@@ -29,18 +29,90 @@
 ```
 ├── main.go              # 应用程序入口
 ├── config.yaml          # 配置文件
+├── config.example.yaml  # 配置示例文件
 ├── go.mod               # Go 模块文件
-├── internal/
+├── go.sum               # Go 依赖校验文件
+├── db_schema.sql        # 数据库模式定义
+├── internal/            # 内部包，不对外暴露
 │   ├── config/          # 配置管理
-│   ├── model/           # 数据模型
+│   │   └── config.go    # 配置结构和加载逻辑
+│   ├── model/           # 数据模型定义
+│   │   └── models.go    # 实体模型定义
 │   ├── repository/      # 数据访问层
+│   │   ├── database.go  # 数据库连接和操作
+│   │   └── redis.go     # Redis连接和缓存操作
 │   ├── middleware/      # 中间件
+│   │   └── jwt.go       # JWT认证中间件
 │   ├── service/         # 业务逻辑层
-│   └── handler/         # API 处理器
-└── pkg/
-    ├── eino/            # Eino 框架集成
-    └── hertz/           # Hertz 框架配置
+│   │   ├── user_service.go      # 用户相关业务逻辑
+│   │   ├── resume_service.go    # 简历相关业务逻辑
+│   │   └── interview_service.go # 面试相关业务逻辑
+│   ├── handler/         # API 处理器
+│   │   ├── user_handler.go      # 用户API处理
+│   │   ├── resume_handler.go    # 简历API处理
+│   │   └── interview_handler.go # 面试API处理
+│   └── utils/           # 工具函数
+├── pkg/                 # 可重用的公共包
+│   ├── eino/            # Eino 框架集成
+│   │   └── eino_manager.go # Eino管理器
+│   └── hertz/           # Hertz 框架配置
+│       ├── hertz_manager.go # Hertz管理器
+│       └── swagger_config.go # Swagger配置
+├── docs/                # API文档
+│   ├── docs.go          # Swagger文档生成
+│   ├── swagger.json     # Swagger JSON文档
+│   └── swagger.yaml     # Swagger YAML文档
+├── doc/                 # 项目文档
+│   ├── swagger_implementation_plan.md # Swagger实现计划
+│   ├── 后端架构设计.md    # 后端架构设计文档
+│   ├── 技术实现方案.md    # 技术实现方案文档
+│   └── 需求文档.md        # 需求文档
+├── chatApp/             # 聊天应用相关代码
+│   ├── chat/            # 聊天功能
+│   ├── config/          # 聊天应用配置
+│   └── tool/            # 聊天应用工具
+├── cmd/                 # 命令行入口
+│   └── api/             # API服务命令
+└── frontend/            # 前端代码目录
 ```
+
+### 目录功能说明
+
+**根目录**: 包含项目的主要配置文件、入口文件和依赖管理文件
+- `main.go`: 应用程序的主入口，负责初始化和启动服务
+- `config.yaml`: 项目配置文件，包含数据库、Redis、API等配置
+- `config.example.yaml`: 配置示例文件，提供配置模板
+- `go.mod`: Go模块定义文件，管理项目依赖
+- `go.sum`: 依赖版本锁定文件，确保依赖一致性
+- `db_schema.sql`: 数据库表结构定义脚本
+
+**internal/**: 内部包目录，根据Go语言约定，这些包不会被外部项目导入
+- `config/`: 配置管理，负责加载和解析配置文件
+- `model/`: 数据模型定义，定义数据库表对应的Go结构体
+- `repository/`: 数据访问层，封装数据库和缓存操作
+- `middleware/`: 中间件，包含认证、日志等横切关注点
+- `service/`: 业务逻辑层，实现核心业务功能
+- `handler/`: API处理器，处理HTTP请求和响应
+- `utils/`: 工具函数，提供通用辅助功能
+
+**pkg/**: 可重用的公共包，可以被其他项目导入使用
+- `eino/`: Eino框架集成，封装AI大模型相关功能
+- `hertz/`: Hertz框架配置，提供Web框架相关的配置和工具
+
+**docs/**: API文档目录
+- 包含自动生成的Swagger文档，用于API接口说明和测试
+
+**doc/**: 项目文档目录
+- 包含架构设计、技术方案、需求文档等项目说明文件
+
+**chatApp/**: 聊天应用相关代码
+- 实现与AI模型的对话功能，用于面试问答交互
+
+**cmd/**: 命令行入口目录
+- 包含可执行程序的入口点
+
+**frontend/**: 前端代码目录
+- 存放前端应用代码，负责用户界面实现
 
 ## 配置说明
 
