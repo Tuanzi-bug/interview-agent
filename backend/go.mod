@@ -3,6 +3,7 @@ module ai-eino-interview-agent
 go 1.24.0
 
 require (
+	github.com/bytedance/sonic v1.14.2
 	github.com/cloudwego/eino v0.5.11
 	github.com/cloudwego/eino-ext/components/document/transformer/splitter/recursive v0.0.0-20251105133430-149843ccfe5d
 	github.com/cloudwego/eino-ext/components/embedding/ark v0.1.0
@@ -12,6 +13,8 @@ require (
 	github.com/cloudwego/eino-ext/components/tool/googlesearch v0.0.0-20251105133430-149843ccfe5d
 	github.com/cloudwego/hertz v0.10.3
 	github.com/golang-jwt/jwt/v5 v5.0.0
+	github.com/joho/godotenv v1.5.1
+	github.com/milvus-io/milvus-sdk-go/v2 v2.4.2
 	github.com/redis/go-redis/v9 v9.16.0
 	github.com/swaggo/swag v1.16.6
 	gopkg.in/yaml.v3 v3.0.1
@@ -27,7 +30,6 @@ require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
-	github.com/bytedance/sonic v1.14.2 // indirect
 	github.com/bytedance/sonic/loader v0.4.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
@@ -71,7 +73,6 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
@@ -80,7 +81,6 @@ require (
 	github.com/mailru/easyjson v0.9.1 // indirect
 	github.com/meguminnnnnnnnn/go-openai v0.1.0 // indirect
 	github.com/milvus-io/milvus-proto/go-api/v2 v2.4.10-0.20240819025435-512e3b98866a // indirect
-	github.com/milvus-io/milvus-sdk-go/v2 v2.4.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
