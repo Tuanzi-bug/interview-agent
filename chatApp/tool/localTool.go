@@ -36,7 +36,7 @@ func CreateTool() tool.InvokableTool {
 			"classify": &schema.ParameterInfo{
 				Type:     schema.String,
 				Required: true,
-				Desc:     "编程语言分类",
+				Desc:     "编程语言分类（只能是go、java、python中的一个）",
 			},
 		}),
 	}, GetUrl)
