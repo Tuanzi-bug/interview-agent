@@ -66,7 +66,7 @@
 
 1. 克隆项目
    ```bash
-   git clone https://github.com/your-username/ai-eino-interview-agent.git
+   git clone git@codeup.aliyun.com:60fadd729187b7df39056384/training_camp/go-eino-interview-agent.git
    cd ai-eino-interview-agent
    ```
 

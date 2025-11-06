@@ -23,10 +23,8 @@ var HertzServer *server.Hertz
 
 // InitHertz 初始化Hertz框架
 func InitHertz() error {
-	cfg := config.Global.Server
-
-	// 创建Hertz服务器实例
-	HertzServer = server.Default(server.WithHostPorts(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)))
+	// 直接使用Global配置的Host和Port
+	HertzServer = server.Default(server.WithHostPorts(fmt.Sprintf("%s:%d", config.Global.Host, config.Global.Port)))
 
 	// 配置中间件
 	configureMiddleware()
@@ -46,15 +44,12 @@ func GetHertzServer() *server.Hertz {
 // configureMiddleware 配置中间件
 func configureMiddleware() {
 	// 启用CORS
-	if config.Global.Security.CORS {
+	if config.Global.Security.CORS.AllowOrigins != nil && len(config.Global.Security.CORS.AllowOrigins) > 0 {
 		HertzServer.Use(CORSMiddleware())
 	}
 
-	// 启用日志中间件
-	if config.Global.Hertz.EnableAccessLog {
-		// 配置访问日志
-		HertzServer.Use(AccessLogMiddleware())
-	}
+	// 直接启用日志中间件
+	HertzServer.Use(AccessLogMiddleware())
 
 	// 添加JWT认证中间件（某些路由需要）
 	// HertzServer.Use(JWTMiddleware())
@@ -216,7 +211,7 @@ func CORSMiddleware() app.HandlerFunc {
 		ctx.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		ctx.Header("Access-Control-Allow-Credentials", "true")
 
-		if ctx.Request.Method() == "OPTIONS" {
+		if string(ctx.Request.Method()) == "OPTIONS" {
 			ctx.AbortWithStatus(consts.StatusNoContent)
 			return
 		}

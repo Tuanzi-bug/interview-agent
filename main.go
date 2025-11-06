@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -14,9 +13,6 @@ import (
 	"ai-eino-interview-agent/internal/repository"
 	"ai-eino-interview-agent/pkg/eino"
 	"ai-eino-interview-agent/pkg/hertz"
-
-	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/hertz-contrib/cors"
 )
 
 func main() {
@@ -52,7 +48,7 @@ func main() {
 
 	// 5. 初始化Hertz服务器
 	log.Println("Initializing Hertz server...")
-	err = hertz.InitHertz(cfg)
+	err = hertz.InitHertz()
 	if err != nil {
 		log.Fatalf("Failed to initialize Hertz: %v", err)
 	}

@@ -21,7 +21,7 @@ func InitDatabase(dbConfig config.DatabaseConfig) error {
 	logLevel := logger.Info
 
 	// 连接数据库
-	db, err := gorm.Open(mysql.Open(cfg.DSN), &gorm.Config{
+	db, err := gorm.Open(mysql.Open(dbConfig.DSN), &gorm.Config{
 		Logger: logger.Default.LogMode(logLevel),
 	})
 	if err != nil {

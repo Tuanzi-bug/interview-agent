@@ -71,7 +71,7 @@ func GenerateToken(userID uint, username, role string) (string, error) {
 	cfg := config.Global.Security
 
 	// 解析过期时间
-	expiration, err := time.ParseDuration(cfg.TokenExpiration)
+	expiration, err := time.ParseDuration(cfg.JWTExpiration)
 	if err != nil {
 		expiration = 24 * time.Hour // 默认24小时
 	}

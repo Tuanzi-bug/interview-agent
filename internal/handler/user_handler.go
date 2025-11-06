@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"net/http"
 
 	"ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/service"
@@ -26,7 +25,7 @@ func NewUserHandler() *UserHandler {
 // Register 用户注册
 func (h *UserHandler) Register(c context.Context, ctx *app.RequestContext) {
 	var req service.RegisterRequest
-	if err := ctx.BindJSON(&req); err != nil {
+	if err := ctx.Bind(&req); err != nil {
 		ctx.JSON(consts.StatusBadRequest, map[string]interface{}{
 			"code":    400,
 			"message": "请求参数错误: " + err.Error(),
@@ -53,7 +52,7 @@ func (h *UserHandler) Register(c context.Context, ctx *app.RequestContext) {
 // Login 用户登录
 func (h *UserHandler) Login(c context.Context, ctx *app.RequestContext) {
 	var req service.LoginRequest
-	if err := ctx.BindJSON(&req); err != nil {
+	if err := ctx.Bind(&req); err != nil {
 		ctx.JSON(consts.StatusBadRequest, map[string]interface{}{
 			"code":    400,
 			"message": "请求参数错误: " + err.Error(),
@@ -121,7 +120,7 @@ func (h *UserHandler) UpdateProfile(c context.Context, ctx *app.RequestContext) 
 		Email    string `json:"email"`
 	}
 
-	if err := ctx.BindJSON(&req); err != nil {
+	if err := ctx.Bind(&req); err != nil {
 		ctx.JSON(consts.StatusBadRequest, map[string]interface{}{
 			"code":    400,
 			"message": "请求参数错误: " + err.Error(),

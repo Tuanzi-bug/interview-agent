@@ -9,16 +9,16 @@ import (
 
 // Config 应用程序配置结构
 type Config struct {
-	Host      string         `yaml:"host"`
-	Port      int            `yaml:"port"`
-	Database  DatabaseConfig `yaml:"database"`
-	Redis     RedisConfig    `yaml:"redis"`
-	Hertz     HertzConfig    `yaml:"hertz"`
-	Eino      EinoConfig     `yaml:"eino"`
-	Interview InterviewConfig `yaml:"interview"`
-	Security  SecurityConfig `yaml:"security"`
-	GoogleSearch GoogleConfig `yaml:"google_search"`
-	OpenAI    OpenAIConfig   `yaml:"openai"`
+	Host         string          `yaml:"host"`
+	Port         int             `yaml:"port"`
+	Database     DatabaseConfig  `yaml:"database"`
+	Redis        RedisConfig     `yaml:"redis"`
+	Hertz        HertzConfig     `yaml:"hertz"`
+	Eino         EinoConfig      `yaml:"eino"`
+	Interview    InterviewConfig `yaml:"interview"`
+	Security     SecurityConfig  `yaml:"security"`
+	GoogleSearch GoogleConfig    `yaml:"google_search"`
+	OpenAI       OpenAIConfig    `yaml:"openai"`
 }
 
 // CORSConfig CORS配置
@@ -32,10 +32,10 @@ type CORSConfig struct {
 
 // DatabaseConfig 数据库配置
 type DatabaseConfig struct {
-	Driver         string `yaml:"driver"`
-	DSN            string `yaml:"dsn"`
-	MaxOpenConns   int    `yaml:"max_open_conns"`
-	MaxIdleConns   int    `yaml:"max_idle_conns"`
+	Driver          string `yaml:"driver"`
+	DSN             string `yaml:"dsn"`
+	MaxOpenConns    int    `yaml:"max_open_conns"`
+	MaxIdleConns    int    `yaml:"max_idle_conns"`
 	ConnMaxLifetime string `yaml:"conn_max_lifetime"`
 }
 
@@ -53,11 +53,11 @@ type RedisConfig struct {
 
 // HertzConfig Hertz框架配置
 type HertzConfig struct {
-	LogLevel    string `yaml:"log_level"`
-	LogPath     string `yaml:"log_path"`
-	ReadTimeout string `yaml:"read_timeout"`
+	LogLevel     string `yaml:"log_level"`
+	LogPath      string `yaml:"log_path"`
+	ReadTimeout  string `yaml:"read_timeout"`
 	WriteTimeout string `yaml:"write_timeout"`
-	IdleTimeout string `yaml:"idle_timeout"`
+	IdleTimeout  string `yaml:"idle_timeout"`
 }
 
 // EinoConfig Eino框架配置
@@ -73,22 +73,22 @@ type EinoConfig struct {
 
 // InterviewConfig 面试系统配置
 type InterviewConfig struct {
-	MaxDuration    string `yaml:"max_duration"`
+	MaxDuration     string `yaml:"max_duration"`
 	QuestionTimeout string `yaml:"question_timeout"`
-	MaxQuestions   int    `yaml:"max_questions"`
-	MinQuestions   int    `yaml:"min_questions"`
+	MaxQuestions    int    `yaml:"max_questions"`
+	MinQuestions    int    `yaml:"min_questions"`
 }
 
 // SecurityConfig 安全性配置
 type SecurityConfig struct {
-	JWTSecret      string   `yaml:"jwt_secret"`
-	JWTExpiration  string   `yaml:"jwt_expiration"`
-	CORS           CORSConfig `yaml:"cors"`
+	JWTSecret     string     `yaml:"jwt_secret"`
+	JWTExpiration string     `yaml:"jwt_expiration"`
+	CORS          CORSConfig `yaml:"cors"`
 }
 
 // GoogleConfig Google搜索配置
 type GoogleConfig struct {
-	APIKey       string `yaml:"api_key"`
+	APIKey         string `yaml:"api_key"`
 	SearchEngineID string `yaml:"search_engine_id"`
 }
 

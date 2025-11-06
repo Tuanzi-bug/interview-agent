@@ -23,5 +23,4 @@ func main() {
 	fmt.Printf("===llm stream ===\n")
 	streamResult := chat.Stream(ctx, model, message)
 	chat.ReportSteam(streamResult)
-
 }

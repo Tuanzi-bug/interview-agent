@@ -4,8 +4,8 @@ go 1.23.0
 
 require (
 	github.com/cloudwego/eino v0.5.11
-	github.com/cloudwego/eino-ext/components/model/openai v0.1.2
-	github.com/cloudwego/eino-ext/components/tool/googlesearch v0.0.0-20251105125719-b650b693fcfd
+	github.com/cloudwego/eino-ext/components/model/openai v0.1.4
+	github.com/cloudwego/eino-ext/components/tool/googlesearch v0.0.0-20251105133430-149843ccfe5d
 	github.com/cloudwego/hertz v0.6.2
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/hertz-contrib/cors v0.1.0
@@ -27,7 +27,7 @@ require (
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
-	github.com/cloudwego/eino-ext/libs/acl/openai v0.1.0 // indirect
+	github.com/cloudwego/eino-ext/libs/acl/openai v0.1.1 // indirect
 	github.com/cloudwego/netpoll v0.3.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect

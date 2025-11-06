@@ -35,7 +35,7 @@ func (h *InterviewHandler) CreateInterview(c context.Context, ctx *app.RequestCo
 	}
 
 	var req service.CreateInterviewRequest
-	if err := ctx.BindJSON(&req); err != nil {
+	if err := ctx.Bind(&req); err != nil {
 		ctx.JSON(consts.StatusBadRequest, map[string]interface{}{
 			"code":    400,
 			"message": "请求参数错误: " + err.Error(),
@@ -226,7 +226,7 @@ func (h *InterviewHandler) SubmitAnswer(c context.Context, ctx *app.RequestConte
 	}
 
 	var req service.SubmitAnswerRequest
-	if err := ctx.BindJSON(&req); err != nil {
+	if err := ctx.Bind(&req); err != nil {
 		ctx.JSON(consts.StatusBadRequest, map[string]interface{}{
 			"code":    400,
 			"message": "请求参数错误: " + err.Error(),
