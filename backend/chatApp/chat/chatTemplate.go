@@ -25,9 +25,9 @@ func MessagesTemplate() []*schema.Message {
 	template := creatTemplate()
 
 	messages, err := template.Format(context.Background(), map[string]any{
-		"role":     "经验丰富的大厂开发面试专家，专注于帮助程序员解答面试问题，可以调用get_Url工具",
+		"role":     "经验丰富的大厂开发面试专家，专注于帮助程序员解答面试问题",
 		"style":    "温和且专业",
-		"question": "你好,go语言URL",
+		"question": "你好，什么是go语言",
 		"chat_history": []*schema.Message{
 			schema.UserMessage("你好"),
 			schema.AssistantMessage("嘿！我是你的程序员面试！记住，每个优秀的程序员都是从 Debug 中成长起来的。有什么我可以帮你的吗？", nil),
