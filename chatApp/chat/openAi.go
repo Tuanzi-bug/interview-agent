@@ -61,7 +61,7 @@ func CreatOpenAiChatModel(ctx context.Context) model.ToolCallingChatModel {
 	}
 
 	// 5. 关键修正：处理 WithTools 绑定结果（必须使用绑定后的新模型）
-	boundModel, err := chatModel.WithTools(toolInfos)
+	_, err = chatModel.WithTools(toolInfos)
 	if err != nil {
 		log.Fatalf("大模型绑定工具失败：%v", err)
 	}
@@ -75,5 +75,5 @@ func CreatOpenAiChatModel(ctx context.Context) model.ToolCallingChatModel {
 	}
 
 	log.Println("大模型绑定工具成功，ToolsNode 初始化完成！")
-	return boundModel
+	return chatModel
 }
