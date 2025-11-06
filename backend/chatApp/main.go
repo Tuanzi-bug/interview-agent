@@ -1,7 +1,7 @@
 package main
 
 import (
-	"ai-eino-agent/chatApp/chat"
+	"ai-eino-interview-agent/chatApp/chat"
 	"context"
 	"fmt"
 )

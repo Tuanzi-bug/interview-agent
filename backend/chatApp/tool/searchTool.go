@@ -1,7 +1,7 @@
 package tool
 
 import (
-	"ai-eino-agent/chatApp/config"
+	"ai-eino-interview-agent/chatApp/config"
 	"context"
 	"fmt"
 	"github.com/cloudwego/eino-ext/components/tool/googlesearch"
