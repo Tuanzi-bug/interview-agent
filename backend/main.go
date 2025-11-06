@@ -16,6 +16,8 @@ package main
 // @name Authorization
 
 import (
+	"ai-eino-interview-agent/internal/repository"
+	"ai-eino-interview-agent/pkg/eino"
 	"context"
 	"log"
 	"net/http"
@@ -49,29 +51,29 @@ func main() {
 	cfg.ExpandEnv()
 	log.Println("Environment variables expanded in configuration")
 
-	//// 4. 初始化数据库
-	//log.Println("Initializing database connection...")
-	//err = repository.InitDatabase(cfg.Database)
-	//if err != nil {
-	//	log.Fatalf("Failed to initialize database: %v", err)
-	//}
-	//log.Println("Database initialized successfully")
-	//
-	//// 5. 初始化Redis
-	//log.Println("Initializing Redis connection...")
-	//err = repository.InitRedis(cfg.Redis)
-	//if err != nil {
-	//	log.Fatalf("Failed to initialize Redis: %v", err)
-	//}
-	//log.Println("Redis initialized successfully")
-	//
-	//// 6. 初始化Eino框架
-	//log.Println("Initializing Eino framework...")
-	//err = eino.InitEino(cfg.Eino)
-	//if err != nil {
-	//	log.Fatalf("Failed to initialize Eino: %v", err)
-	//}
-	//log.Println("Eino initialized successfully")
+	// 4. 初始化数据库
+	log.Println("Initializing database connection...")
+	err = repository.InitDatabase(cfg.Database)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	log.Println("Database initialized successfully")
+
+	// 5. 初始化Redis
+	log.Println("Initializing Redis connection...")
+	err = repository.InitRedis(cfg.Redis)
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+	log.Println("Redis initialized successfully")
+
+	// 6. 初始化Eino框架
+	log.Println("Initializing Eino framework...")
+	err = eino.InitEino(cfg.Eino)
+	if err != nil {
+		log.Fatalf("Failed to initialize Eino: %v", err)
+	}
+	log.Println("Eino initialized successfully")
 
 	// 7. 初始化 Milvus Manager（向量数据库、Embedding、检索等服务）
 	log.Println("Initializing Milvus Manager...")
