@@ -27,20 +27,83 @@
 ## 项目结构
 
 ```
-├── main.go              # 应用程序入口
-├── config.yaml          # 配置文件
-├── go.mod               # Go 模块文件
-├── internal/
-│   ├── config/          # 配置管理
-│   ├── model/           # 数据模型
-│   ├── repository/      # 数据访问层
-│   ├── middleware/      # 中间件
-│   ├── service/         # 业务逻辑层
-│   └── handler/         # API 处理器
-└── pkg/
-    ├── eino/            # Eino 框架集成
-    └── hertz/           # Hertz 框架配置
+├── README.md            # 项目说明文档
+├── backend/             # 后端代码目录
+│   ├── main.go          # 后端应用程序入口
+│   ├── config.yaml      # 后端配置文件
+│   ├── config.example.yaml # 后端配置示例文件
+│   ├── go.mod           # Go 模块文件
+│   ├── go.sum           # Go 依赖校验文件
+│   ├── db_schema.sql    # 数据库模式定义
+│   ├── internal/        # 内部包，不对外暴露
+│   │   ├── config/      # 配置管理
+│   │   ├── model/       # 数据模型定义
+│   │   ├── repository/  # 数据访问层
+│   │   ├── middleware/  # 中间件
+│   │   ├── service/     # 业务逻辑层
+│   │   ├── handler/     # API 处理器
+│   │   └── utils/       # 工具函数
+│   ├── pkg/             # 可重用的公共包
+│   │   ├── eino/        # Eino 框架集成
+│   │   └── hertz/       # Hertz 框架配置
+│   ├── docs/            # API文档
+│   │   ├── docs.go      # Swagger文档生成
+│   │   ├── swagger.json # Swagger JSON文档
+│   │   └── swagger.yaml # Swagger YAML文档
+│   ├── chatApp/         # 聊天应用相关代码
+│   │   ├── chat/        # 聊天功能
+│   │   ├── config/      # 聊天应用配置
+│   │   └── tool/        # 聊天应用工具
+│   └── cmd/             # 命令行入口
+│       └── api/         # API服务命令
+├── doc/                 # 项目文档目录
+│   ├── AI编程开发规范.md # AI编程开发规范
+│   ├── swagger_implementation_plan.md # Swagger实现计划
+│   ├── 前端开发方案.md    # 前端开发方案
+│   ├── 后端架构设计.md    # 后端架构设计文档
+│   ├── 待解决的问题1106.md # 待解决问题
+│   ├── 技术实现方案.md    # 技术实现方案文档
+│   └── 需求文档.md        # 需求文档
+└── frontend/            # 前端代码目录
+    ├── src/             # 前端源代码
+    ├── public/          # 静态资源
+    └── 配置文件         # 前端相关配置
 ```
+
+### 目录功能说明
+
+**根目录**: 项目的根目录，包含项目的整体说明文档和各主要组件目录
+- `README.md`: 项目的主要说明文档，包含项目概述、安装说明等
+
+**backend/**: 后端代码目录，包含所有服务器端代码
+- `main.go`: 后端应用程序的主入口，负责初始化和启动服务
+- `config.yaml`: 后端配置文件，包含数据库、Redis、API等配置
+- `config.example.yaml`: 配置示例文件，提供配置模板
+- `go.mod`: Go模块定义文件，管理项目依赖
+- `go.sum`: 依赖版本锁定文件，确保依赖一致性
+- `db_schema.sql`: 数据库表结构定义脚本
+- `internal/`: 内部包目录，根据Go语言约定，这些包不会被外部项目导入
+  - `config/`: 配置管理，负责加载和解析配置文件
+  - `model/`: 数据模型定义，定义数据库表对应的Go结构体
+  - `repository/`: 数据访问层，封装数据库和缓存操作
+  - `middleware/`: 中间件，包含认证、日志等横切关注点
+  - `service/`: 业务逻辑层，实现核心业务功能
+  - `handler/`: API处理器，处理HTTP请求和响应
+  - `utils/`: 工具函数，提供通用辅助功能
+- `pkg/`: 可重用的公共包，可以被其他项目导入使用
+  - `eino/`: Eino框架集成，封装AI大模型相关功能
+  - `hertz/`: Hertz框架配置，提供Web框架相关的配置和工具
+- `docs/`: API文档目录，包含自动生成的Swagger文档
+- `chatApp/`: 聊天应用相关代码，实现与AI模型的对话功能
+- `cmd/`: 命令行入口目录，包含可执行程序的入口点
+
+**doc/**: 项目文档目录，包含项目相关的各种文档
+- 包含架构设计、技术方案、需求文档等项目说明文件
+- 包含前后端开发规范和计划文档
+
+**frontend/**: 前端代码目录，包含所有客户端代码
+- 存放前端应用代码，负责用户界面实现
+- 包含React组件、页面、服务和工具函数等
 
 ## 配置说明
 
@@ -67,11 +130,14 @@
 1. 克隆项目
    ```bash
    git clone git@codeup.aliyun.com:60fadd729187b7df39056384/training_camp/go-eino-interview-agent.git
-   cd ai-eino-interview-agent
+   cd go-eino-interview-agent
    ```
 
 2. 配置环境
-   编辑 `config.yaml` 文件，填写相关配置：
+   进入 backend 目录并编辑 `config.yaml` 文件，填写相关配置：
+   ```bash
+   cd backend
+   ```
    - 数据库连接信息
    - Redis 连接信息
    - API Key 等
