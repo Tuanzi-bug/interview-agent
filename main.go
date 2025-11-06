@@ -1,5 +1,20 @@
 package main
 
+// @title AI-Eino 智能面试系统 API文档
+// @version 1.0.0
+// @description 智能面试助手系统，提供用户管理、简历管理、面试管理等功能
+// @contact.name 技术支持
+// @contact.url http://example.com/support
+// @contact.email support@example.com
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @host localhost:8000
+// @BasePath /api/v1
+// @schemes http
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
+
 import (
 	"context"
 	"log"

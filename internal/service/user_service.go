@@ -33,8 +33,8 @@ type LoginRequest struct {
 
 // LoginResponse 登录响应
 type LoginResponse struct {
-	Token  string `json:"token"`
-	User   model.User `json:"user"`
+	Token string     `json:"token"`
+	User  model.User `json:"user"`
 }
 
 // Register 用户注册

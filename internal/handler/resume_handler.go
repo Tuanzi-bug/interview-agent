@@ -23,7 +23,19 @@ func NewResumeHandler() *ResumeHandler {
 	}
 }
 
-// CreateResume 创建简历
+// CreateResume 创建简历接口
+// @Summary 创建简历
+// @Description 为当前登录用户创建一个新的简历
+// @Tags 简历管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request body service.CreateResumeRequest true "创建简历请求参数"
+// @Success 200 {object} map[string]interface{} "创建成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权访问"
+// @Failure 500 {object} map[string]interface{} "创建失败"
+// @Router /api/v1/resume [post]
 func (h *ResumeHandler) CreateResume(c context.Context, ctx *app.RequestContext) {
 	userID := middleware.GetUserID(ctx)
 	if userID == 0 {
@@ -59,7 +71,16 @@ func (h *ResumeHandler) CreateResume(c context.Context, ctx *app.RequestContext)
 	})
 }
 
-// GetUserResumes 获取用户的所有简历
+// GetUserResumes 获取用户的所有简历接口
+// @Summary 获取用户简历列表
+// @Description 获取当前登录用户的所有简历
+// @Tags 简历管理
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} map[string]interface{} "获取成功"
+// @Failure 401 {object} map[string]interface{} "未授权访问"
+// @Failure 500 {object} map[string]interface{} "获取失败"
+// @Router /api/v1/resume [get]
 func (h *ResumeHandler) GetUserResumes(c context.Context, ctx *app.RequestContext) {
 	userID := middleware.GetUserID(ctx)
 	if userID == 0 {
@@ -86,7 +107,18 @@ func (h *ResumeHandler) GetUserResumes(c context.Context, ctx *app.RequestContex
 	})
 }
 
-// GetResume 获取单个简历
+// GetResume 获取单个简历接口
+// @Summary 获取简历详情
+// @Description 根据简历ID获取指定简历的详细信息
+// @Tags 简历管理
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path int true "简历ID"
+// @Success 200 {object} map[string]interface{} "获取成功"
+// @Failure 400 {object} map[string]interface{} "无效的简历ID"
+// @Failure 401 {object} map[string]interface{} "未授权访问"
+// @Failure 404 {object} map[string]interface{} "简历不存在"
+// @Router /api/v1/resume/{id} [get]
 func (h *ResumeHandler) GetResume(c context.Context, ctx *app.RequestContext) {
 	userID := middleware.GetUserID(ctx)
 	if userID == 0 {
@@ -124,7 +156,21 @@ func (h *ResumeHandler) GetResume(c context.Context, ctx *app.RequestContext) {
 	})
 }
 
-// UpdateResume 更新简历
+// UpdateResume 更新简历接口
+// @Summary 更新简历
+// @Description 更新指定ID的简历信息
+// @Tags 简历管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path int true "简历ID"
+// @Param request body service.CreateResumeRequest true "更新简历请求参数"
+// @Success 200 {object} map[string]interface{} "更新成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权访问"
+// @Failure 404 {object} map[string]interface{} "简历不存在"
+// @Failure 500 {object} map[string]interface{} "更新失败"
+// @Router /api/v1/resume/{id} [put]
 func (h *ResumeHandler) UpdateResume(c context.Context, ctx *app.RequestContext) {
 	userID := middleware.GetUserID(ctx)
 	if userID == 0 {
@@ -171,7 +217,17 @@ func (h *ResumeHandler) UpdateResume(c context.Context, ctx *app.RequestContext)
 	})
 }
 
-// DeleteResume 删除简历
+// DeleteResume 删除简历接口
+// @Summary 删除简历
+// @Description 删除指定ID的简历
+// @Tags 简历管理
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path int true "简历ID"
+// @Success 200 {object} map[string]interface{} "删除成功"
+// @Failure 400 {object} map[string]interface{} "无效的简历ID或删除失败"
+// @Failure 401 {object} map[string]interface{} "未授权访问"
+// @Router /api/v1/resume/{id} [delete]
 func (h *ResumeHandler) DeleteResume(c context.Context, ctx *app.RequestContext) {
 	userID := middleware.GetUserID(ctx)
 	if userID == 0 {
@@ -208,7 +264,18 @@ func (h *ResumeHandler) DeleteResume(c context.Context, ctx *app.RequestContext)
 	})
 }
 
-// AnalyzeResume 分析简历
+// AnalyzeResume 分析简历接口
+// @Summary 分析简历
+// @Description 使用AI分析指定ID的简历内容
+// @Tags 简历管理
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path int true "简历ID"
+// @Success 200 {object} map[string]interface{} "分析成功"
+// @Failure 400 {object} map[string]interface{} "无效的简历ID"
+// @Failure 401 {object} map[string]interface{} "未授权访问"
+// @Failure 500 {object} map[string]interface{} "分析失败"
+// @Router /api/v1/resume/{id}/analyze [post]
 func (h *ResumeHandler) AnalyzeResume(c context.Context, ctx *app.RequestContext) {
 	userID := middleware.GetUserID(ctx)
 	if userID == 0 {

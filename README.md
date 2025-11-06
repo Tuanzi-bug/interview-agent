@@ -75,6 +75,7 @@
    - 数据库连接信息
    - Redis 连接信息
    - API Key 等
+   - 把 db_schema.sql 中的数据库 schema 导入到 MySQL 数据库中
 
 3. 安装依赖
    ```bash

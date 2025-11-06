@@ -22,7 +22,16 @@ func NewUserHandler() *UserHandler {
 	}
 }
 
-// Register 用户注册
+// Register 用户注册接口
+// @Summary 用户注册
+// @Description 用户通过邮箱和密码进行注册
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param request body service.RegisterRequest true "注册请求参数"
+// @Success 200 {object} map[string]interface{} "注册成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Router /api/v1/user/register [post]
 func (h *UserHandler) Register(c context.Context, ctx *app.RequestContext) {
 	var req service.RegisterRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -49,7 +58,17 @@ func (h *UserHandler) Register(c context.Context, ctx *app.RequestContext) {
 	})
 }
 
-// Login 用户登录
+// Login 用户登录接口
+// @Summary 用户登录
+// @Description 用户通过邮箱和密码进行登录
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param request body service.LoginRequest true "登录请求参数"
+// @Success 200 {object} map[string]interface{} "登录成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "认证失败"
+// @Router /api/v1/user/login [post]
 func (h *UserHandler) Login(c context.Context, ctx *app.RequestContext) {
 	var req service.LoginRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -76,7 +95,16 @@ func (h *UserHandler) Login(c context.Context, ctx *app.RequestContext) {
 	})
 }
 
-// GetProfile 获取用户资料
+// GetProfile 获取用户资料接口
+// @Summary 获取用户资料
+// @Description 获取当前登录用户的详细资料
+// @Tags 用户管理
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} map[string]interface{} "获取成功"
+// @Failure 401 {object} map[string]interface{} "未授权访问"
+// @Failure 404 {object} map[string]interface{} "用户不存在"
+// @Router /api/v1/user/profile [get]
 func (h *UserHandler) GetProfile(c context.Context, ctx *app.RequestContext) {
 	userID := middleware.GetUserID(ctx)
 	if userID == 0 {
@@ -103,7 +131,19 @@ func (h *UserHandler) GetProfile(c context.Context, ctx *app.RequestContext) {
 	})
 }
 
-// UpdateProfile 更新用户资料
+// UpdateProfile 更新用户资料接口
+// @Summary 更新用户资料
+// @Description 更新当前登录用户的资料信息
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request body map[string]string true "更新请求参数"
+// @Success 200 {object} map[string]interface{} "更新成功"
+// @Failure 400 {object} map[string]interface{} "请求参数错误"
+// @Failure 401 {object} map[string]interface{} "未授权访问"
+// @Failure 500 {object} map[string]interface{} "更新失败"
+// @Router /api/v1/user/profile [put]
 func (h *UserHandler) UpdateProfile(c context.Context, ctx *app.RequestContext) {
 	userID := middleware.GetUserID(ctx)
 	if userID == 0 {

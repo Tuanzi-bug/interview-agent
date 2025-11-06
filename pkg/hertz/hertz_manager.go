@@ -32,6 +32,9 @@ func InitHertz() error {
 	// 配置路由
 	configureRoutes()
 
+	// 配置Swagger文档
+	SetupSwagger()
+
 	log.Println("Hertz框架初始化成功")
 	return nil
 }
@@ -54,6 +57,8 @@ func configureMiddleware() {
 	// 添加JWT认证中间件（某些路由需要）
 	// HertzServer.Use(JWTMiddleware())
 }
+
+
 
 // configureRoutes 配置路由
 func configureRoutes() {
