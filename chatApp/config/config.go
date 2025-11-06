@@ -3,8 +3,10 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"gopkg.in/yaml.v3"
 )
@@ -32,30 +34,39 @@ type OpenAIConfig struct {
 // LoadConfig：读取 config.yaml 文件，返回配置结构体
 // 类比 Spring Boot 的配置自动加载（手动实现，但能复用）
 func LoadConfig() (*Config, error) {
-	// 1. 获取 config.yaml 文件的绝对路径（避免相对路径错误）
-	// 项目根目录下的 config.yaml，这里用 filepath.Abs 转成绝对路径
-	configPath, err := filepath.Abs("../../config.yaml")
-	if err != nil {
-		return nil, fmt.Errorf("获取配置文件路径失败：%v", err)
+	// 关键修改1：获取 config.go 源代码文件的真实路径（不受执行目录影响）
+	_, currentSourceFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return nil, fmt.Errorf("获取源代码文件路径失败")
 	}
+	// currentSourceFile 格式：D:\Bear\ai-eino-agent\chatApp\tool\config.go（真实源代码路径）
+	log.Printf("✅ 源代码文件路径：%s", currentSourceFile)
 
-	// 2. 打开 config.yaml 文件（类似 Spring Boot 读取 application.yml）
+	// 关键修改2：向上追溯到项目根目录（按你的目录结构调整）
+	// 目录结构：config.go → chatApp/tool → chatApp → 项目根目录（D:\Bear\ai-eino-agent\）
+	toolDir := filepath.Dir(currentSourceFile) // 得到：chatApp/tool
+	chatAppDir := filepath.Dir(toolDir)        // 得到：chatApp
+	projectRootDir := filepath.Dir(chatAppDir) // 得到：项目根目录（D:\Bear\ai-eino-agent\）
+
+	// 关键修改3：拼接项目根目录 + config.yaml（最终路径100%正确）
+	configPath := filepath.Join(projectRootDir, "config.yaml")
+	log.Printf("✅ 最终配置文件路径：%s", configPath)
+
+	// 下面的代码不变！
 	file, err := os.Open(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("打开配置文件失败（路径：%s）：%v", configPath, err)
 	}
-	defer file.Close() // 函数结束后自动关闭文件，避免资源泄漏
+	defer file.Close()
 
-	// 3. 解析 YAML 文件内容到 Config 结构体（核心步骤）
 	var config Config
 	decoder := yaml.NewDecoder(file)
 	if err := decoder.Decode(&config); err != nil {
-		return nil, fmt.Errorf("解析 YAML 配置失败：%v", err)
+		return nil, fmt.Errorf("解析 YAML 失败：%v", err)
 	}
 
-	// 4. 检查配置是否为空（可选，避免密钥没填）
 	if config.Google.APIKey == "" || config.Google.SearchEngineID == "" {
-		return nil, fmt.Errorf("config.yaml 中 google.api_key 或 google.search_engine_id 未配置")
+		return nil, fmt.Errorf("config.yaml 中 google.api_key 或 google.search_engine_id 未填写")
 	}
 
 	return &config, nil

@@ -32,13 +32,14 @@ func CreateTool() tool.InvokableTool {
 	getUrlTool := utils.NewTool(&schema.ToolInfo{
 		Name: "get_Url",
 		Desc: "根据编程语言分类获取学习网站url,例如：get_learnUrl(classify='go')",
-		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
-			"classify": &schema.ParameterInfo{
-				Type:     schema.String,
-				Required: true,
-				Desc:     "编程语言分类（只能是go、java、python中的一个）",
-			},
-		}),
+		ParamsOneOf: schema.NewParamsOneOfByParams(
+			map[string]*schema.ParameterInfo{
+				"classify": &schema.ParameterInfo{
+					Type:     schema.String,
+					Required: true,
+					Desc:     "编程语言分类（只能是go、java、python中的一个）",
+				},
+			}),
 	}, GetUrl)
 	fmt.Printf("使用get_learnUrl工具获取学习网站url\n")
 	return getUrlTool
