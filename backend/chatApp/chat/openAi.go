@@ -34,12 +34,13 @@ func CreatOpenAiChatModel(ctx context.Context) model.ToolCallingChatModel {
 	var toolList []einoTool.BaseTool
 
 	// 加入谷歌搜索工具
-	googleTool, err := myTool.CreatGoogleSearchTool(ctx)
-	if err != nil {
+	//googleTool, err := myTool.CreatGoogleSearchTool(ctx)
+	/*if err != nil {
 		log.Fatalf("初始化谷歌搜索工具失败：%v", err)
-	}
+	}*/
 
-	toolList = append(toolList, googleTool)
+	//toolList = append(toolList, googleTool)
+	toolList = append(toolList, myTool.CreatePDFToTextTool())
 	toolList = append(toolList, myTool.CreateTool()) // 加入get_Url工具
 
 	// 3. 收集工具元信息（和之前逻辑一样，只是遍历的切片类型变了）
@@ -61,7 +62,7 @@ func CreatOpenAiChatModel(ctx context.Context) model.ToolCallingChatModel {
 	}
 
 	// 5. 关键修正：处理 WithTools 绑定结果（必须使用绑定后的新模型）
-	_, err = chatModel.WithTools(toolInfos)
+	toolmodel, err := chatModel.WithTools(toolInfos)
 	if err != nil {
 		log.Fatalf("大模型绑定工具失败：%v", err)
 	}
@@ -75,5 +76,5 @@ func CreatOpenAiChatModel(ctx context.Context) model.ToolCallingChatModel {
 	}
 
 	log.Println("大模型绑定工具成功，ToolsNode 初始化完成！")
-	return chatModel
+	return toolmodel
 }

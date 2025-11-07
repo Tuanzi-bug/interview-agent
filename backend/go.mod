@@ -5,6 +5,7 @@ go 1.24.0
 require (
 	github.com/bytedance/sonic v1.14.2
 	github.com/cloudwego/eino v0.5.11
+	github.com/cloudwego/eino-ext/components/document/parser/pdf v0.0.0-20251105133430-149843ccfe5d
 	github.com/cloudwego/eino-ext/components/document/transformer/splitter/recursive v0.0.0-20251105133430-149843ccfe5d
 	github.com/cloudwego/eino-ext/components/embedding/ark v0.1.0
 	github.com/cloudwego/eino-ext/components/indexer/milvus v0.0.0-20251105133430-149843ccfe5d
@@ -40,6 +41,7 @@ require (
 	github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f // indirect
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/dslipak/pdf v0.0.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eino-contrib/jsonschema v1.0.2 // indirect
 	github.com/evanphx/json-patch v0.5.2 // indirect
