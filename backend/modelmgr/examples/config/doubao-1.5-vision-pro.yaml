@@ -1,0 +1,41 @@
+# Ark (字节跳动豆包) 模型配置示例
+id: 2001
+name: doubao-1.5-vision-pro
+display_name: 豆包大模型 Pro
+protocol: ark
+status: 1
+description:
+  zh: "字节跳动豆包大模型专业版，支持 4K 上下文"
+  en: "ByteDance Doubao Pro with 4K context support"
+capability:
+  support_function_call: true
+  support_streaming: true
+  support_vision: false
+  max_input_tokens: 4096
+  max_output_tokens: 4096
+config:
+  api_key: ""
+  model: "doubao-1.5-vision-pro-250328"
+  base_url: "https://ark.cn-beijing.volces.com/api/v3/"
+  
+  # 温度参数（0.0-1.0）
+  # - 0.0: 确定性输出
+  # - 0.5: 平衡的随机性（推荐）
+  # - 1.0: 高度随机
+  temperature: 0.7
+  # 最大生成 token 数
+  max_tokens: 2000
+  # 核采样参数（0.0-1.0）
+  top_p: 0.9
+# 扩展属性（可选）
+extra:
+  provider: "ByteDance"
+  region: "cn-beijing"
+  pricing:
+    input: "0.008"   # 每千 token 价格（元）
+    output: "0.008"
+  tags:
+    - "中文"
+    - "通用对话"
+    - "代码生成"
+
