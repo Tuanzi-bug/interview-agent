@@ -2,7 +2,6 @@ package tool
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -13,7 +12,6 @@ import (
 	"github.com/cloudwego/eino/components/document/parser"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
-	"github.com/cloudwego/eino/schema"
 )
 
 // PDFToTextRequest 大模型调用工具的入参结构体（明确参数要求）
@@ -24,28 +22,22 @@ type PDFToTextRequest struct {
 
 // PDFToTextResult 工具返回的结构化结果（大模型可直接解析）
 type PDFToTextResult struct {
-	Success    bool                   `json:"success"`             // 解析是否成功
-	Content    string                 `json:"content,omitempty"`   // 合并后的纯文本（ToPages=false时返回）
-	Pages      []PDFPageText          `json:"pages,omitempty"`     // 分页文本（ToPages=true时返回）
-	TotalPages int                    `json:"total_pages"`         // PDF总页数
-	ErrorMsg   string                 `json:"error_msg,omitempty"` // 错误信息（失败时返回）
-	Meta       map[string]interface{} `json:"meta,omitempty"`      // 元数据（方便追溯）
+	Success    bool                   `json:"success" jsonschema:"description=解析是否成功"`
+	Content    string                 `json:"content,omitempty" jsonschema:"description=合并后的纯文本（ToPages=false时返回）"`
+	Pages      []PDFPageText          `json:"pages,omitempty" jsonschema:"description=分页文本（ToPages=true时返回）"`
+	TotalPages int                    `json:"total_pages" jsonschema:"description=PDF总页数"`
+	ErrorMsg   string                 `json:"error_msg,omitempty" jsonschema:"description=错误信息（失败时返回）"`
+	Meta       map[string]interface{} `json:"meta,omitempty" jsonschema:"description=元数据（方便追溯）"`
 }
 
 // PDFPageText 单页文本结构（分页模式下使用）
 type PDFPageText struct {
-	PageNum int    `json:"page_num"` // 页码（从1开始）
-	Content string `json:"content"`  // 单页纯文本
+	PageNum int    `json:"page_num" jsonschema:"description=页码（从1开始）"`
+	Content string `json:"content" jsonschema:"description=单页纯文本"`
 }
 
 // ConvertPDFToText 核心逻辑：PDF转纯文本（工具执行入口）
-func ConvertPDFToText(ctx context.Context, req *PDFToTextRequest) (string, error) {
-	// 1. 参数校验（必填参数检查）
-	if req.FilePath == "" {
-		return "", errors.New("参数错误：必须传入 file_path（本地PDF文件的绝对路径）")
-	}
-
-	// 2. 初始化结果结构体
+func ConvertPDFToText(ctx context.Context, req *PDFToTextRequest) (*PDFToTextResult, error) {
 	result := PDFToTextResult{
 		Meta: map[string]interface{}{
 			"file_path":  req.FilePath,
@@ -53,14 +45,19 @@ func ConvertPDFToText(ctx context.Context, req *PDFToTextRequest) (string, error
 			"parse_time": time.Now().Format("2006-01-02 15:04:05"),
 		},
 	}
+	// 1. 参数校验（必填参数检查）
+	if req.FilePath == "" {
+		result.Success = false
+		result.ErrorMsg = "参数错误：必须传入 file_path（本地PDF文件的绝对路径）"
+		return &result, errors.New(result.ErrorMsg)
+	}
 
-	// 3. 打开本地PDF文件
+	// 2. 打开本地PDF文件
 	file, err := os.Open(req.FilePath)
 	if err != nil {
 		result.Success = false
 		result.ErrorMsg = fmt.Sprintf("打开PDF文件失败：%v（请检查路径是否正确、文件是否存在）", err)
-		resultJSON, _ := json.MarshalIndent(result, "", "  ")
-		return string(resultJSON), errors.New(result.ErrorMsg)
+		return &result, errors.New(result.ErrorMsg)
 	}
 	defer func(file *os.File) {
 		err := file.Close()
@@ -69,18 +66,17 @@ func ConvertPDFToText(ctx context.Context, req *PDFToTextRequest) (string, error
 		}
 	}(file)
 
-	// 4. 初始化Eino PDF解析器（无超时配置，极简核心）
+	// 3. 初始化Eino PDF解析器（无超时配置，极简核心）
 	pdfIns, err := pdfParser.NewPDFParser(ctx, &pdfParser.Config{
 		ToPages: req.ToPages, // 按大模型传入的参数决定是否分页
 	})
 	if err != nil {
 		result.Success = false
 		result.ErrorMsg = fmt.Sprintf("初始化PDF解析器失败：%v", err)
-		resultJSON, _ := json.MarshalIndent(result, "", "  ")
-		return string(resultJSON), errors.New(result.ErrorMsg)
+		return &result, errors.New(result.ErrorMsg)
 	}
 
-	// 5. 核心：解析PDF为纯文本
+	// 4. 核心：解析PDF为纯文本
 	docs, err := pdfIns.Parse(ctx, file,
 		parser.WithURI(req.FilePath),
 		parser.WithExtraMeta(result.Meta),
@@ -88,11 +84,10 @@ func ConvertPDFToText(ctx context.Context, req *PDFToTextRequest) (string, error
 	if err != nil {
 		result.Success = false
 		result.ErrorMsg = fmt.Sprintf("PDF解析失败：%v（仅支持文本型PDF，不支持扫描件/加密PDF）", err)
-		resultJSON, _ := json.MarshalIndent(result, "", "  ")
-		return string(resultJSON), errors.New(result.ErrorMsg)
+		return &result, errors.New(result.ErrorMsg)
 	}
 
-	// 6. 构造成功结果
+	// 5. 构造成功结果
 	result.Success = true
 	result.TotalPages = len(docs)
 
@@ -115,35 +110,17 @@ func ConvertPDFToText(ctx context.Context, req *PDFToTextRequest) (string, error
 		result.Content = contentBuilder
 	}
 
-	// 7. 结果序列化为JSON（大模型可直接解析）
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("结果序列化失败：%v", err)
-	}
-	return string(resultJSON), nil
+	// 6. 结果序列化为JSON（大模型可直接解析）
+	return &result, nil
 }
 
 // CreatePDFToTextTool 创建工具实例（供Eino框架注册，大模型识别）
 func CreatePDFToTextTool() tool.InvokableTool {
 	// 工具元信息：大模型识别的关键（名称、描述、参数定义）
-	pdfTool := utils.NewTool(&schema.ToolInfo{
-		Name: "pdf_to_text", // 工具名称（大模型调用时用）
-		Desc: "将本地PDF文件转换为纯文本，仅支持文本型PDF（可复制文字），不支持扫描件、加密PDF。需传入本地PDF的绝对路径，可选择按页面分割或合并所有页。",
-		// 参数定义（大模型明确知道该传什么）
-		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
-			"file_path": &schema.ParameterInfo{
-				Type:     schema.String,
-				Required: true, // 必填参数
-				Desc:     "本地PDF文件的绝对路径（Windows示例：D:\\test\\document.pdf；Linux/Mac示例：/home/user/document.pdf）",
-			},
-			"to_pages": &schema.ParameterInfo{
-				Type:     schema.Boolean,
-				Required: false,
-				Desc:     "是否按页面分割文本：true=返回每一页的文本（带页码），false=合并所有页为一个文本",
-			},
-		}),
-	}, ConvertPDFToText)
-
+	pdfTool, err := utils.InferTool("pdf_to_text", "将本地PDF文件转换为纯文本，仅支持文本型PDF（可复制文字），不支持扫描件、加密PDF。需传入本地PDF的绝对路径，可选择按页面分割或合并所有页。", ConvertPDFToText)
+	if err != nil {
+		log.Fatalf("infer tool failed: %v", err)
+	}
 	fmt.Println("✅ PDF转纯文本工具初始化完成（大模型可调用）")
 	return pdfTool
 }
