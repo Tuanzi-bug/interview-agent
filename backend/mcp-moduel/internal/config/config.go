@@ -156,3 +156,11 @@ func Parse(configJSON string) (*Config, error) {
 	cfg.SetDefaults()
 	return &cfg, nil
 }
+
+// Marshal 将配置序列化为 JSON 字符串
+func Marshal(cfg *Config) (string, error) {
+	if cfg == nil {
+		return "", fmt.Errorf("config cannot be nil")
+	}
+	return sonic.MarshalString(cfg)
+}

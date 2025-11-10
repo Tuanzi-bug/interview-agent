@@ -1,4 +1,4 @@
-package external_tool
+package tools
 
 import (
 	"context"

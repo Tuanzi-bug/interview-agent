@@ -14,6 +14,56 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
+// ServerConfig 服务器配置（用于 stdio 服务器）
+type ServerConfig struct {
+	// ServerName 服务器名称
+	ServerName string
+
+	// ServerVersion 服务器版本
+	ServerVersion string
+}
+
+// DefaultServerConfig 返回默认服务器配置
+func DefaultServerConfig() *ServerConfig {
+	return &ServerConfig{
+		ServerName:    "mcp-stdio-server",
+		ServerVersion: "1.0.0",
+	}
+}
+
+// Validate 验证配置
+func (c *ServerConfig) Validate() error {
+	if c.ServerName == "" {
+		c.ServerName = "mcp-stdio-server"
+	}
+	if c.ServerVersion == "" {
+		c.ServerVersion = "1.0.0"
+	}
+	return nil
+}
+
+// JSONRPCRequest JSON-RPC 2.0 请求结构
+type JSONRPCRequest struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      interface{}     `json:"id"`
+	Method  string          `json:"method"`
+	Params  json.RawMessage `json:"params,omitempty"`
+}
+
+// JSONRPCError JSON-RPC 2.0 错误结构
+type JSONRPCError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    string `json:"data,omitempty"`
+}
+
+// JSONRPCErrorResponse JSON-RPC 2.0 错误响应
+type JSONRPCErrorResponse struct {
+	JSONRPC string       `json:"jsonrpc"`
+	ID      interface{}  `json:"id"`
+	Error   JSONRPCError `json:"error"`
+}
+
 // StdioServer stdio 服务器实现
 type StdioServer struct {
 	toolRegistry *ToolRegistry

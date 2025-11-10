@@ -29,7 +29,7 @@ type ToolRegistry struct {
 	mu    sync.RWMutex
 }
 
-// NewToolRegistry 创建新的工具管理器
+// NewToolRegistry 创建新的工具注册表
 func NewToolRegistry() *ToolRegistry {
 	return &ToolRegistry{
 		tools: make(map[string]Tool),
