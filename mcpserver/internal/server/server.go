@@ -45,7 +45,7 @@ func (s *Server) ToolRegistry() *ToolRegistry {
 	return s.toolRegistry
 }
 
-// NewServer 创建新的 MCP 服务器实例
+// NewServer 初始化 MCP 服务器实例
 func NewServer(config *config.ServerConfig) *Server {
 	if config == nil {
 		panic("server config cannot be nil")

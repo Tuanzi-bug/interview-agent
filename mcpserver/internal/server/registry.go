@@ -23,13 +23,13 @@ type Tool interface {
 	Execute(ctx context.Context, arguments map[string]interface{}) (*mcp.CallToolResult, error)
 }
 
-// ToolRegistry 工具注册表
+// ToolRegistry 定义工具仓库
 type ToolRegistry struct {
 	tools map[string]Tool
 	mu    sync.RWMutex
 }
 
-// NewToolRegistry 创建新的工具注册表
+// NewToolRegistry 初始化工具仓库
 func NewToolRegistry() *ToolRegistry {
 	return &ToolRegistry{
 		tools: make(map[string]Tool),
