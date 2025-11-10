@@ -3,8 +3,9 @@ package agent
 import (
 	"context"
 	"fmt"
-	"github.com/cloudwego/eino/adk"
 	"log"
+
+	"github.com/cloudwego/eino/adk"
 )
 
 func NewInterviewProcessAgent() *adk.Runner {
