@@ -5,7 +5,6 @@ go 1.24.0
 require (
 	github.com/bytedance/sonic v1.14.2
 	github.com/cloudwego/eino v0.5.11
-	github.com/cloudwego/eino-examples v0.0.0-20251030062102-28d7c0a57807
 	github.com/cloudwego/eino-ext/components/document/parser/pdf v0.0.0-20251105133430-149843ccfe5d
 	github.com/cloudwego/eino-ext/components/document/transformer/splitter/recursive v0.0.0-20251105133430-149843ccfe5d
 	github.com/cloudwego/eino-ext/components/embedding/ark v0.1.0
@@ -84,6 +83,7 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mailru/easyjson v0.9.1 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/meguminnnnnnnnn/go-openai v0.1.0 // indirect
 	github.com/milvus-io/milvus-proto/go-api/v2 v2.4.10-0.20240819025435-512e3b98866a // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -95,6 +95,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/slongfield/pyfmt v0.0.0-20220222012616-ea85ff4c361f // indirect
@@ -103,6 +104,7 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
+	github.com/ugorji/go/codec v1.3.0 // indirect
 	github.com/volcengine/volc-sdk-golang v1.0.196 // indirect
 	github.com/volcengine/volcengine-go-sdk v1.1.44 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
