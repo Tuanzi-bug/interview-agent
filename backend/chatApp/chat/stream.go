@@ -30,6 +30,8 @@ func ReportSteam(sr *schema.StreamReader[*schema.Message]) {
 }
 
 func Stream(ctx context.Context, llm model.ToolCallingChatModel, in []*schema.Message) *schema.StreamReader[*schema.Message] {
+
+	// 执行链
 	result, err := llm.Stream(ctx, in)
 	if err != nil {
 		log.Fatalf("llm generate failed: %v", err)
