@@ -5,7 +5,7 @@ port: 8888
 # 数据库配置
 database:
   driver: "mysql"
-  dsn: "root:111111@tcp(localhost:3306)/interview_agent?charset=utf8mb4&parseTime=True&loc=Local"
+  dsn: "root:Myl011208@tcp(localhost:3306)/interview_agent?charset=utf8mb4&parseTime=True&loc=Local"
   max_open_conns: 100
   max_idle_conns: 10
   conn_max_lifetime: "1h"
@@ -13,7 +13,7 @@ database:
 # Redis配置
 redis:
   addr: "localhost:6379"
-  password: ""
+  password: "Myl011208"
   db: 0
   dial_timeout: "5s"
   read_timeout: "3s"
@@ -118,3 +118,9 @@ DocumentSplitter:
     - "! "                             # 英文感叹号
     - "? "                             # 英文问号
   KeepType: 0                          # 分隔符保留策略: 0=不保留, 1=保留在开头, 2=保留在结尾
+
+# 微信配置
+wechat:
+  app_id: appid
+  app_secret: appsecret
+  redirect_url: "http://localhost:8888/api/v1/user/wechat/callback"
