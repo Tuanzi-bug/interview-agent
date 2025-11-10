@@ -4,9 +4,10 @@ import (
 	"ai-eino-interview-agent/chatApp/agent"
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
-	"log"
 )
 
 func main() {
