@@ -1,4 +1,4 @@
-package milvus
+package storage
 
 import (
 	"context"

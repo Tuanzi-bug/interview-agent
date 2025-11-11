@@ -3,7 +3,6 @@ package milvus
 import (
 	"context"
 	"fmt"
-	"github.com/milvus-io/milvus-sdk-go/v2/entity"
 	"log"
 	"time"
 
@@ -12,8 +11,12 @@ import (
 	milvusIndexer "github.com/cloudwego/eino-ext/components/indexer/milvus"
 	milvusRetriever "github.com/cloudwego/eino-ext/components/retriever/milvus"
 	"github.com/milvus-io/milvus-sdk-go/v2/client"
+	"github.com/milvus-io/milvus-sdk-go/v2/entity"
 
 	"ai-eino-interview-agent/internal/config"
+	"ai-eino-interview-agent/internal/eino/milvus/retrieval"
+	"ai-eino-interview-agent/internal/eino/milvus/splitter"
+	"ai-eino-interview-agent/internal/eino/milvus/storage"
 )
 
 // MilvusManager Milvus服务管理器，负责初始化和管理所有Milvus相关服务
@@ -22,10 +25,10 @@ type MilvusManager struct {
 	Client client.Client
 
 	// 各个服务实例
-	EmbeddingService *EmbeddingService
-	SplitterService  *DocumentSplitterService
-	IndexerService   *IndexerService
-	RetrieverService *RetrieverService
+	EmbeddingService *storage.EmbeddingService
+	SplitterService  *splitter.DocumentSplitterService
+	IndexerService   *storage.IndexerService
+	RetrieverService *retrieval.RetrieverService
 
 	// 配置信息
 	Config *config.Config
@@ -75,7 +78,7 @@ func InitMilvusManager(ctx context.Context, cfg *config.Config) (*MilvusManager,
 		Timeout:    &timeout,
 		RetryTimes: &retryTimes,
 	}
-	embeddingService, err := NewArkEmbeddingService(ctx, embeddingConfig)
+	embeddingService, err := storage.NewArkEmbeddingService(ctx, embeddingConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize embedding service: %w", err)
 	}
@@ -90,7 +93,7 @@ func InitMilvusManager(ctx context.Context, cfg *config.Config) (*MilvusManager,
 		Separators:  cfg.DocumentSplitter.Separators,
 		KeepType:    recursive.KeepType(cfg.DocumentSplitter.KeepType),
 	}
-	splitterService, err := NewDocumentSplitterService(ctx, splitterConfig)
+	splitterService, err := splitter.NewDocumentSplitterService(ctx, splitterConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize document splitter: %w", err)
 	}
@@ -105,7 +108,7 @@ func InitMilvusManager(ctx context.Context, cfg *config.Config) (*MilvusManager,
 		Collection: cfg.Milvus.CollectionName,
 		Embedding:  embeddingService.GetEmbedder(),
 	}
-	indexerService, err := NewIndexerServiceWithDimension(ctx, indexerConfig, cfg.Embedding.Dimensions)
+	indexerService, err := storage.NewIndexerServiceWithDimension(ctx, indexerConfig, cfg.Embedding.Dimensions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize indexer service: %w", err)
 	}
@@ -124,7 +127,7 @@ func InitMilvusManager(ctx context.Context, cfg *config.Config) (*MilvusManager,
 		TopK:         cfg.Milvus.TopK,
 		Embedding:    embeddingService.GetEmbedder(),
 	}
-	retrieverService, err := NewRetrieverService(ctx, retrieverConfig)
+	retrieverService, err := retrieval.NewRetrieverService(ctx, retrieverConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize retriever service: %w", err)
 	}
@@ -173,22 +176,22 @@ func (m *MilvusManager) Close() error {
 }
 
 // GetEmbeddingService 获取Embedding服务
-func (m *MilvusManager) GetEmbeddingService() *EmbeddingService {
+func (m *MilvusManager) GetEmbeddingService() *storage.EmbeddingService {
 	return m.EmbeddingService
 }
 
 // GetSplitterService 获取文档分割器服务
-func (m *MilvusManager) GetSplitterService() *DocumentSplitterService {
+func (m *MilvusManager) GetSplitterService() *splitter.DocumentSplitterService {
 	return m.SplitterService
 }
 
 // GetIndexerService 获取索引器服务
-func (m *MilvusManager) GetIndexerService() *IndexerService {
+func (m *MilvusManager) GetIndexerService() *storage.IndexerService {
 	return m.IndexerService
 }
 
 // GetRetrieverService 获取检索器服务
-func (m *MilvusManager) GetRetrieverService() *RetrieverService {
+func (m *MilvusManager) GetRetrieverService() *retrieval.RetrieverService {
 	return m.RetrieverService
 }
 

@@ -1,4 +1,4 @@
-package milvus
+package retrieval
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/eino-ext/components/retriever/milvus"
 	"github.com/cloudwego/eino/schema"
+	milvusClient "github.com/milvus-io/milvus-sdk-go/v2/client"
 	"github.com/milvus-io/milvus-sdk-go/v2/entity"
 )
 
@@ -15,6 +16,7 @@ import (
 type RetrieverService struct {
 	retriever *milvus.Retriever
 	config    *milvus.RetrieverConfig
+	client    milvusClient.Client
 }
 
 // NewRetrieverService 创建新的检索器服务
@@ -55,7 +57,7 @@ func NewRetrieverService(ctx context.Context, config *milvus.RetrieverConfig) (*
 		OutputFields:      config.OutputFields,
 		DocumentConverter: config.DocumentConverter,
 		// 设置 VectorConverter 为 FloatVector 转换器（与 indexer 保持一致）
-		VectorConverter: floatVectorConverter,
+		VectorConverter: FloatVectorConverter,
 		MetricType:      config.MetricType,
 		TopK:            config.TopK,
 		Embedding:       config.Embedding,
@@ -82,14 +84,44 @@ func NewRetrieverService(ctx context.Context, config *milvus.RetrieverConfig) (*
 	return &RetrieverService{
 		retriever: retriever,
 		config:    config,
+		client:    config.Client,
 	}, nil
 }
 
-// Retrieve 检索相关文档
+// Retrieve 检索相关文档（不带过滤条件）
 func (s *RetrieverService) Retrieve(ctx context.Context, query string) ([]*schema.Document, error) {
+	return s.RetrieveWithOptions(ctx, query, nil)
+}
+
+// RetrieveWithOptions 检索相关文档（支持过滤选项）
+func (s *RetrieverService) RetrieveWithOptions(ctx context.Context, query string, opts *RetrieveOptions) ([]*schema.Document, error) {
 	if query == "" {
 		return nil, fmt.Errorf("query is empty")
 	}
+
+	// 因为默认的 retriever 绑定到特定的集合
+	if opts != nil && (opts.Collection != "") {
+		expr := BuildFilterExpr(opts)
+		return SearchWithExpr(ctx, s.client, s.config, query, expr, opts)
+	}
+
+	// 如果没有过滤选项，使用默认检索
+	if opts == nil {
+		documents, err := s.retriever.Retrieve(ctx, query)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve documents: %w", err)
+		}
+		return documents, nil
+	}
+
+	// 构建过滤表达式
+	expr := BuildFilterExpr(opts)
+	if expr != "" {
+		// 如果有过滤表达式，使用 Milvus SDK 直接搜索
+		return SearchWithExpr(ctx, s.client, s.config, query, expr, opts)
+	}
+
+	// 没有过滤条件，使用默认检索
 	documents, err := s.retriever.Retrieve(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve documents: %w", err)
@@ -97,21 +129,44 @@ func (s *RetrieverService) Retrieve(ctx context.Context, query string) ([]*schem
 	return documents, nil
 }
 
+// RetrieveWithDatabaseAndCollection 检索相关文档（指定数据库和集合）
+func (s *RetrieverService) RetrieveWithDatabaseAndCollection(
+	ctx context.Context,
+	query string,
+	database string,
+	collection string,
+	opts *RetrieveOptions,
+) ([]*schema.Document, error) {
+	if query == "" {
+		return nil, fmt.Errorf("query is empty")
+	}
+	if collection == "" {
+		return nil, fmt.Errorf("collection name is empty")
+	}
+
+	// 创建检索选项，包含集合信息（忽略数据库）
+	retrieveOpts := &RetrieveOptions{
+		Collection: collection,
+	}
+
+	// 如果提供了其他选项，合并它们
+	if opts != nil {
+		retrieveOpts.Language = opts.Language
+		retrieveOpts.Category = opts.Category
+		retrieveOpts.Expr = opts.Expr
+		retrieveOpts.TopK = opts.TopK
+		// 如果 opts 中也指定了集合，使用 opts 中的值（优先级更高）
+		if opts.Collection != "" {
+			retrieveOpts.Collection = opts.Collection
+		}
+	}
+
+	// 构建过滤表达式
+	expr := BuildFilterExpr(retrieveOpts)
+	return SearchWithExpr(ctx, s.client, s.config, query, expr, retrieveOpts)
+}
+
 // GetConfig 获取配置信息
 func (s *RetrieverService) GetConfig() *milvus.RetrieverConfig {
 	return s.config
-}
-
-// floatVectorConverter 将 float64 向量转换为 FloatVector
-// 这个转换器与 indexer 中使用的向量类型保持一致
-func floatVectorConverter(ctx context.Context, vectors [][]float64) ([]entity.Vector, error) {
-	result := make([]entity.Vector, 0, len(vectors))
-	for _, vector := range vectors {
-		float32Vec := make([]float32, len(vector))
-		for i, v := range vector {
-			float32Vec[i] = float32(v)
-		}
-		result = append(result, entity.FloatVector(float32Vec))
-	}
-	return result, nil
 }

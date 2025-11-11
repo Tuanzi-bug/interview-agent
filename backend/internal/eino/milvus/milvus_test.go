@@ -31,7 +31,7 @@ func getTestConfig() *config.Config {
 	return &config.Config{
 		Embedding: config.EmbeddingConfig{
 			APIKey:     os.Getenv("EMBEDDING_API_KEY"),
-			Model:      os.Getenv("EMBEDDING_MODEL"),
+			Model:      getEnvOrDefault("EMBEDDING_MODEL", "doubao-embedding-text-240715"), // 默认使用 embedding 模型
 			BaseURL:    "https://ark.cn-beijing.volces.com/api/v3/",
 			Region:     getEnvOrDefault("EMBEDDING_REGION", "cn-beijing"),
 			Timeout:    30 * time.Second,
@@ -46,8 +46,8 @@ func getTestConfig() *config.Config {
 		},
 		Milvus: config.MilvusConfig{
 			Address:        getEnvOrDefault("MILVUS_ADDRESS", "localhost:19530"),
-			CollectionName: "documents",
-			DatabaseName:   "default",
+			CollectionName: "knowledge",
+			DatabaseName:   "test1",
 			MetricType:     "COSINE",
 			Username:       getEnvOrDefault("MILVUS_USERNAME", "minioadmin"),
 			Password:       getEnvOrDefault("MILVUS_PASSWORD", "minioadmin"),

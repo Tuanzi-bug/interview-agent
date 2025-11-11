@@ -13,7 +13,7 @@ type ChatModelMgr struct {
 func NewChatModelMg() *ChatModelMgr {
 	return &ChatModelMgr{}
 }
-func (c *ChatModelMgr) Init() (ChatModel, error) {
+func (c *ChatModelMgr) Init(name string) (ChatModel, error) {
 	// 1. 初始化模型管理器
 	cfg := &Config{
 		ConfigPath:     "",
@@ -30,7 +30,7 @@ func (c *ChatModelMgr) Init() (ChatModel, error) {
 	// 2. 查找可用的豆包模型
 	models, err := mgr.ListModels(ctx, &ListOptions{
 		Status:     []ModelStatus{StatusActive},
-		NameFilter: "doubao",
+		NameFilter: name,
 	})
 	if err != nil {
 		log.Fatalf("查询模型失败: %v", err)

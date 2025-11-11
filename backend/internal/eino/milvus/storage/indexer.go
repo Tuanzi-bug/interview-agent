@@ -1,52 +1,15 @@
-package milvus
+package storage
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/bytedance/sonic"
 	"github.com/cloudwego/eino-ext/components/indexer/milvus"
 	"github.com/cloudwego/eino/schema"
 	"github.com/milvus-io/milvus-sdk-go/v2/entity"
 )
 
 //参考文档 https://www.cloudwego.io/zh/docs/eino/ecosystem_integration/indexer/indexer_milvus/
-
-// floatVectorSchema 定义浮点向量的数据结构（相当于表的结构）
-type floatVectorSchema struct {
-	ID       string    `json:"id" milvus:"name:id"`
-	Content  string    `json:"content" milvus:"name:content"`
-	Vector   []float32 `json:"vector" milvus:"name:vector"`
-	Metadata []byte    `json:"metadata" milvus:"name:metadata"`
-}
-
-// floatVectorDocumentConverter 将 schema.Document 转换为浮点向量格式
-func floatVectorDocumentConverter(ctx context.Context, docs []*schema.Document, vectors [][]float64) ([]interface{}, error) {
-	if len(docs) != len(vectors) {
-		return nil, fmt.Errorf("docs and vectors length mismatch: %d != %d", len(docs), len(vectors))
-	}
-	rows := make([]interface{}, 0, len(docs))
-	for idx, doc := range docs {
-		// 序列化 metadata
-		metadata, err := sonic.Marshal(doc.MetaData)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal metadata: %w", err)
-		}
-		vector := make([]float32, len(vectors[idx]))
-		for i, v := range vectors[idx] {
-			vector[i] = float32(v)
-		}
-		row := &floatVectorSchema{
-			ID:       doc.ID,
-			Content:  doc.Content,
-			Vector:   vector,
-			Metadata: metadata,
-		}
-		rows = append(rows, row)
-	}
-
-	return rows, nil
-}
 
 // IndexerService 封装 Milvus 索引器服务
 type IndexerService struct {
@@ -105,7 +68,7 @@ func NewIndexerServiceWithDimension(ctx context.Context, config *milvus.IndexerC
 		},
 		// 使用 L2 或 COSINE 度量类型（适用于浮点向量）
 		MetricType:        milvus.COSINE,
-		DocumentConverter: floatVectorDocumentConverter,
+		DocumentConverter: FloatVectorDocumentConverter,
 	}
 	// 创建 Indexer
 	indexer, err := milvus.NewIndexer(ctx, indexerConfig)

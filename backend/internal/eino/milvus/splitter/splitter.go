@@ -1,4 +1,4 @@
-package milvus
+package splitter
 
 import (
 	"context"
