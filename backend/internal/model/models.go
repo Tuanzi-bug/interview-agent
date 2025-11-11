@@ -8,16 +8,20 @@ import (
 
 // User 用户模型
 type User struct {
-	ID           uint           `json:"id" gorm:"primaryKey"`
-	Username     string         `json:"username" gorm:"uniqueIndex;size:50;not null"`
-	Email        string         `json:"email" gorm:"uniqueIndex;size:100;not null"`
-	PasswordHash string         `json:"-" gorm:"size:255;not null"`
-	Role         string         `json:"role" gorm:"size:20;default:'user'"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
-	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
-	Resumes      []Resume       `json:"resumes,omitempty" gorm:"foreignKey:UserID"`
-	Interviews   []Interview    `json:"interviews,omitempty" gorm:"foreignKey:UserID"`
+	ID            uint           `json:"id" gorm:"primaryKey"`
+	Username      string         `json:"username" gorm:"uniqueIndex;size:50;not null"`
+	Email         string         `json:"email" gorm:"uniqueIndex;size:100;not null"`
+	PasswordHash  string         `json:"-" gorm:"size:255;not null"`
+	Role          string         `json:"role" gorm:"size:20;default:'user'"`
+	WechatOpenID  string         `json:"wechat_open_id" gorm:"uniqueIndex;size:100"`  // 微信OpenID
+	WechatUnionID string         `json:"wechat_union_id" gorm:"uniqueIndex;size:100"` // 微信UnionID
+	Nickname      string         `json:"nickname" gorm:"size:100"`                    // 微信昵称
+	Avatar        string         `json:"avatar" gorm:"size:255"`                      // 微信头像
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `json:"-" gorm:"index"`
+	Resumes       []Resume       `json:"resumes,omitempty" gorm:"foreignKey:UserID"`
+	Interviews    []Interview    `json:"interviews,omitempty" gorm:"foreignKey:UserID"`
 }
 
 // Resume 简历模型

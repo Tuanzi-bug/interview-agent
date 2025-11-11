@@ -25,6 +25,14 @@ type Config struct {
 	Embedding        EmbeddingConfig `yaml:"Embedding"`
 	Milvus           MilvusConfig    `yaml:"Milvus"`
 	DocumentSplitter SplitterConfig  `yaml:"DocumentSplitter"`
+	Wechat           WechatConfig    `yaml:"wechat"` // 微信配置
+}
+
+// WechatConfig 微信配置
+type WechatConfig struct {
+	AppID       string `yaml:"app_id"`
+	AppSecret   string `yaml:"app_secret"`
+	RedirectURL string `yaml:"redirect_url"`
 }
 
 // CORSConfig CORS配置

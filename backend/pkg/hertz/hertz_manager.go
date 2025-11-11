@@ -58,8 +58,6 @@ func configureMiddleware() {
 	// HertzServer.Use(JWTMiddleware())
 }
 
-
-
 // configureRoutes 配置路由
 func configureRoutes() {
 	// 创建处理器实例
@@ -85,6 +83,12 @@ func configureRoutes() {
 			user.POST("/login", userHandler.Login)
 			user.GET("/profile", middleware.JWTMiddleware(), userHandler.GetProfile)
 			user.PUT("/profile", middleware.JWTMiddleware(), userHandler.UpdateProfile)
+			wechat := user.Group("/wechat")
+			{
+				// 微信登录相关路由
+				wechat.GET("/login", userHandler.WechatLogin)
+				wechat.GET("/callback", userHandler.WechatCallback)
+			}
 		}
 
 		// 简历相关路由（需要认证）
