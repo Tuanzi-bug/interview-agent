@@ -59,7 +59,7 @@ func (s *UserModelServer) CreateUserModel(ctx context.Context,
 		BaseURL:         req.GetBaseURL(),
 		APIKeyEncrypted: apiKey,
 		ConfigJSON:      configJSON,
-		MetaID:          metaID,
+		MetaID:          int64(metaID),
 		DefaultParams:   defaultParams,
 		Scope:           scope,
 		Status:          status,
@@ -125,7 +125,7 @@ func (s *UserModelServer) UpdateUserModel(ctx context.Context,
 
 	// 处理可选字段 - MetaID
 	if req.IsSetMetaID() {
-		existingModel.MetaID = uint64(req.GetMetaID())
+		existingModel.MetaID = req.GetMetaID()
 	}
 
 	// 处理可选字段 - DefaultParams

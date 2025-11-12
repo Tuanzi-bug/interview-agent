@@ -28,7 +28,7 @@ type (
 		ConfigJSON      string `json:"config_json" gorm:"type:json;comment:额外配置（如区域、访问密钥等）"`
 		SecretHint      string `json:"secret_hint" gorm:"size:32;default:'';comment:密钥脱敏提示（如显示末尾4位）"`
 		ProviderName    string `json:"provider_name" gorm:"size:64;not null;comment:提供商名称（如 OpenAI、Ark、DeepSeek）"`
-		MetaID          uint64 `json:"meta_id" gorm:"comment:关联全局 model_meta.id（继承能力/图标）"`
+		MetaID          int64  `json:"meta_id" gorm:"comment:关联全局 model_meta.id（继承能力/图标）"`
 		DefaultParams   string `json:"default_params" gorm:"type:json;comment:默认参数（如 temperature、max_tokens）"`
 		Scope           int    `json:"scope" gorm:"not null;default:7;comment:使用范围（位掩码：1=智能体, 2=应用, 4=工作流）"`
 		Status          int    `json:"status" gorm:"not null;default:1;comment:状态（0=禁用, 1=启用）"`

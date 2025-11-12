@@ -42,8 +42,33 @@ func ListUserModels(ctx context.Context, c *app.RequestContext) {
 		c.String(consts.StatusBadRequest, err.Error())
 		return
 	}
-
+	userId := int64(11111)
+	res, totl, err := userservice.NewModelManager().ListUserModels(ctx, userId, req)
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
 	resp := new(user.ListUserModelsResponse)
+	resp.Total = totl
+	modelList := make([]*user.UserModelItem, 0)
+	for _, model := range res {
+		modelList = append(modelList, &user.UserModelItem{
+			ID:            int64(model.ID),
+			Name:          model.Name,
+			ModelKey:      model.ModelKey,
+			Protocol:      model.Protocol,
+			BaseURL:       model.BaseURL,
+			ProviderName:  model.ProviderName,
+			MetaID:        &model.MetaID,
+			DefaultParams: &model.DefaultParams,
+			ConfigJSON:    &model.ConfigJSON,
+			Scope:         int32(model.Scope),
+			Status:        int32(model.Status),
+			CreatedAt:     model.CreatedAt,
+			UpdatedAt:     model.UpdatedAt,
+		})
+	}
+	resp.List = modelList
 
 	c.JSON(consts.StatusOK, resp)
 }
@@ -58,9 +83,25 @@ func GetUserModel(ctx context.Context, c *app.RequestContext) {
 		c.String(consts.StatusBadRequest, err.Error())
 		return
 	}
-
+	userId := int64(11111)
+	res, err := userservice.NewModelManager().UserModelDetail(ctx, userId, req.ID)
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
 	resp := new(user.GetUserModelResponse)
-
+	resp.Data = &user.UserModelDetail{
+		ID:            int64(res.ID),
+		Name:          res.Name,
+		ModelKey:      res.ModelKey,
+		Protocol:      res.Protocol,
+		BaseURL:       res.BaseURL,
+		ProviderName:  res.ProviderName,
+		MetaID:        &res.MetaID,
+		DefaultParams: &res.DefaultParams,
+		ConfigJSON:    &res.ConfigJSON,
+		Scope:         int32(res.Scope),
+	}
 	c.JSON(consts.StatusOK, resp)
 }
 
