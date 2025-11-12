@@ -1,27 +1,33 @@
 package user
 
 import (
-	"ai-eino-interview-agent/api/model/user"
+	userapi "ai-eino-interview-agent/api/model/user"
 	"ai-eino-interview-agent/internal/model"
 	"ai-eino-interview-agent/internal/service/user/impl"
 	"context"
+	"strings"
 )
 
-// NewModelManager 返回 ModelManager 接口的默认实现
+// NewModelManager 返回模型管理接口的默认实现
 func NewModelManager() ModelManager {
 	return impl.NewUserModelServer()
+}
+
+// NewUserManager 返回用户管理接口的默认实现
+func NewUserManager() UserManager {
+	return impl.NewUserServer()
 }
 
 type ModelManager interface {
 	CreateUserModel(
 		ctx context.Context,
 		userID int64,
-		req user.CreateUserModelRequest,
+		req userapi.CreateUserModelRequest,
 	) (string, error)
 	ListUserModels(
 		ctx context.Context,
 		userID int64,
-		req user.ListUserModelsRequest,
+		req userapi.ListUserModelsRequest,
 	) ([]*model.UserModel, int64, error)
 	UserModelDetail(
 		ctx context.Context,
@@ -31,11 +37,98 @@ type ModelManager interface {
 	UpdateUserModel(
 		ctx context.Context,
 		userID int64,
-		req user.UpdateUserModelRequest,
+		req userapi.UpdateUserModelRequest,
 	) error
 	DeleteUserModel(
 		ctx context.Context,
 		userID int64,
 		modelID int64,
 	) error
+}
+
+type UserManager interface {
+	Register(ctx context.Context, req userapi.RegisterRequest) (*userapi.LoginResponse, error)
+	Login(ctx context.Context, req userapi.LoginRequest) (*userapi.LoginResponse, error)
+	GetProfile(ctx context.Context, userID uint) (*userapi.UserProfile, error)
+	UpdateProfile(ctx context.Context, userID uint, req userapi.UpdateProfileRequest) (*userapi.UserProfile, error)
+	WechatLogin(ctx context.Context) (*userapi.WechatLoginQRResponse, error)
+	WechatCallback(ctx context.Context, req userapi.WechatCallbackRequest) (*userapi.LoginResponse, error)
+}
+
+func ToUserModelItem(m *model.UserModel) *userapi.UserModelItem {
+	if m == nil {
+		return nil
+	}
+
+	item := userapi.NewUserModelItem()
+	item.ID = int64(m.ID)
+	item.Name = m.Name
+	item.ModelKey = m.ModelKey
+	item.Protocol = m.Protocol
+	item.BaseURL = m.BaseURL
+	item.ProviderName = m.ProviderName
+
+	if m.MetaID != 0 {
+		metaID := m.MetaID
+		item.MetaID = &metaID
+	}
+	if strings.TrimSpace(m.DefaultParams) != "" {
+		defaultParams := m.DefaultParams
+		item.DefaultParams = &defaultParams
+	}
+	if strings.TrimSpace(m.ConfigJSON) != "" {
+		configJSON := m.ConfigJSON
+		item.ConfigJSON = &configJSON
+	}
+
+	item.Scope = int32(m.Scope)
+	item.Status = int32(m.Status)
+	item.CreatedAt = m.CreatedAt
+	item.UpdatedAt = m.UpdatedAt
+	item.HasSecret = strings.TrimSpace(m.APIKeyEncrypted) != ""
+	if strings.TrimSpace(m.SecretHint) != "" {
+		secretHint := m.SecretHint
+		item.SecretHint = &secretHint
+	}
+
+	return item
+}
+
+func ToUserModelDetail(m *model.UserModel) *userapi.UserModelDetail {
+	if m == nil {
+		return nil
+	}
+
+	detail := userapi.NewUserModelDetail()
+	detail.ID = int64(m.ID)
+	detail.Name = m.Name
+	detail.ModelKey = m.ModelKey
+	detail.Protocol = m.Protocol
+	detail.BaseURL = m.BaseURL
+	detail.ProviderName = m.ProviderName
+
+	if m.MetaID != 0 {
+		metaID := m.MetaID
+		detail.MetaID = &metaID
+	}
+	if strings.TrimSpace(m.DefaultParams) != "" {
+		defaultParams := m.DefaultParams
+		detail.DefaultParams = &defaultParams
+	}
+	if strings.TrimSpace(m.ConfigJSON) != "" {
+		configJSON := m.ConfigJSON
+		detail.ConfigJSON = &configJSON
+	}
+
+	detail.Scope = int32(m.Scope)
+	detail.Status = int32(m.Status)
+	detail.CreatedAt = m.CreatedAt
+	detail.UpdatedAt = m.UpdatedAt
+	detail.HasSecret = strings.TrimSpace(m.APIKeyEncrypted) != ""
+	if strings.TrimSpace(m.SecretHint) != "" {
+		secretHint := m.SecretHint
+		detail.SecretHint = &secretHint
+	}
+
+	return detail
 }

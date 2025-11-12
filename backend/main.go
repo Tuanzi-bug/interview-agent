@@ -2,8 +2,10 @@ package main
 
 import (
 	"ai-eino-interview-agent/api/router"
+	interviewRouter "ai-eino-interview-agent/api/router/interview"
 	"ai-eino-interview-agent/internal/config"
 	"ai-eino-interview-agent/internal/eino/milvus"
+	appMiddleware "ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/repository"
 	"context"
 	"errors"
@@ -80,6 +82,7 @@ func main() {
 
 	// 初始化Hertz服务器
 	s := server.Default(server.WithHostPorts(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)))
+	s.Use(appMiddleware.JWTMiddlewareWithSkipper(interviewRouter.AuthSkipper()))
 	router.GeneratedRegister(s)
 	// 创建一个通道来监听中断信号
 	quit := make(chan os.Signal, 1)
