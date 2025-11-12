@@ -5,7 +5,7 @@ port: 8888
 # 数据库配置
 database:
   driver: "mysql"
-  dsn: "root:Myl011208@tcp(localhost:3306)/interview_agent?charset=utf8mb4&parseTime=True&loc=Local"
+  dsn: "root:ht123456@tcp(localhost:3306)/interview_agent?charset=utf8mb4&parseTime=True&loc=Local"
   max_open_conns: 100
   max_idle_conns: 10
   conn_max_lifetime: "1h"
@@ -13,7 +13,7 @@ database:
 # Redis配置
 redis:
   addr: "localhost:6379"
-  password: "Myl011208"
+  password: ""
   db: 0
   dial_timeout: "5s"
   read_timeout: "3s"
@@ -98,7 +98,7 @@ Milvus:
 
   # 检索配置
   TopK: 5                                   # 返回的最相似文档数量
-  MetricType: "L2"                          # 距离度量类型: L2, IP, COSINE
+  MetricType: "COSINE"                      # 距离度量类型: L2, IP, COSINE
 
   # 超时配置
   ConnectTimeout: 10s                       # 连接超时
