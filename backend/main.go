@@ -1,30 +1,22 @@
 package main
 
-// @title AI-Eino 智能面试系统 API文档
-// @version 1.0.0
-// @description 智能面试助手系统，提供用户管理、简历管理、面试管理等功能
-// @contact.name 技术支持
-// @contact.url http://example.com/support
-// @contact.email support@example.com
-// @license.name Apache 2.0
-// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
-// @host localhost:8000
-// @BasePath /api/v1
-// @schemes http
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name Authorization
-
 import (
+	"ai-eino-interview-agent/api/router"
 	"ai-eino-interview-agent/internal/config"
 	"ai-eino-interview-agent/internal/eino/milvus"
+	"ai-eino-interview-agent/internal/repository"
+	"ai-eino-interview-agent/pkg/eino"
 	"context"
+	"errors"
 	"fmt"
+	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/joho/godotenv"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -37,10 +29,38 @@ func main() {
 	}
 
 	// 2. 加载配置文件
-	cfg, err := config.LoadConfig("/Users/hongtairen/Documents/ai_project/chat/go-eino-interview-agent/backend/config.yaml")
+	cfg, err := config.LoadConfig("backend/config.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
+
+	// 3. 展开配置中的环境变量引用（${VAR_NAME}）
+	cfg.ExpandEnv()
+	log.Println("Environment variables expanded in configuration")
+
+	// 4. 初始化数据库
+	log.Println("Initializing database connection...")
+	err = repository.InitDatabase(cfg.Database)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	log.Println("Database initialized successfully")
+
+	// 5. 初始化Redis
+	log.Println("Initializing Redis connection...")
+	err = repository.InitRedis(cfg.Redis)
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+	log.Println("Redis initialized successfully")
+
+	// 6. 初始化Eino框架
+	log.Println("Initializing Eino framework...")
+	err = eino.InitEino(cfg.Eino)
+	if err != nil {
+		log.Fatalf("Failed to initialize Eino: %v", err)
+	}
+	log.Println("Eino initialized successfully")
 
 	// 7. 初始化 Milvus Manager（向量数据库、Embedding、检索等服务）
 	log.Println("Initializing Milvus Manager...")
@@ -55,39 +75,39 @@ func main() {
 	}
 	log.Println("Milvus Manager initialized successfully")
 
-	tool := milvusManager.RetrieverService
-	q1 := "GMP模型是什么"
-	opts2 := &milvus.RetrieveOptions{
-		Language: milvus.LanguageGolang,
-		TopK:     5,
-	}
-	data, err := tool.RetrieveWithOptions(ctx, q1, opts2)
-	if err != nil {
-		log.Println("检索失败", err)
-	}
-	for i, doc := range data {
-		fmt.Printf("Document %d:\n", i+1)
-		fmt.Printf("  ID: %s\n", doc.ID)
-		fmt.Printf("  Content: %s\n", doc.Content)
-		// 如果需要输出元数据
-		if doc.MetaData != nil {
-			fmt.Printf("  MetaData: %+v\n", doc.MetaData)
-		}
-		fmt.Println("---")
-	}
-
+	// 初始化Hertz服务器
+	s := server.Default(server.WithHostPorts(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)))
+	router.GeneratedRegister(s)
 	// 创建一个通道来监听中断信号
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
+	// 在单独的goroutine中启动服务器
+	go func() {
+		log.Printf("Server is running on %s:%d", cfg.Host, cfg.Port)
+		if err := s.Run(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
 	// 等待中断信号
 	<-quit
 	log.Println("Shutting down server...")
+
 	// 关闭 Milvus Manager
 	if milvusManager != nil {
 		if err := milvusManager.Close(); err != nil {
 			log.Printf("Warning: Failed to close Milvus Manager: %v", err)
 		}
+	}
+
+	// 创建一个带有超时的上下文，用于优雅关闭
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// 优雅关闭服务器
+	if err := s.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 
 	log.Println("Server exiting")
