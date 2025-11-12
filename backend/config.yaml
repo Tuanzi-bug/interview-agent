@@ -1,4 +1,4 @@
-# 服务配置
+# WEB服务配置（AI智能体相关的在各自的服务下配置）
 host: "0.0.0.0"
 port: 8888
 
@@ -28,16 +28,6 @@ hertz:
   read_timeout: "10s"
   write_timeout: "10s"
   idle_timeout: "60s"
-
-# Eino框架配置
-eino:
-  model: "your-model-name"
-  api_key: "your-api-key-here"
-  base_url: "https://api.example.com/v1"
-  max_tokens: 2048
-  temperature: 0.7
-  retry_count: 3
-  retry_delay: "1s"
   
 # 面试系统配置
 interview:

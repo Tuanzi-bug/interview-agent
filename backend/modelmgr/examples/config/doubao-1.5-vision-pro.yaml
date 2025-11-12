@@ -14,7 +14,7 @@ capability:
   max_input_tokens: 4096
   max_output_tokens: 4096
 config:
-  api_key: ""
+  api_key: "6441ebfb-9d12-4a03-8108-9e91a794695d"
   model: "doubao-1.5-vision-pro-250328"
   base_url: "https://ark.cn-beijing.volces.com/api/v3/"
   
