@@ -45,7 +45,7 @@ func main() {
 		manager, err := milvus.InitMilvusManager(ctx, cfg)
 		exitIfErr(err)
 		defer manager.Close()
-		fmt.Println("Milvus manager initialized")
+		fmt.Println("Milvus manager.go initialized")
 	case "health":
 		manager, err := milvus.InitMilvusManager(ctx, cfg)
 		exitIfErr(err)

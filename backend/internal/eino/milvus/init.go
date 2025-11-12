@@ -145,7 +145,7 @@ func InitMilvusManager(ctx context.Context, cfg *config.Config) (*MilvusManager,
 // GetMilvusManager 获取全局Milvus管理器实例
 func GetMilvusManager() (*MilvusManager, error) {
 	if globalManager == nil {
-		return nil, fmt.Errorf("milvus manager not initialized, call InitMilvusManager first")
+		return nil, fmt.Errorf("milvus manager.go not initialized, call InitMilvusManager first")
 	}
 	return globalManager, nil
 }

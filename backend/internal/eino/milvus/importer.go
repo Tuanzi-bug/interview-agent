@@ -19,7 +19,7 @@ type MarkdownImporter struct {
 // NewMarkdownImporter 创建新的 Markdown 导入器
 func NewMarkdownImporter(manager *MilvusManager) (*MarkdownImporter, error) {
 	if manager == nil {
-		return nil, fmt.Errorf("milvus manager is nil")
+		return nil, fmt.Errorf("milvus manager.go is nil")
 	}
 	return &MarkdownImporter{
 		manager: manager,

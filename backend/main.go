@@ -5,7 +5,6 @@ import (
 	"ai-eino-interview-agent/internal/config"
 	"ai-eino-interview-agent/internal/eino/milvus"
 	"ai-eino-interview-agent/internal/repository"
-	"ai-eino-interview-agent/pkg/eino"
 	"context"
 	"errors"
 	"fmt"
@@ -15,6 +14,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
 	"syscall"
 	"time"
 )
@@ -29,7 +30,9 @@ func main() {
 	}
 
 	// 2. 加载配置文件
-	cfg, err := config.LoadConfig("backend/config.yaml")
+	// 获取配置文件路径（相对于 main.go 所在目录）
+	configPath := findConfigFile()
+	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
@@ -47,20 +50,20 @@ func main() {
 	log.Println("Database initialized successfully")
 
 	// 5. 初始化Redis
-	log.Println("Initializing Redis connection...")
-	err = repository.InitRedis(cfg.Redis)
-	if err != nil {
-		log.Fatalf("Failed to initialize Redis: %v", err)
-	}
-	log.Println("Redis initialized successfully")
-
-	// 6. 初始化Eino框架
-	log.Println("Initializing Eino framework...")
-	err = eino.InitEino(cfg.Eino)
-	if err != nil {
-		log.Fatalf("Failed to initialize Eino: %v", err)
-	}
-	log.Println("Eino initialized successfully")
+	//log.Println("Initializing Redis connection...")
+	//err = repository.InitRedis(cfg.Redis)
+	//if err != nil {
+	//	log.Fatalf("Failed to initialize Redis: %v", err)
+	//}
+	//log.Println("Redis initialized successfully")
+	//
+	//// 6. 初始化Eino框架
+	//log.Println("Initializing Eino framework...")
+	//err = eino.InitEino(cfg.Eino)
+	//if err != nil {
+	//	log.Fatalf("Failed to initialize Eino: %v", err)
+	//}
+	//log.Println("Eino initialized successfully")
 
 	// 7. 初始化 Milvus Manager（向量数据库、Embedding、检索等服务）
 	log.Println("Initializing Milvus Manager...")
@@ -101,14 +104,51 @@ func main() {
 		}
 	}
 
-	// 创建一个带有超时的上下文，用于优雅关闭
+	// 创建一个带有超时的上下文，用于关闭
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// 优雅关闭服务器
+	// 关闭服务器
 	if err := s.Shutdown(shutdownCtx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 
 	log.Println("Server exiting")
+}
+
+// findConfigFile 查找配置文件路径
+// 优先使用相对于 main.go 所在目录的 config.yaml
+func findConfigFile() string {
+	// 获取 main.go 源代码文件的路径
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		// 如果无法获取，尝试使用当前工作目录
+		return "config.yaml"
+	}
+
+	// main.go 在 backend 目录下，config.yaml 也在 backend 目录下
+	backendDir := filepath.Dir(currentFile)
+	configPath := filepath.Join(backendDir, "config.yaml")
+
+	// 检查文件是否存在
+	if _, err := os.Stat(configPath); err == nil {
+		return configPath
+	}
+
+	// 如果不存在，尝试当前工作目录
+	if wd, err := os.Getwd(); err == nil {
+		// 尝试 backend/config.yaml（从项目根目录运行）
+		path1 := filepath.Join(wd, "backend", "config.yaml")
+		if _, err := os.Stat(path1); err == nil {
+			return path1
+		}
+		// 尝试 config.yaml（从 backend 目录运行）
+		path2 := filepath.Join(wd, "config.yaml")
+		if _, err := os.Stat(path2); err == nil {
+			return path2
+		}
+	}
+
+	// 默认返回相对于 main.go 的路径
+	return configPath
 }

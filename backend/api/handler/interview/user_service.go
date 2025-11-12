@@ -3,6 +3,7 @@
 package interview
 
 import (
+	userservice "ai-eino-interview-agent/internal/service/user"
 	"context"
 
 	user "ai-eino-interview-agent/api/model/user"
@@ -20,9 +21,14 @@ func CreateUserModel(ctx context.Context, c *app.RequestContext) {
 		c.String(consts.StatusBadRequest, err.Error())
 		return
 	}
-
+	userId := int64(11111)
+	res, err := userservice.NewModelManager().CreateUserModel(ctx, userId, req)
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
 	resp := new(user.CreateUserModelResponse)
-
+	resp.State = res
 	c.JSON(consts.StatusOK, resp)
 }
 
