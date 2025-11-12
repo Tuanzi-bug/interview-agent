@@ -13,7 +13,7 @@ import (
 )
 
 // NewAnswerEvalAgent 基于现有模板构建的模拟面试智能体
-func NewAnswerEvalAgent() adk.Agent {
+func NewAnswerEvalAgent(supervisorName string) adk.Agent {
 	ctx := context.Background()
 
 	a, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
@@ -41,5 +41,9 @@ func NewAnswerEvalAgent() adk.Agent {
 		log.Fatal(fmt.Errorf("failed to create answer eval agent: %w", err))
 	}
 
-	return a
+	// 增强：完成后自动回调Supervisor
+	return adk.AgentWithDeterministicTransferTo(context.Background(), &adk.DeterministicTransferConfig{
+		Agent:        a,
+		ToAgentNames: []string{supervisorName},
+	})
 }

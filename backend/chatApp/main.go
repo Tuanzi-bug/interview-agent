@@ -2,43 +2,82 @@ package main
 
 import (
 	"ai-eino-interview-agent/chatApp/agent"
-	"context"
 	"fmt"
-	"log"
-
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
+	"golang.org/x/net/context"
+	"log"
 )
 
 func main() {
 	ctx := context.Background()
-	runner := agent.NewInterviewProcessAgent()
 
-	mockMessages := buildResumeAnalysisQuery()
+	// 1. 创建Supervisor Agent（包含所有子Agent）
+	interviewSupervisor := agent.NewInterviewSupervisorAgent()
 
-	iter := runner.Run(ctx, mockMessages)
+	// 2. 创建Runner
+	runner := adk.NewRunner(ctx, adk.RunnerConfig{
+		Agent: interviewSupervisor,
+	})
+
+	query := buildResumeAnalysisQuery()
+
+	// 3. 启动面试流程（用户输入简历）
+	log.Println("====== 面试流程启动 ======")
+	iter := runner.Run(ctx, query)
+
+	// 4. 处理事件流
 	for {
 		event, ok := iter.Next()
 		if !ok {
 			break
 		}
 		if event.Err != nil {
-			log.Fatal(event.Err)
-		}
-		if event.Action != nil {
-			log.Printf("\nAgent[%s]: transfer to %+v\n\n======\n", event.AgentName, event.Action.TransferToAgent.DestAgentName)
-		} else {
-			log.Printf("\nAgent[%s]:\n%+v\n\n======\n", event.AgentName, event.Output.MessageOutput.Message)
+			log.Fatalf("面试流程出错：%v", event.Err)
 		}
 
-		if event.Output != nil && event.Output.MessageOutput.Message.Content != "" {
-			lastMessage, _, err := adk.GetMessage(event)
-			if err != nil {
-				log.Fatal(err)
+		// 打印转让事件
+		if event.Action != nil && event.Action.TransferToAgent != nil {
+			log.Printf("\n🔄 调度中心转让任务给：%s", event.Action.TransferToAgent.DestAgentName)
+			continue
+		}
+
+		// 打印Agent输出
+		if event.Output != nil && event.Output.MessageOutput != nil {
+			log.Printf("\n📢 %s 输出：\n%s", event.AgentName, event.Output.MessageOutput.Message.Content)
+			if event.AgentName == "InterviewReportAgent" {
+				log.Println("\n====== 面试流程结束 ======")
 			}
-			fmt.Printf("lastMessage: content=%+v role=%s\n", lastMessage.Content, lastMessage.Role)
 		}
 	}
+	//ctx := context.Background()
+	//runner := agent.NewInterviewProcessAgent()
+	//
+	//mockMessages := buildResumeAnalysisQuery()
+	//
+	//iter := runner.Run(ctx, mockMessages)
+	//for {
+	//	event, ok := iter.Next()
+	//	if !ok {
+	//		break
+	//	}
+	//	if event.Err != nil {
+	//		log.Fatal(event.Err)
+	//	}
+	//	if event.Action != nil {
+	//		log.Printf("\nAgent[%s]: transfer to %+v\n\n======\n", event.AgentName, event.Action.TransferToAgent.DestAgentName)
+	//	} else {
+	//		log.Printf("\nAgent[%s]:\n%+v\n\n======\n", event.AgentName, event.Output.MessageOutput.Message)
+	//	}
+	//
+	//	if event.Output != nil && event.Output.MessageOutput.Message.Content != "" {
+	//		lastMessage, _, err := adk.GetMessage(event)
+	//		if err != nil {
+	//			log.Fatal(err)
+	//		}
+	//		fmt.Printf("lastMessage: content=%+v role=%s\n", lastMessage.Content, lastMessage.Role)
+	//	}
+	//}
 }
 
 func mockResumeAnalysisJSON() string {
@@ -102,7 +141,7 @@ func buildQuestionGeneratorQuery() []adk.Message {
 
 func buildResumeAnalysisQuery() []adk.Message {
 	//这个需要你去提供你的简历
-	query := "帮我解析C:\\Users\\86153\\Desktop\\xjl.pdf这个PDF文件 开始模拟面试,进行5轮问题回答,"
+	query := "帮我解析 C:\\Users\\LittleBear\\Desktop\\GoTest.pdf 这个PDF文件开始模拟面试问题回答"
 
 	mockMessages := []adk.Message{
 		schema.UserMessage(query),

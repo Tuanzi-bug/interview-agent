@@ -9,8 +9,9 @@ import (
 	"github.com/cloudwego/eino/compose"
 	"log"
 )
+
 // 面试报告
-func NewInterviewReportAgent() adk.Agent {
+func NewInterviewReportAgent(supervisorName string) adk.Agent {
 	ctx := context.Background()
 
 	a, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
@@ -30,5 +31,9 @@ func NewInterviewReportAgent() adk.Agent {
 		log.Fatal(fmt.Errorf("failed to create chatmodel: %w", err))
 	}
 
-	return a
+	// 增强：完成后自动回调Supervisor
+	return adk.AgentWithDeterministicTransferTo(context.Background(), &adk.DeterministicTransferConfig{
+		Agent:        a,
+		ToAgentNames: []string{supervisorName},
+	})
 }
