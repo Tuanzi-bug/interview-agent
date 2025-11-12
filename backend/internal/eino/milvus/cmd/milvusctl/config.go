@@ -10,7 +10,7 @@ import (
 func getTestConfig() *config.Config {
 	return &config.Config{
 		Embedding: config.EmbeddingConfig{
-			APIKey:     "5d4abebd-3bda-4403-97b3-169e948a2c72",
+			APIKey:     "",
 			Model:      "doubao-embedding-text-240715",
 			BaseURL:    "https://ark.cn-beijing.volces.com/api/v3/",
 			Region:     getEnvOrDefault("EMBEDDING_REGION", "cn-beijing"),
