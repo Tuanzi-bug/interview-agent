@@ -122,6 +122,70 @@ struct UpdateUserModelResponse {
 struct DeleteUserModelResponse {
 }
 
+// ==================== 6. 用户认证与资料相关 ====================
+
+// 注册请求
+struct RegisterRequest {
+    1: required string username (api.form="username")
+    2: required string email (api.form="email")
+    3: required string password (api.form="password")
+}
+
+// 登录请求
+struct LoginRequest {
+    1: required string email (api.form="email")
+    2: required string password (api.form="password")
+}
+
+// 用户资料
+struct UserProfile {
+    1: required i64 id
+    2: required string username
+    3: required string email
+    4: required string role
+    5: optional string wechat_open_id
+    6: optional string wechat_union_id
+    7: optional string nickname
+    8: optional string avatar
+    9: optional i64 created_at
+    10: optional i64 updated_at
+}
+
+// 登录/注册响应
+struct LoginResponse {
+    1: required string token
+    2: required UserProfile user
+}
+
+// 空请求
+struct EmptyRequest {}
+
+// 获取资料响应
+struct GetProfileResponse {
+    1: required UserProfile data
+}
+
+// 更新资料请求
+struct UpdateProfileRequest {
+    1: optional string username (api.form="username")
+    2: optional string email (api.form="email")
+}
+
+// 更新资料响应
+struct UpdateProfileResponse {
+    1: required UserProfile data
+}
+
+// 微信登录二维码响应
+struct WechatLoginQRResponse {
+    1: required string login_url
+}
+
+// 微信回调请求
+struct WechatCallbackRequest {
+    1: required string code (api.query="code")
+    2: optional string state (api.query="state")
+}
 // 服务定义
 service UserService {
     // 1. 创建用户模型
@@ -200,69 +264,4 @@ service UserService {
            api.category="user",
            api.gen_path="user"
        )
-}
-
-// ==================== 6. 用户认证与资料相关 ====================
-
-// 注册请求
-struct RegisterRequest {
-    1: required string username (api.form="username")
-    2: required string email (api.form="email")
-    3: required string password (api.form="password")
-}
-
-// 登录请求
-struct LoginRequest {
-    1: required string email (api.form="email")
-    2: required string password (api.form="password")
-}
-
-// 用户资料
-struct UserProfile {
-    1: required i64 id
-    2: required string username
-    3: required string email
-    4: required string role
-    5: optional string wechat_open_id
-    6: optional string wechat_union_id
-    7: optional string nickname
-    8: optional string avatar
-    9: optional i64 created_at
-    10: optional i64 updated_at
-}
-
-// 登录/注册响应
-struct LoginResponse {
-    1: required string token
-    2: required UserProfile user
-}
-
-// 空请求
-struct EmptyRequest {}
-
-// 获取资料响应
-struct GetProfileResponse {
-    1: required UserProfile data
-}
-
-// 更新资料请求
-struct UpdateProfileRequest {
-    1: optional string username (api.form="username")
-    2: optional string email (api.form="email")
-}
-
-// 更新资料响应
-struct UpdateProfileResponse {
-    1: required UserProfile data
-}
-
-// 微信登录二维码响应
-struct WechatLoginQRResponse {
-    1: required string login_url
-}
-
-// 微信回调请求
-struct WechatCallbackRequest {
-    1: required string code (api.query="code")
-    2: optional string state (api.query="state")
 }
