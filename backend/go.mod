@@ -4,7 +4,9 @@ go 1.24.0
 
 toolchain go1.24.10
 
+replace github.com/apache/thrift => github.com/apache/thrift v0.13.0
 require (
+	github.com/apache/thrift v0.21.0
 	github.com/bytedance/sonic v1.14.2
 	github.com/cloudwego/eino v0.5.11
 	github.com/cloudwego/eino-ext/components/document/parser/pdf v0.0.0-20251105133430-149843ccfe5d
@@ -17,7 +19,6 @@ require (
 	github.com/cloudwego/eino-ext/components/tool/googlesearch v0.0.0-20251105133430-149843ccfe5d
 	github.com/cloudwego/hertz v0.10.3
 	github.com/golang-jwt/jwt/v5 v5.2.1
-	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/mark3labs/mcp-go v0.43.0
 	github.com/milvus-io/milvus-sdk-go/v2 v2.4.2
@@ -71,6 +72,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.13.0 // indirect
 	github.com/goph/emperror v0.17.2 // indirect
@@ -137,4 +139,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-// 移除不兼容的replace指令
+replace github.com/apache/thrift => github.com/apache/thrift v0.13.0
