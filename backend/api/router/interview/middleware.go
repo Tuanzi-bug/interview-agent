@@ -3,70 +3,109 @@
 package interview
 
 import (
+	serviceMiddleware "ai-eino-interview-agent/internal/middleware"
+
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
 
+var jwtPublicRoutes = map[string]struct{}{
+	"/api/user/login":           {},
+	"/api/user/register":        {},
+	"/api/user/wechat/login":    {},
+	"/api/user/wechat/callback": {},
+}
+
+func AuthSkipper() serviceMiddleware.JWTSkipper {
+	return func(ctx *app.RequestContext) bool {
+		if string(ctx.Method()) == consts.MethodOptions {
+			return true
+		}
+
+		path := string(ctx.Path())
+		if _, ok := jwtPublicRoutes[path]; ok {
+			return true
+		}
+		return false
+	}
+}
+
 func rootMw() []app.HandlerFunc {
-	// your code...
 	return nil
 }
 
 func _apiMw() []app.HandlerFunc {
-	// your code...
 	return nil
 }
 
 func _userMw() []app.HandlerFunc {
-	// your code...
 	return nil
 }
 
 func _createMw() []app.HandlerFunc {
-	// your code...
 	return nil
 }
 
 func _createusermodelMw() []app.HandlerFunc {
-	// your code...
 	return nil
 }
 
 func _modelMw() []app.HandlerFunc {
-	// your code...
 	return nil
 }
 
 func _listusermodelsMw() []app.HandlerFunc {
-	// your code...
 	return nil
 }
 
 func _deleteMw() []app.HandlerFunc {
-	// your code...
 	return nil
 }
 
 func _deleteusermodelMw() []app.HandlerFunc {
-	// your code...
 	return nil
 }
 
 func _detailsMw() []app.HandlerFunc {
-	// your code...
 	return nil
 }
 
 func _getusermodelMw() []app.HandlerFunc {
-	// your code...
 	return nil
 }
 
 func _updateMw() []app.HandlerFunc {
-	// your code...
 	return nil
 }
 
 func _updateusermodelMw() []app.HandlerFunc {
-	// your code...
+	return nil
+}
+
+func _loginMw() []app.HandlerFunc {
+	return nil
+}
+
+func _getprofileMw() []app.HandlerFunc {
+	return nil
+}
+
+func _updateprofileMw() []app.HandlerFunc {
+	return nil
+}
+
+func _registerMw() []app.HandlerFunc {
+	return nil
+}
+
+func _wechatMw() []app.HandlerFunc {
+	return nil
+}
+
+func _wechatcallbackMw() []app.HandlerFunc {
+	return nil
+}
+
+func _wechatloginMw() []app.HandlerFunc {
 	return nil
 }

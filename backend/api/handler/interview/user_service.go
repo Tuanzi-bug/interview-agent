@@ -3,72 +3,85 @@
 package interview
 
 import (
-	userservice "ai-eino-interview-agent/internal/service/user"
 	"context"
+	"errors"
 
 	user "ai-eino-interview-agent/api/model/user"
+	"ai-eino-interview-agent/internal/middleware"
+	userservice "ai-eino-interview-agent/internal/service/user"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"gorm.io/gorm"
 )
 
 // CreateUserModel .
 // @router /api/user/create/model [POST]
 func CreateUserModel(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req user.CreateUserModelRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
+	if err := c.BindAndValidate(&req); err != nil {
 		c.String(consts.StatusBadRequest, err.Error())
 		return
 	}
-	userId := int64(11111)
-	res, err := userservice.NewModelManager().CreateUserModel(ctx, userId, req)
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		c.String(consts.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	state, err := userservice.NewModelManager().CreateUserModel(ctx, int64(userID), req)
 	if err != nil {
 		c.String(consts.StatusInternalServerError, err.Error())
 		return
 	}
-	resp := new(user.CreateUserModelResponse)
-	resp.State = res
+
+	resp := user.NewCreateUserModelResponse()
+	resp.State = state
 	c.JSON(consts.StatusOK, resp)
 }
 
 // ListUserModels .
 // @router /api/user/model/list [GET]
 func ListUserModels(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req user.ListUserModelsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
+	if err := c.BindAndValidate(&req); err != nil {
 		c.String(consts.StatusBadRequest, err.Error())
 		return
 	}
-	userId := int64(11111)
-	res, totl, err := userservice.NewModelManager().ListUserModels(ctx, userId, req)
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		c.String(consts.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	page := req.GetPage()
+	if page <= 0 {
+		page = 1
+	}
+	size := req.GetSize()
+	if size <= 0 {
+		size = 10
+	}
+	if size > 100 {
+		size = 100
+	}
+
+	models, total, err := userservice.NewModelManager().ListUserModels(ctx, int64(userID), req)
 	if err != nil {
 		c.String(consts.StatusInternalServerError, err.Error())
 		return
 	}
-	resp := new(user.ListUserModelsResponse)
-	resp.Total = totl
-	modelList := make([]*user.UserModelItem, 0)
-	for _, model := range res {
-		modelList = append(modelList, &user.UserModelItem{
-			ID:            int64(model.ID),
-			Name:          model.Name,
-			ModelKey:      model.ModelKey,
-			Protocol:      model.Protocol,
-			BaseURL:       model.BaseURL,
-			ProviderName:  model.ProviderName,
-			MetaID:        &model.MetaID,
-			DefaultParams: &model.DefaultParams,
-			ConfigJSON:    &model.ConfigJSON,
-			Scope:         int32(model.Scope),
-			Status:        int32(model.Status),
-			CreatedAt:     model.CreatedAt,
-			UpdatedAt:     model.UpdatedAt,
-		})
+
+	resp := user.NewListUserModelsResponse()
+	resp.List = make([]*user.UserModelItem, 0, len(models))
+	for _, m := range models {
+		resp.List = append(resp.List, userservice.ToUserModelItem(m))
 	}
-	resp.List = modelList
+	resp.Total = total
+	resp.Page = page
+	resp.Size = size
 
 	c.JSON(consts.StatusOK, resp)
 }
@@ -76,63 +89,230 @@ func ListUserModels(ctx context.Context, c *app.RequestContext) {
 // GetUserModel .
 // @router /api/user/model/details/:id [GET]
 func GetUserModel(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req user.IDRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
+	if err := c.BindAndValidate(&req); err != nil {
 		c.String(consts.StatusBadRequest, err.Error())
 		return
 	}
-	userId := int64(11111)
-	res, err := userservice.NewModelManager().UserModelDetail(ctx, userId, req.ID)
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		c.String(consts.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	record, err := userservice.NewModelManager().UserModelDetail(ctx, int64(userID), req.GetID())
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.String(consts.StatusNotFound, "user model not found")
+			return
+		}
 		c.String(consts.StatusInternalServerError, err.Error())
 		return
 	}
-	resp := new(user.GetUserModelResponse)
-	resp.Data = &user.UserModelDetail{
-		ID:            int64(res.ID),
-		Name:          res.Name,
-		ModelKey:      res.ModelKey,
-		Protocol:      res.Protocol,
-		BaseURL:       res.BaseURL,
-		ProviderName:  res.ProviderName,
-		MetaID:        &res.MetaID,
-		DefaultParams: &res.DefaultParams,
-		ConfigJSON:    &res.ConfigJSON,
-		Scope:         int32(res.Scope),
-	}
+
+	resp := user.NewGetUserModelResponse()
+	resp.Data = userservice.ToUserModelDetail(record)
+
 	c.JSON(consts.StatusOK, resp)
 }
 
 // UpdateUserModel .
 // @router /api/user/model/update/:id [PUT]
 func UpdateUserModel(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req user.UpdateUserModelRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
+	if err := c.BindAndValidate(&req); err != nil {
 		c.String(consts.StatusBadRequest, err.Error())
 		return
 	}
 
-	resp := new(user.UpdateUserModelResponse)
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		c.String(consts.StatusUnauthorized, "unauthorized")
+		return
+	}
 
+	if err := userservice.NewModelManager().UpdateUserModel(ctx, int64(userID), req); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.String(consts.StatusNotFound, "user model not found")
+			return
+		}
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
+
+	resp := user.NewUpdateUserModelResponse()
 	c.JSON(consts.StatusOK, resp)
 }
 
 // DeleteUserModel .
 // @router /api/user/model/delete/:id [DELETE]
 func DeleteUserModel(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req user.IDRequest
+	if err := c.BindAndValidate(&req); err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		c.String(consts.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	if err := userservice.NewModelManager().DeleteUserModel(ctx, int64(userID), req.GetID()); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.String(consts.StatusNotFound, "user model not found")
+			return
+		}
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
+
+	resp := user.NewDeleteUserModelResponse()
+	c.JSON(consts.StatusOK, resp)
+}
+
+// Register .
+// @router /api/user/register [POST]
+func Register(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req user.RegisterRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
 		c.String(consts.StatusBadRequest, err.Error())
 		return
 	}
 
-	resp := new(user.DeleteUserModelResponse)
+	manager := userservice.NewUserManager()
+	resp, err := manager.Register(ctx, req)
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// Login .
+// @router /api/user/login [POST]
+func Login(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req user.LoginRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	manager := userservice.NewUserManager()
+	resp, err := manager.Login(ctx, req)
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetProfile .
+// @router /api/user/profile [GET]
+func GetProfile(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req user.EmptyRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		c.String(consts.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	manager := userservice.NewUserManager()
+	profile, err := manager.GetProfile(ctx, uint(userID))
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
+
+	resp := new(user.GetProfileResponse)
+	resp.Data = profile
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// UpdateProfile .
+// @router /api/user/profile [PUT]
+func UpdateProfile(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req user.UpdateProfileRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		c.String(consts.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	manager := userservice.NewUserManager()
+	profile, err := manager.UpdateProfile(ctx, userID, req)
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
+
+	resp := new(user.UpdateProfileResponse)
+	resp.Data = profile
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// WechatLogin .
+// @router /api/user/wechat/login [GET]
+func WechatLogin(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req user.EmptyRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	manager := userservice.NewUserManager()
+	resp, err := manager.WechatLogin(ctx)
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// WechatCallback .
+// @router /api/user/wechat/callback [GET]
+func WechatCallback(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req user.WechatCallbackRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	manager := userservice.NewUserManager()
+	resp, err := manager.WechatCallback(ctx, req)
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
 
 	c.JSON(consts.StatusOK, resp)
 }

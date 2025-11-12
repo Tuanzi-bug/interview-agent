@@ -21,6 +21,10 @@ func Register(r *server.Hertz) {
 		_api := root.Group("/api", _apiMw()...)
 		{
 			_user := _api.Group("/user", _userMw()...)
+			_user.POST("/login", append(_loginMw(), interview.Login)...)
+			_user.GET("/profile", append(_getprofileMw(), interview.GetProfile)...)
+			_user.PUT("/profile", append(_updateprofileMw(), interview.UpdateProfile)...)
+			_user.POST("/register", append(_registerMw(), interview.Register)...)
 			{
 				_create := _user.Group("/create", _createMw()...)
 				_create.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
@@ -40,6 +44,11 @@ func Register(r *server.Hertz) {
 					_update := _model.Group("/update", _updateMw()...)
 					_update.PUT("/:id", append(_updateusermodelMw(), interview.UpdateUserModel)...)
 				}
+			}
+			{
+				_wechat := _user.Group("/wechat", _wechatMw()...)
+				_wechat.GET("/callback", append(_wechatcallbackMw(), interview.WechatCallback)...)
+				_wechat.GET("/login", append(_wechatloginMw(), interview.WechatLogin)...)
 			}
 		}
 	}
