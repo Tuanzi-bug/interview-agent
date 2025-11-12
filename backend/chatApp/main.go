@@ -1,7 +1,7 @@
 package main
 
 import (
-	"ai-eino-interview-agent/chatApp/example"
+	"ai-eino-interview-agent/chatApp/agent"
 	"fmt"
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
@@ -13,16 +13,18 @@ func main() {
 	ctx := context.Background()
 
 	// 1. 创建Supervisor Agent（包含所有子Agent）
-	interviewSupervisor := example.NewInterviewSupervisorAgent()
+	interviewSupervisor := agent.NewInterviewSupervisorAgent()
 
 	// 2. 创建Runner
 	runner := adk.NewRunner(ctx, adk.RunnerConfig{
 		Agent: interviewSupervisor,
 	})
 
+	query := buildResumeAnalysisQuery()
+
 	// 3. 启动面试流程（用户输入简历）
 	log.Println("====== 面试流程启动 ======")
-	iter := runner.Query(ctx, "请开始模拟面试，基于我的简历关键字：Go、Redis、微服务。逐轮提问。")
+	iter := runner.Run(ctx, query)
 
 	// 4. 处理事件流
 	for {
@@ -139,7 +141,7 @@ func buildQuestionGeneratorQuery() []adk.Message {
 
 func buildResumeAnalysisQuery() []adk.Message {
 	//这个需要你去提供你的简历
-	query := "帮我解析 C:\\Users\\LittleBear\\Desktop\\GoTest.pdf 这个PDF文件 开始模拟面试,进行5轮问题回答,"
+	query := "帮我解析 C:\\Users\\LittleBear\\Desktop\\GoTest.pdf 这个PDF文件开始模拟面试问题回答"
 
 	mockMessages := []adk.Message{
 		schema.UserMessage(query),
