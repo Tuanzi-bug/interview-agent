@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"ai-eino-interview-agent/internal/config"
 	"context"
+	"fmt"
+	"net/url"
 
 	"ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/service"
@@ -181,5 +184,85 @@ func (h *UserHandler) UpdateProfile(c context.Context, ctx *app.RequestContext) 
 		"code":    200,
 		"message": "更新成功",
 		"data":    user,
+	})
+}
+
+// WechatLogin 微信登录二维码获取接口
+// @Summary 微信登录二维码
+// @Description 获取微信登录二维码
+// @Tags 用户管理
+// @Produce json
+// @Success 200 {object} map[string]interface{} "微信登录二维码信息"
+// @Router /api/v1/user/wechat/login [get]
+func (h *UserHandler) WechatLogin(c context.Context, ctx *app.RequestContext) {
+	// 生成微信登录URL
+	wechatLoginURL := fmt.Sprintf(
+		"https://open.weixin.qq.com/connect/qrconnect?appid=%s&redirect_uri=%s&response_type=code&scope=snsapi_login&state=STATE#wechat_redirect",
+		config.Global.Wechat.AppID,
+		url.QueryEscape(config.Global.Wechat.RedirectURL),
+	)
+
+	ctx.JSON(consts.StatusOK, map[string]interface{}{
+		"code":    200,
+		"message": "success",
+		"data": map[string]string{
+			"login_url": wechatLoginURL,
+		},
+	})
+}
+
+// WechatCallback 微信登录回调接口
+// @Summary 微信登录回调
+// @Description 微信登录回调处理
+// @Tags 用户管理
+// @Produce json
+// @Param code query string true "微信授权码"
+// @Param state query string false "状态码"
+// @Success 200 {object} map[string]interface{} "登录成功"
+// @Router /api/v1/user/wechat/callback [get]
+func (h *UserHandler) WechatCallback(c context.Context, ctx *app.RequestContext) {
+	code := string(ctx.Query("code"))
+	if code == "" {
+		ctx.JSON(consts.StatusBadRequest, map[string]interface{}{
+			"code":    400,
+			"message": "缺少授权码",
+		})
+		return
+	}
+
+	// 使用code换取access_token和openid
+	tokenResp, err := h.userService.GetWechatAccessToken(code)
+	if err != nil {
+		ctx.JSON(consts.StatusInternalServerError, map[string]interface{}{
+			"code":    500,
+			"message": "获取微信授权失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 获取用户信息
+	userInfo, err := h.userService.GetWechatUserInfo(tokenResp.AccessToken, tokenResp.OpenID)
+	if err != nil {
+		ctx.JSON(consts.StatusInternalServerError, map[string]interface{}{
+			"code":    500,
+			"message": "获取微信用户信息失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 处理用户登录或注册
+	response, err := h.userService.WechatLoginOrRegister(userInfo)
+	if err != nil {
+		ctx.JSON(consts.StatusInternalServerError, map[string]interface{}{
+			"code":    500,
+			"message": "登录或注册失败: " + err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(consts.StatusOK, map[string]interface{}{
+		"code":    200,
+		"message": "登录成功",
+		"data":    response,
 	})
 }

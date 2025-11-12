@@ -93,8 +93,8 @@ Milvus:
   Address: "${MILVUS_ADDRESS}"              # Milvus 服务地址，从环境变量读取
   Username: "${MILVUS_USERNAME}"            # 从环境变量 MILVUS_USERNAME 读取
   Password: "${MILVUS_PASSWORD}"            # 从环境变量 MILVUS_PASSWORD 读取
-  DatabaseName: "test3"                   # 数据库名称
-  CollectionName: "knowledge"               # 集合名称
+  DatabaseName: "default"                   # 数据库名称
+  CollectionName: "documents"               # 集合名称
 
   # 检索配置
   TopK: 5                                   # 返回的最相似文档数量
@@ -118,3 +118,9 @@ DocumentSplitter:
     - "! "                             # 英文感叹号
     - "? "                             # 英文问号
   KeepType: 0                          # 分隔符保留策略: 0=不保留, 1=保留在开头, 2=保留在结尾
+
+# 微信配置
+wechat:
+  app_id: appid
+  app_secret: appsecret
+  redirect_url: "http://localhost:8888/api/v1/user/wechat/callback"
