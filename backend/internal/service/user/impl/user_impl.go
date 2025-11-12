@@ -160,11 +160,11 @@ func (s *UserServer) toUserProfile(userRecord *model.User) *userapi.UserProfile 
 	profile.Email = userRecord.Email
 	profile.Role = userRecord.Role
 
-	if userRecord.WechatOpenID != "" {
-		profile.WechatOpenID = &userRecord.WechatOpenID
+	if userRecord.WechatOpenID != nil {
+		profile.WechatOpenID = userRecord.WechatOpenID
 	}
-	if userRecord.WechatUnionID != "" {
-		profile.WechatUnionID = &userRecord.WechatUnionID
+	if userRecord.WechatUnionID != nil {
+		profile.WechatUnionID = userRecord.WechatUnionID
 	}
 	if userRecord.Nickname != "" {
 		profile.Nickname = &userRecord.Nickname
@@ -278,8 +278,8 @@ func (s *UserServer) wechatLoginOrRegister(_ context.Context, tokenResp *wechatT
 			Email:         "",
 			PasswordHash:  "",
 			Role:          "user",
-			WechatOpenID:  userInfo.OpenID,
-			WechatUnionID: unionID,
+			WechatOpenID:  &userInfo.OpenID,
+			WechatUnionID: &unionID,
 			Nickname:      userInfo.Nickname,
 			Avatar:        userInfo.HeadImgURL,
 		}
@@ -294,7 +294,7 @@ func (s *UserServer) wechatLoginOrRegister(_ context.Context, tokenResp *wechatT
 		"nickname": userInfo.Nickname,
 		"avatar":   userInfo.HeadImgURL,
 	}
-	if existingUser.WechatUnionID == "" && unionID != "" {
+	if existingUser.WechatUnionID == nil && unionID != "" {
 		updates["wechat_union_id"] = unionID
 	}
 

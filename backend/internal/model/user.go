@@ -18,8 +18,8 @@ type (
 		Email         string         `json:"email" gorm:"uniqueIndex;size:100;not null"`
 		PasswordHash  string         `json:"-" gorm:"size:255;not null"`
 		Role          string         `json:"role" gorm:"size:20;default:'user'"`
-		WechatOpenID  string         `json:"wechat_open_id" gorm:"uniqueIndex;size:100"`  // 微信OpenID
-		WechatUnionID string         `json:"wechat_union_id" gorm:"uniqueIndex;size:100"` // 微信UnionID
+		WechatOpenID  *string        `json:"wechat_open_id" gorm:"uniqueIndex;size:100"`  // 微信OpenID
+		WechatUnionID *string        `json:"wechat_union_id" gorm:"uniqueIndex;size:100"` // 微信UnionID
 		Nickname      string         `json:"nickname" gorm:"size:100"`                    // 微信昵称
 		Avatar        string         `json:"avatar" gorm:"size:255"`                      // 微信头像
 		CreatedAt     time.Time      `json:"created_at"`
