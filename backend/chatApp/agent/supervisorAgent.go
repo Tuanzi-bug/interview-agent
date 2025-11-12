@@ -9,7 +9,7 @@ import (
 
 // 面试调度Supervisor
 func NewInterviewSupervisorAgent() adk.Agent {
-	supervisorName := "InterviewSupervisor" // 固定名称，子Agent回调用
+	supervisorName := "NewInterviewSupervisorAgent" // 固定名称，子Agent回调用
 
 	// 步骤1：创建所有增强子Agent（传入Supervisor名称）
 	resumeAgent := NewResumAnalysisAgent(supervisorName)
@@ -24,7 +24,7 @@ func NewInterviewSupervisorAgent() adk.Agent {
 		// 关键：Supervisor的Instruction定义任务分配规则
 		Instruction: `你是面试调度专家，遵循以下流程：
 1. 初始任务：用户提供简历（文本或PDF路径），先转让给ResumeAnalysisAgent解析；
-2. 简历分析后：转让给TechQuestionAgent生成技术问题；
+2. 简历分析后：转让给QuestionGeneratorAgent生成技术问题；
 3. 用户提供回答后：转让给AnswerEvalAgent评估；
 4. 评估后：转让给InterviewReportAgent生成最终报告；
 5. 报告生成后：直接输出报告，结束流程；
