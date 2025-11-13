@@ -106,7 +106,7 @@ func StartInterviewStream(ctx context.Context, query string) (<-chan *InterviewE
 			if event.Action != nil && event.Action.TransferToAgent != nil {
 				status := ""
 				switch event.Action.TransferToAgent.DestAgentName {
-				case "ResumAnalysisAgent":
+				case "ResumeAnalysisAgent":
 					status = "resume_analysis"
 				case "QuestionGeneratorAgent":
 					status = "question_generation"

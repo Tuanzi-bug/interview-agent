@@ -109,3 +109,23 @@ func _wechatcallbackMw() []app.HandlerFunc {
 func _wechatloginMw() []app.HandlerFunc {
 	return nil
 }
+
+func _interviewMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _continueinterviewMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _startMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _startinterviewstreamMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}

@@ -93,7 +93,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 	// 如果有上传的简历文件，将文件路径添加到请求中
 	if resumeFilePath != "" {
 		// 将文件路径信息添加到 query 中，让智能体知道有简历文件
-		// Supervisor 会根据指令将简历分析任务转让给 ResumAnalysisAgent
+		// Supervisor 会根据指令将简历分析任务转让给 ResumeAnalysisAgent
 		if req.Query == "" {
 			req.Query = fmt.Sprintf("请分析我的简历PDF文件，文件路径：%s", resumeFilePath)
 		} else {
