@@ -3,6 +3,7 @@
 package interview
 
 import (
+	"ai-eino-interview-agent/api/model/interviews"
 	"ai-eino-interview-agent/api/model/user"
 	"github.com/apache/thrift/lib/go/thrift"
 )
@@ -33,11 +34,46 @@ func NewUserServiceClient(c thrift.TClient) *UserServiceClient {
 	}
 }
 
+type InterviewsService interface {
+	interviews.InterviewsService
+}
+
+type InterviewsServiceClient struct {
+	*interviews.InterviewsServiceClient
+}
+
+func NewInterviewsServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *InterviewsServiceClient {
+	return &InterviewsServiceClient{
+		InterviewsServiceClient: interviews.NewInterviewsServiceClientFactory(t, f),
+	}
+}
+
+func NewInterviewsServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *InterviewsServiceClient {
+	return &InterviewsServiceClient{
+		InterviewsServiceClient: interviews.NewInterviewsServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewInterviewsServiceClient(c thrift.TClient) *InterviewsServiceClient {
+	return &InterviewsServiceClient{
+		InterviewsServiceClient: interviews.NewInterviewsServiceClient(c),
+	}
+}
+
 type UserServiceProcessor struct {
 	*user.UserServiceProcessor
 }
 
 func NewUserServiceProcessor(handler UserService) *UserServiceProcessor {
 	self := &UserServiceProcessor{user.NewUserServiceProcessor(handler)}
+	return self
+}
+
+type InterviewsServiceProcessor struct {
+	*interviews.InterviewsServiceProcessor
+}
+
+func NewInterviewsServiceProcessor(handler InterviewsService) *InterviewsServiceProcessor {
+	self := &InterviewsServiceProcessor{interviews.NewInterviewsServiceProcessor(handler)}
 	return self
 }
