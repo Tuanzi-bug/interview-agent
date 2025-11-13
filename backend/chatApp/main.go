@@ -141,7 +141,9 @@ func buildQuestionGeneratorQuery() []adk.Message {
 
 func buildResumeAnalysisQuery() []adk.Message {
 	//这个需要你去提供你的简历
-	query := "帮我解析 C:\\Users\\LittleBear\\Desktop\\GoTest.pdf 这个PDF文件开始模拟面试问题回答"
+	//query := "帮我解析 C:\\Users\\LittleBear\\Desktop\\GoTest.pdf 这个PDF文件 开始模拟面试,进行5轮问题回答,"
+
+	query := "我是3年go开发经验，直接开始模拟面试"
 
 	mockMessages := []adk.Message{
 		schema.UserMessage(query),

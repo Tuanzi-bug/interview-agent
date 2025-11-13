@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
 // 创建axios实例
 const apiClient: AxiosInstance = axios.create({
@@ -11,11 +11,12 @@ const apiClient: AxiosInstance = axios.create({
 
 // 请求拦截器
 apiClient.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
+  (config: InternalAxiosRequestConfig) => {
     // 这里可以添加token等认证信息
     const token = localStorage.getItem('token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      config.headers = (config.headers || {}) as any;
+      (config.headers as any).Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -26,7 +27,7 @@ apiClient.interceptors.request.use(
 
 // 响应拦截器
 apiClient.interceptors.response.use(
-  (response: AxiosResponse) => {
+  (response: AxiosResponse<any>) => {
     // 对响应数据做点什么
     return response.data;
   },
@@ -41,4 +42,4 @@ apiClient.interceptors.response.use(
   }
 );
 
-export default apiClient;","}}}
+export default apiClient;
