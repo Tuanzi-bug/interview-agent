@@ -6,6 +6,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"time"
 
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
@@ -18,10 +22,62 @@ import (
 func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 	var err error
 	var req interviewsapi.StartInterviewRequest
+
+	// 先尝试绑定表单数据（支持 multipart/form-data）
 	err = c.BindAndValidate(&req)
 	if err != nil {
 		c.String(consts.StatusBadRequest, err.Error())
 		return
+	}
+
+	// 处理文件上传（如果存在）
+	var resumeFilePath string
+	fileHeader, err := c.FormFile("resume")
+	if err == nil && fileHeader != nil {
+		// 验证文件类型
+		if filepath.Ext(fileHeader.Filename) != ".pdf" {
+			c.String(consts.StatusBadRequest, "只支持 PDF 格式的简历文件")
+			return
+		}
+		// 验证文件大小（限制为 10MB）
+		if fileHeader.Size > 10*1024*1024 {
+			c.String(consts.StatusBadRequest, "文件大小不能超过 10MB")
+			return
+		}
+		// 打开上传的文件
+		file, err := fileHeader.Open()
+		if err != nil {
+			c.String(consts.StatusInternalServerError, "无法打开上传的文件: "+err.Error())
+			return
+		}
+		defer file.Close()
+		// 创建临时目录
+		tempDir := filepath.Join(os.TempDir(), "interview_resumes")
+		err = os.MkdirAll(tempDir, 0755)
+		if err != nil {
+			c.String(consts.StatusInternalServerError, "无法创建临时目录: "+err.Error())
+			return
+		}
+		// 生成唯一的文件名
+		timestamp := time.Now().UnixNano()
+		fileName := fmt.Sprintf("resume_%d_%s", timestamp, fileHeader.Filename)
+		resumeFilePath = filepath.Join(tempDir, fileName)
+		// 创建临时文件
+		tempFile, err := os.Create(resumeFilePath)
+		if err != nil {
+			c.String(consts.StatusInternalServerError, "无法创建临时文件: "+err.Error())
+			return
+		}
+		defer tempFile.Close()
+		// 将上传的文件内容复制到临时文件
+		_, err = io.Copy(tempFile, file)
+		if err != nil {
+			os.Remove(resumeFilePath) // 清理失败的文件
+			c.String(consts.StatusInternalServerError, "无法保存文件: "+err.Error())
+			return
+		}
+		// 确保文件已写入磁盘
+		tempFile.Sync()
 	}
 
 	// 设置 SSE 响应头
@@ -34,12 +90,38 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 	// 获取面试服务实例
 	interviewService := interviewservice.NewInterviewService()
 
+	// 如果有上传的简历文件，将文件路径添加到请求中
+	if resumeFilePath != "" {
+		// 将文件路径信息添加到 query 中，让智能体知道有简历文件
+		// Supervisor 会根据指令将简历分析任务转让给 ResumAnalysisAgent
+		if req.Query == "" {
+			req.Query = fmt.Sprintf("请分析我的简历PDF文件，文件路径：%s", resumeFilePath)
+		} else {
+			req.Query = fmt.Sprintf("%s\n\n我上传了简历PDF文件，文件路径：%s，请先分析简历", req.Query, resumeFilePath)
+		}
+	}
+
 	// 启动流式面试
 	eventChan, err := interviewService.StartInterviewStream(ctx, &req)
 	if err != nil {
+		// 如果出错，清理上传的文件
+		if resumeFilePath != "" {
+			os.Remove(resumeFilePath)
+		}
 		c.String(consts.StatusInternalServerError, err.Error())
 		return
 	}
+
+	// 在流式响应结束后清理临时文件
+	defer func() {
+		if resumeFilePath != "" {
+			// 延迟删除，给智能体一些时间处理文件
+			go func() {
+				time.Sleep(5 * time.Minute) // 5分钟后删除
+				os.Remove(resumeFilePath)
+			}()
+		}
+	}()
 
 	// 流式输出事件
 	writer := c.Response.BodyWriter()
