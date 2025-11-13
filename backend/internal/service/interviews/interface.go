@@ -6,7 +6,7 @@ import (
 	"context"
 )
 
-// NewInterviewService 返回面试服务的默认实现
+// NewInterviewService 初始化面试服务的实例
 func NewInterviewService() InterviewService {
 	return impl.NewInterviewServiceImpl()
 }

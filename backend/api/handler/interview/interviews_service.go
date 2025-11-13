@@ -23,7 +23,6 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 	var err error
 	var req interviewsapi.StartInterviewRequest
 
-	// 先尝试绑定表单数据（支持 multipart/form-data）
 	err = c.BindAndValidate(&req)
 	if err != nil {
 		c.String(consts.StatusBadRequest, err.Error())
