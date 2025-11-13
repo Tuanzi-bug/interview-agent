@@ -42,7 +42,7 @@ export default function UserCenterPage() {
               <div>ID：695965d5-1648-4c4f-bc94-38c978b17a19</div>
             </div>
 
-            <AntCard className="rounded-2xl mt-6 bg-green-500 text-white" variant="filled">
+            <AntCard className="rounded-2xl mt-6 bg-green-500 text-white" variant="outlined">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm opacity-90">剩余牛币</div>
