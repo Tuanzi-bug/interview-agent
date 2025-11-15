@@ -3,6 +3,7 @@
 package interview
 
 import (
+	"ai-eino-interview-agent/internal/middleware"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
@@ -99,9 +101,17 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 			req.Query = fmt.Sprintf("%s\n\n我上传了简历PDF文件，文件路径：%s，请先分析简历", req.Query, resumeFilePath)
 		}
 	}
+	// 保存面试记录（
+	userID := middleware.GetUserID(c)
+	recordTitle := fmt.Sprintf("Interview - %s", time.Now().Format("2006-01-02 15:04:05"))
+	recordID, err := interviewService.SaveInterviewRecord(ctx, userID, recordTitle, req.Query)
+	if err != nil {
+		// 记录错误但不中断流程
+		fmt.Fprintf(os.Stderr, "Failed to save interview record: %v\n", err)
+	}
 
 	// 启动流式面试
-	eventChan, err := interviewService.StartInterviewStream(ctx, &req)
+	eventChan, err := interviewService.StartInterviewStream(ctx, &req, 1)
 	if err != nil {
 		// 如果出错，清理上传的文件
 		if resumeFilePath != "" {
@@ -124,6 +134,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 
 	// 流式输出事件
 	writer := c.Response.BodyWriter()
+	startTime := time.Now()
 	for event := range eventChan {
 		// 将事件序列化为 JSON
 		eventJSON, err := json.Marshal(event)
@@ -141,9 +152,47 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		// 使用 SSE 格式发送事件
 		fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
 
-		// 如果是完成事件，结束流
+		// 如果是完成事件，结束流并更新面试记录为已完成
 		if event.Type == "done" {
+			if recordID > 0 {
+				// 异步更新面试记录状态为已完成
+				go func() {
+					duration := int64(time.Since(startTime).Seconds())
+					report := ""
+					if event.Report != nil {
+						report = *event.Report
+					}
+					_ = interviewService.CompleteInterviewRecord(ctx, recordID, report, duration, event.Score)
+				}()
+
+			}
 			break
+		}
+
+		// 保存消息事件中的对话历史
+		if recordID > 0 && event.Type == "message" && event.Messages != nil {
+			go func(messages *string) {
+				messagesStr := ""
+				if messages != nil {
+					messagesStr = *messages
+				}
+				_ = interviewService.UpdateInterviewRecord(ctx, recordID, messagesStr, "", "")
+			}(event.Messages)
+		}
+
+		// 更新面试记录的状态和当前Agent
+		if recordID > 0 && event.Status != nil && *event.Status != "" {
+			go func(status string, agentName *string, messages *string) {
+				agent := ""
+				if agentName != nil {
+					agent = *agentName
+				}
+				messagesStr := ""
+				if messages != nil {
+					messagesStr = *messages
+				}
+				_ = interviewService.UpdateInterviewRecord(ctx, recordID, messagesStr, status, agent)
+			}(*event.Status, event.AgentName, event.Messages)
 		}
 
 		// 检查上下文是否已取消
@@ -177,7 +226,7 @@ func ContinueInterview(ctx context.Context, c *app.RequestContext) {
 	interviewService := interviewservice.NewInterviewService()
 
 	// 继续面试流程
-	eventChan, err := interviewService.ContinueInterview(ctx, &req)
+	eventChan, err := interviewService.ContinueInterview(ctx, &req, 2)
 	if err != nil {
 		c.String(consts.StatusInternalServerError, err.Error())
 		return

@@ -625,6 +625,16 @@ type InterviewEvent struct {
 	Error *string `thrift:"error,5,optional" form:"error" json:"error,omitempty" query:"error"`
 	// 状态更新
 	Status *string `thrift:"status,6,optional" form:"status" json:"status,omitempty" query:"status"`
+	// 最终报告（当 Type 为 done 时）
+	Report *string `thrift:"report,7,optional" form:"report" json:"report,omitempty" query:"report"`
+	// 面试评分（当 Type 为 done 时）
+	Score *float64 `thrift:"score,8,optional" form:"score" json:"score,omitempty" query:"score"`
+	// 面试时长（秒）（当 Type 为 done 时）
+	Duration *int64 `thrift:"duration,9,optional" form:"duration" json:"duration,omitempty" query:"duration"`
+	// 反馈信息（当 Type 为 done 时）
+	Feedback *string `thrift:"feedback,10,optional" form:"feedback" json:"feedback,omitempty" query:"feedback"`
+	// 对话历史（JSON 格式）（当 Type 为 done 时）
+	Messages *string `thrift:"messages,11,optional" form:"messages" json:"messages,omitempty" query:"messages"`
 }
 
 func NewInterviewEvent() *InterviewEvent {
@@ -683,13 +693,63 @@ func (p *InterviewEvent) GetStatus() (v string) {
 	return *p.Status
 }
 
+var InterviewEvent_Report_DEFAULT string
+
+func (p *InterviewEvent) GetReport() (v string) {
+	if !p.IsSetReport() {
+		return InterviewEvent_Report_DEFAULT
+	}
+	return *p.Report
+}
+
+var InterviewEvent_Score_DEFAULT float64
+
+func (p *InterviewEvent) GetScore() (v float64) {
+	if !p.IsSetScore() {
+		return InterviewEvent_Score_DEFAULT
+	}
+	return *p.Score
+}
+
+var InterviewEvent_Duration_DEFAULT int64
+
+func (p *InterviewEvent) GetDuration() (v int64) {
+	if !p.IsSetDuration() {
+		return InterviewEvent_Duration_DEFAULT
+	}
+	return *p.Duration
+}
+
+var InterviewEvent_Feedback_DEFAULT string
+
+func (p *InterviewEvent) GetFeedback() (v string) {
+	if !p.IsSetFeedback() {
+		return InterviewEvent_Feedback_DEFAULT
+	}
+	return *p.Feedback
+}
+
+var InterviewEvent_Messages_DEFAULT string
+
+func (p *InterviewEvent) GetMessages() (v string) {
+	if !p.IsSetMessages() {
+		return InterviewEvent_Messages_DEFAULT
+	}
+	return *p.Messages
+}
+
 var fieldIDToName_InterviewEvent = map[int16]string{
-	1: "type",
-	2: "agent_name",
-	3: "message",
-	4: "transfer_to",
-	5: "error",
-	6: "status",
+	1:  "type",
+	2:  "agent_name",
+	3:  "message",
+	4:  "transfer_to",
+	5:  "error",
+	6:  "status",
+	7:  "report",
+	8:  "score",
+	9:  "duration",
+	10: "feedback",
+	11: "messages",
 }
 
 func (p *InterviewEvent) IsSetAgentName() bool {
@@ -710,6 +770,26 @@ func (p *InterviewEvent) IsSetError() bool {
 
 func (p *InterviewEvent) IsSetStatus() bool {
 	return p.Status != nil
+}
+
+func (p *InterviewEvent) IsSetReport() bool {
+	return p.Report != nil
+}
+
+func (p *InterviewEvent) IsSetScore() bool {
+	return p.Score != nil
+}
+
+func (p *InterviewEvent) IsSetDuration() bool {
+	return p.Duration != nil
+}
+
+func (p *InterviewEvent) IsSetFeedback() bool {
+	return p.Feedback != nil
+}
+
+func (p *InterviewEvent) IsSetMessages() bool {
+	return p.Messages != nil
 }
 
 func (p *InterviewEvent) Read(iprot thrift.TProtocol) (err error) {
@@ -776,6 +856,46 @@ func (p *InterviewEvent) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.DOUBLE {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -882,6 +1002,61 @@ func (p *InterviewEvent) ReadField6(iprot thrift.TProtocol) error {
 	p.Status = _field
 	return nil
 }
+func (p *InterviewEvent) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Report = _field
+	return nil
+}
+func (p *InterviewEvent) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *float64
+	if v, err := iprot.ReadDouble(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Score = _field
+	return nil
+}
+func (p *InterviewEvent) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Duration = _field
+	return nil
+}
+func (p *InterviewEvent) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Feedback = _field
+	return nil
+}
+func (p *InterviewEvent) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Messages = _field
+	return nil
+}
 
 func (p *InterviewEvent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -911,6 +1086,26 @@ func (p *InterviewEvent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -1041,6 +1236,101 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *InterviewEvent) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetReport() {
+		if err = oprot.WriteFieldBegin("report", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Report); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *InterviewEvent) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetScore() {
+		if err = oprot.WriteFieldBegin("score", thrift.DOUBLE, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteDouble(*p.Score); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *InterviewEvent) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDuration() {
+		if err = oprot.WriteFieldBegin("duration", thrift.I64, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Duration); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
+func (p *InterviewEvent) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFeedback() {
+		if err = oprot.WriteFieldBegin("feedback", thrift.STRING, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Feedback); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
+func (p *InterviewEvent) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMessages() {
+		if err = oprot.WriteFieldBegin("messages", thrift.STRING, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Messages); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
 
 func (p *InterviewEvent) String() string {

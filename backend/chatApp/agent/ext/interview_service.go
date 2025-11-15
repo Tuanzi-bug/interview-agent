@@ -2,7 +2,9 @@ package ext
 
 import (
 	"ai-eino-interview-agent/chatApp/agent"
+	"ai-eino-interview-agent/chatApp/tool"
 	"context"
+	"encoding/json"
 	"sync"
 
 	"github.com/cloudwego/eino/adk"
@@ -41,7 +43,17 @@ type InterviewEvent struct {
 	// 错误信息（当 Type 为 error 时）
 	Error string `json:"error,omitempty"`
 	// 状态更新
-	Status string `json:"status,omitempty"`
+	Status *string `json:"status,omitempty"`
+	// 最终报告（当 Type 为 done 时）
+	Report string `json:"report,omitempty"`
+	// 面试评分（当 Type 为 done 时）
+	Score *float64 `json:"score,omitempty"`
+	// 面试时长（秒）（当 Type 为 done 时）
+	Duration int64 `json:"duration,omitempty"`
+	// 反馈信息（当 Type 为 done 时）
+	Feedback string `json:"feedback,omitempty"`
+	// 对话历史（JSON 格式）（当 Type 为 done 时）
+	Messages string `json:"messages,omitempty"`
 }
 
 var (
@@ -63,10 +75,24 @@ func getRunner(ctx context.Context) *adk.Runner {
 
 // StartInterviewStream 启动面试流程（流式）
 // query: 用户输入的查询
+// maxQuestions: 最大提问数量，0 表示无限制
 // 返回一个事件流 channel，可以实时获取 Agent 的输出
 // 注意：调用者需要负责关闭 channel（当事件流结束时，channel 会自动关闭）
-func StartInterviewStream(ctx context.Context, query string) (<-chan *InterviewEvent, error) {
+func StartInterviewStream(ctx context.Context, query string, maxQuestions int) (<-chan *InterviewEvent, error) {
 	runner := getRunner(ctx)
+
+	// 将 maxQuestions 添加到 context 中，供 agents 使用
+	if maxQuestions > 0 {
+		// 检查是否已有 session ID（用于继续面试时复用）
+		sessionID, ok := ctx.Value(tool.SessionIDKey).(string)
+		if !ok || sessionID == "" {
+			// 生成唯一的 session ID
+			sessionID = tool.GenerateSessionID()
+		}
+		ctx = context.WithValue(ctx, tool.MaxQuestionsKey, maxQuestions)
+		ctx = context.WithValue(ctx, tool.QuestionCountKey, 0)
+		ctx = context.WithValue(ctx, tool.SessionIDKey, sessionID)
+	}
 
 	// 构建消息
 	messages := []adk.Message{
@@ -82,6 +108,9 @@ func StartInterviewStream(ctx context.Context, query string) (<-chan *InterviewE
 	// 在 goroutine 中处理事件流
 	go func() {
 		defer close(eventChan)
+
+		// 用于收集对话历史
+		var messageHistory []map[string]interface{}
 
 		for {
 			event, ok := iter.Next()
@@ -116,29 +145,52 @@ func StartInterviewStream(ctx context.Context, query string) (<-chan *InterviewE
 					status = "report_generation"
 				}
 
+				// 将对话历史转换为 JSON
+				messagesJSON, _ := json.Marshal(messageHistory)
+
 				eventChan <- &InterviewEvent{
 					Type:       "transfer",
 					AgentName:  event.AgentName,
 					TransferTo: event.Action.TransferToAgent.DestAgentName,
-					Status:     status,
+					Status:     &status,
+					Messages:   string(messagesJSON),
 				}
 				continue
 			}
 
 			// 处理Agent输出
 			if event.Output != nil && event.Output.MessageOutput != nil {
+				messageContent := event.Output.MessageOutput.Message.Content
+
+				// 收集对话历史
+				messageHistory = append(messageHistory, map[string]interface{}{
+					"role":    "assistant",
+					"content": messageContent,
+					"agent":   event.AgentName,
+				})
+
+				// 将对话历史转换为 JSON
+				messagesJSON, _ := json.Marshal(messageHistory)
+
+				// 如果是报告Agent的输出，发送完成事件并返回
+				if event.AgentName == "InterviewReportAgent" {
+					completed := "completed"
+
+					eventChan <- &InterviewEvent{
+						Type:     "done",
+						Status:   &completed,
+						Report:   messageContent,
+						Messages: string(messagesJSON),
+					}
+					return
+				}
+
+				// 其他Agent的输出，发送消息事件
 				eventChan <- &InterviewEvent{
 					Type:      "message",
 					AgentName: event.AgentName,
-					Message:   event.Output.MessageOutput.Message.Content,
-				}
-
-				// 如果是报告Agent的输出，发送完成事件
-				if event.AgentName == "InterviewReportAgent" {
-					eventChan <- &InterviewEvent{
-						Type:   "done",
-						Status: "completed",
-					}
+					Message:   messageContent,
+					Messages:  string(messagesJSON),
 				}
 			}
 		}
@@ -148,7 +200,7 @@ func StartInterviewStream(ctx context.Context, query string) (<-chan *InterviewE
 }
 
 // ContinueInterview 继续面试流程（用于多轮对话）
-func ContinueInterview(ctx context.Context, query string) (<-chan *InterviewEvent, error) {
+func ContinueInterview(ctx context.Context, query string, maxQuestions int) (<-chan *InterviewEvent, error) {
 
-	return StartInterviewStream(ctx, query)
+	return StartInterviewStream(ctx, query, maxQuestions)
 }
