@@ -5,6 +5,8 @@ import (
 	"ai-eino-interview-agent/chatApp/tool"
 	"context"
 	"encoding/json"
+	"regexp"
+	"strconv"
 	"sync"
 
 	"github.com/cloudwego/eino/adk"
@@ -161,12 +163,12 @@ func StartInterviewStream(ctx context.Context, query string, maxQuestions int) (
 			// 处理Agent输出
 			if event.Output != nil && event.Output.MessageOutput != nil {
 				messageContent := event.Output.MessageOutput.Message.Content
+				role := event.Output.MessageOutput.Message.Role
 
 				// 收集对话历史
 				messageHistory = append(messageHistory, map[string]interface{}{
-					"role":    "assistant",
+					"role":    role,
 					"content": messageContent,
-					"agent":   event.AgentName,
 				})
 
 				// 将对话历史转换为 JSON
@@ -175,10 +177,12 @@ func StartInterviewStream(ctx context.Context, query string, maxQuestions int) (
 				// 如果是报告Agent的输出，发送完成事件并返回
 				if event.AgentName == "InterviewReportAgent" {
 					completed := "completed"
-
+					var score *float64
+					score = extractScoreFromReport(messageContent)
 					eventChan <- &InterviewEvent{
 						Type:     "done",
 						Status:   &completed,
+						Score:    score,
 						Report:   messageContent,
 						Messages: string(messagesJSON),
 					}
@@ -203,4 +207,34 @@ func StartInterviewStream(ctx context.Context, query string, maxQuestions int) (
 func ContinueInterview(ctx context.Context, query string, maxQuestions int) (<-chan *InterviewEvent, error) {
 
 	return StartInterviewStream(ctx, query, maxQuestions)
+}
+
+// extractScoreFromReport 从面试报告中提取分数
+// 适用场景：报告格式相对固定，分数表现形式一致
+
+func extractScoreFromReport(report string) *float64 {
+	// 匹配模式：
+	// - "总分：85" 或 "总分: 85"
+	// - "综合评分：82.5" 或 "综合评分: 82.5"
+	// - "面试评分：90分" 或 "面试评分: 90分"
+
+	patterns := []string{
+		`总(?:体)?(?:评)?分[：:]\s*(\d+(?:\.\d+)?)`,  // 总分：85 或 总体评分：82.5
+		`综合(?:评)?分[：:]\s*(\d+(?:\.\d+)?)`,       // 综合评分：85
+		`面试(?:评)?分[：:]\s*(\d+(?:\.\d+)?)(?:分)?`, // 面试评分：85分
+		`(?:最终)?评分[：:]\s*(\d+(?:\.\d+)?)`,       // 评分：85
+	}
+
+	for _, pattern := range patterns {
+		re := regexp.MustCompile(pattern)
+		matches := re.FindStringSubmatch(report)
+		if len(matches) > 1 {
+			score, err := strconv.ParseFloat(matches[1], 64)
+			if err == nil && score >= 0 && score <= 100 {
+				return &score
+			}
+		}
+	}
+
+	return nil
 }

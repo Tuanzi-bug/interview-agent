@@ -156,14 +156,14 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		if event.Type == "done" {
 			if recordID > 0 {
 				// 异步更新面试记录状态为已完成
-				go func() {
+				go func(report *string, score int32) {
 					duration := int64(time.Since(startTime).Seconds())
-					report := ""
+					var reportStr string
 					if event.Report != nil {
-						report = *event.Report
+						reportStr = *event.Report
 					}
-					_ = interviewService.CompleteInterviewRecord(ctx, recordID, report, duration, event.Score)
-				}()
+					_ = interviewService.CompleteInterviewRecord(ctx, recordID, reportStr, duration, event.Score)
+				}(event.Report, int32(*event.Score))
 
 			}
 			break
@@ -171,13 +171,18 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 
 		// 保存消息事件中的对话历史
 		if recordID > 0 && event.Type == "message" && event.Messages != nil {
-			go func(messages *string) {
+			go func(status string, agentName *string, messages *string) {
+				agent := ""
+				if agentName != nil {
+					agent = *agentName
+				}
 				messagesStr := ""
 				if messages != nil {
 					messagesStr = *messages
 				}
-				_ = interviewService.UpdateInterviewRecord(ctx, recordID, messagesStr, "", "")
-			}(event.Messages)
+				nowTime := time.Now()
+				_ = interviewService.UpdateInterviewRecord(ctx, recordID, messagesStr, status, agent, nowTime)
+			}(*event.Status, event.AgentName, event.Messages)
 		}
 
 		// 更新面试记录的状态和当前Agent
@@ -191,7 +196,8 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 				if messages != nil {
 					messagesStr = *messages
 				}
-				_ = interviewService.UpdateInterviewRecord(ctx, recordID, messagesStr, status, agent)
+				nowTime := time.Now()
+				_ = interviewService.UpdateInterviewRecord(ctx, recordID, messagesStr, status, agent, nowTime)
 			}(*event.Status, event.AgentName, event.Messages)
 		}
 

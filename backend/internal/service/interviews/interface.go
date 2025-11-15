@@ -4,6 +4,7 @@ import (
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
 	"ai-eino-interview-agent/internal/service/interviews/impl"
 	"context"
+	"time"
 )
 
 // NewInterviewService 初始化面试服务的实例
@@ -26,7 +27,8 @@ type InterviewService interface {
 	SaveInterviewRecord(ctx context.Context, userID uint, title, query string) (uint64, error)
 
 	// UpdateInterviewRecord 更新面试记录（用于保存对话历史和状态）
-	UpdateInterviewRecord(ctx context.Context, recordID uint64, messages string, status, currentAgent string) error
+	// lastModifiedAt: 上次修改的时间戳，用于并发控制检查
+	UpdateInterviewRecord(ctx context.Context, recordID uint64, messages string, status, currentAgent string, lastModifiedAt time.Time) error
 
 	// CompleteInterviewRecord 完成面试记录（保存最终报告和评分）
 	CompleteInterviewRecord(ctx context.Context, recordID uint64, report string, duration int64, score *float64) error

@@ -5,6 +5,7 @@ import (
 	"ai-eino-interview-agent/chatApp/agent/ext"
 	"ai-eino-interview-agent/internal/model"
 	"context"
+	"time"
 )
 
 // InterviewServiceImpl 面试服务实现
@@ -82,8 +83,15 @@ func (s *InterviewServiceImpl) SaveInterviewRecord(ctx context.Context, userID u
 }
 
 // UpdateInterviewRecord 更新面试记录（用于保存对话历史和状态）
-func (s *InterviewServiceImpl) UpdateInterviewRecord(ctx context.Context, recordID uint64, messages string, status, currentAgent string) error {
-	return model.InterviewRecordDao.UpdateInterviewRecordStatus(recordID, status, currentAgent)
+func (s *InterviewServiceImpl) UpdateInterviewRecord(ctx context.Context, recordID uint64, messages string, status, currentAgent string, lastModifiedAt time.Time) error {
+	record := &model.InterviewRecord{
+		ID:             recordID,
+		Messages:       messages,
+		Status:         status,
+		CurrentAgent:   currentAgent,
+		LastModifiedAt: lastModifiedAt,
+	}
+	return model.InterviewRecordDao.UpdateInterviewRecord(record)
 }
 
 // CompleteInterviewRecord 完成面试记录（保存最终报告和评分）
