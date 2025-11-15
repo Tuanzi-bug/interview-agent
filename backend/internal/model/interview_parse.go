@@ -12,7 +12,7 @@ type (
 	//}
 	InterviewParse struct {
 		ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
-		TitleId   uint64    `json:"title_id" gorm:"index;comment:面试题目Id"`
+		TitleId   uint64    `json:"title_id" gorm:"index;not null;comment:面试题目Id"`
 		Parse     string    `json:"parse" gorm:"type:text;not null;comment:面试题解析"`
 		Url       string    `json:"url" gorm:"type:text;comment:面试题解析图片URL "`
 		CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime:milli"`

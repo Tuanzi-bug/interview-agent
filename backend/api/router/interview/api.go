@@ -31,6 +31,16 @@ func Register(r *server.Hertz) {
 			}
 		}
 		{
+			_titlebank := _api.Group("/titleBank", _titlebankMw()...)
+			{
+				_create := _titlebank.Group("/create", _createMw()...)
+				_create.POST("/interact", append(_createusertitleinteractMw(), interview.CreateUserTitleInteract)...)
+				_create.POST("/label", append(_createinterviewlabelMw(), interview.CreateInterviewLabel)...)
+				_create.POST("/parse", append(_createinterviewparseMw(), interview.CreateInterviewParse)...)
+				_create.POST("/title", append(_createinterviewtitleMw(), interview.CreateInterviewTitle)...)
+			}
+		}
+		{
 			_user := _api.Group("/user", _userMw()...)
 			_user.POST("/login", append(_loginMw(), interview.Login)...)
 			_user.GET("/profile", append(_getprofileMw(), interview.GetProfile)...)
@@ -38,8 +48,8 @@ func Register(r *server.Hertz) {
 			_user.POST("/register", append(_registerMw(), interview.Register)...)
 			_user.POST("/logout", append(_logoutMw(), interview.Logout)...)
 			{
-				_create := _user.Group("/create", _createMw()...)
-				_create.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
+				_create0 := _user.Group("/create", _create0Mw()...)
+				_create0.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
 			}
 			{
 				_create2 := _api.Group("/create", _createMw()...)
