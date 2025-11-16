@@ -156,14 +156,14 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		if event.Type == "done" {
 			if recordID > 0 {
 				// 异步更新面试记录状态为已完成
-				go func(report *string, score int32) {
+				go func(report *string, score *float64) {
 					duration := int64(time.Since(startTime).Seconds())
 					var reportStr string
-					if event.Report != nil {
-						reportStr = *event.Report
+					if report != nil {
+						reportStr = *report
 					}
-					_ = interviewService.CompleteInterviewRecord(ctx, recordID, reportStr, duration, event.Score)
-				}(event.Report, int32(*event.Score))
+					_ = interviewService.CompleteInterviewRecord(ctx, recordID, reportStr, duration, score)
+				}(event.Report, event.Score)
 
 			}
 			break
@@ -171,7 +171,11 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 
 		// 保存消息事件中的对话历史
 		if recordID > 0 && event.Type == "message" && event.Messages != nil {
-			go func(status string, agentName *string, messages *string) {
+			go func(status *string, agentName *string, messages *string) {
+				statusStr := ""
+				if status != nil {
+					statusStr = *status
+				}
 				agent := ""
 				if agentName != nil {
 					agent = *agentName
@@ -180,25 +184,8 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 				if messages != nil {
 					messagesStr = *messages
 				}
-				nowTime := time.Now()
-				_ = interviewService.UpdateInterviewRecord(ctx, recordID, messagesStr, status, agent, nowTime)
-			}(*event.Status, event.AgentName, event.Messages)
-		}
-
-		// 更新面试记录的状态和当前Agent
-		if recordID > 0 && event.Status != nil && *event.Status != "" {
-			go func(status string, agentName *string, messages *string) {
-				agent := ""
-				if agentName != nil {
-					agent = *agentName
-				}
-				messagesStr := ""
-				if messages != nil {
-					messagesStr = *messages
-				}
-				nowTime := time.Now()
-				_ = interviewService.UpdateInterviewRecord(ctx, recordID, messagesStr, status, agent, nowTime)
-			}(*event.Status, event.AgentName, event.Messages)
+				_ = interviewService.UpdateInterviewRecord(ctx, recordID, messagesStr, statusStr, agent)
+			}(event.Status, event.AgentName, event.Messages)
 		}
 
 		// 检查上下文是否已取消

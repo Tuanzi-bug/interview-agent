@@ -112,7 +112,7 @@ func StartInterviewStream(ctx context.Context, query string, maxQuestions int) (
 		defer close(eventChan)
 
 		// 用于收集对话历史
-		var messageHistory []map[string]interface{}
+		var messageHistory []Message
 
 		for {
 			event, ok := iter.Next()
@@ -147,8 +147,12 @@ func StartInterviewStream(ctx context.Context, query string, maxQuestions int) (
 					status = "report_generation"
 				}
 
-				// 将对话历史转换为 JSON
-				messagesJSON, _ := json.Marshal(messageHistory)
+				// 将对话历史转换为 JSON（只保留面试官提问和用户回答）
+				filtered := filterInterviewMessages(messageHistory)
+				var messagesJSON []byte
+				if len(filtered) > 0 {
+					messagesJSON, _ = json.Marshal(filtered)
+				}
 
 				eventChan <- &InterviewEvent{
 					Type:       "transfer",
@@ -165,14 +169,19 @@ func StartInterviewStream(ctx context.Context, query string, maxQuestions int) (
 				messageContent := event.Output.MessageOutput.Message.Content
 				role := event.Output.MessageOutput.Message.Role
 
-				// 收集对话历史
-				messageHistory = append(messageHistory, map[string]interface{}{
-					"role":    role,
-					"content": messageContent,
+				// 收集对话历史（包含 Agent 信息，方便后续过滤）
+				messageHistory = append(messageHistory, Message{
+					Role:    string(role),
+					Content: messageContent,
+					Agent:   event.AgentName,
 				})
 
-				// 将对话历史转换为 JSON
-				messagesJSON, _ := json.Marshal(messageHistory)
+				// 将对话历史转换为 JSON（只保留面试官提问）
+				filtered := filterInterviewMessages(messageHistory)
+				var messagesJSON []byte
+				if len(filtered) > 0 {
+					messagesJSON, _ = json.Marshal(filtered)
+				}
 
 				// 如果是报告Agent的输出，发送完成事件并返回
 				if event.AgentName == "InterviewReportAgent" {
@@ -207,6 +216,19 @@ func StartInterviewStream(ctx context.Context, query string, maxQuestions int) (
 func ContinueInterview(ctx context.Context, query string, maxQuestions int) (<-chan *InterviewEvent, error) {
 
 	return StartInterviewStream(ctx, query, maxQuestions)
+}
+
+// filterInterviewMessages 只保留面试官提问
+// 约定：
+// - 面试官提问：role == "assistant" 且 Agent == "QuestionGeneratorAgent"
+func filterInterviewMessages(history []Message) []Message {
+	var result []Message
+	for _, m := range history {
+		if m.Role == "assistant" && m.Agent == "QuestionGeneratorAgent" {
+			result = append(result, m)
+		}
+	}
+	return result
 }
 
 // extractScoreFromReport 从面试报告中提取分数

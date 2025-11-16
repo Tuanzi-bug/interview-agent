@@ -25,7 +25,7 @@ func NewQuestionGeneratorAgent(supervisorName string) adk.Agent {
 4. 如果工具返回的答案包含 "[INTERVIEW_LIMIT_REACHED]" 标记，表示已达到最大提问数量限制，立即停止提问并返回面试调度中心去进行问题回答评估。
 
 关键约束：
-- 每轮只提一个问题，确保问题简明、明确、可回答。
+- 每轮只提一个问题，确保问题简明、明确、可回答，必须为中文。
 - 保持专业、鼓励且以候选人为中心的语气，必要时说明当前面试阶段（如"技术深挖"、"总结反馈"等）。
 - 工具调用名称必须精确匹配："ask_for_input"。
 - 严格遵守提问数量限制，当收到 "[INTERVIEW_LIMIT_REACHED]" 标记时必须立即停止。`

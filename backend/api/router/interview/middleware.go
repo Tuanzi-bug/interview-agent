@@ -10,11 +10,10 @@ import (
 )
 
 var jwtPublicRoutes = map[string]struct{}{
-	"/api/user/login":             {},
-	"/api/user/register":          {},
-	"/api/user/wechat/login":      {},
-	"/api/user/wechat/callback":   {},
-	"/api/interview/start/stream": {},
+	"/api/user/login":           {},
+	"/api/user/register":        {},
+	"/api/user/wechat/login":    {},
+	"/api/user/wechat/callback": {},
 }
 
 func AuthSkipper() serviceMiddleware.JWTSkipper {

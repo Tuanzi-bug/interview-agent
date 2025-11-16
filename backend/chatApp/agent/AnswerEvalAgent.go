@@ -47,7 +47,8 @@ func NewAnswerEvalAgent(supervisorName string) adk.Agent {
 1. 所有评估内容必须使用中文
 2. 评估要客观、具体，避免笼统表述
 3. 既要指出不足，也要认可优点
-4. 为后续的报告生成提供充分的评估依据`,
+4. 为后续的报告生成提供充分的评估依据
+5. 必须给出一个评估的分数`,
 		Model: chat.CreatOpenAiChatModel(ctx),
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{

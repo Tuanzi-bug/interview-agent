@@ -23,7 +23,7 @@ type (
 		Duration       int64      `json:"duration" gorm:"comment:面试耗时（秒）"`
 		Score          *float64   `json:"score" gorm:"comment:面试评分"`
 		Feedback       string     `json:"feedback" gorm:"type:text;comment:反馈信息"`
-		LastModifiedAt time.Time  `json:"last_modified_at" gorm:"comment:最后修改时间戳，用于并发控制"`
+		LastModifiedAt time.Time  `json:"last_modified_at" gorm:"autoCreateTime:milli;comment:最后修改时间戳，用于并发控制"`
 		CreatedAt      time.Time  `json:"created_at" gorm:"autoCreateTime:milli"`
 		UpdatedAt      time.Time  `json:"updated_at" gorm:"autoUpdateTime:milli"`
 		CompletedAt    *time.Time `json:"completed_at" gorm:"comment:完成时间"`

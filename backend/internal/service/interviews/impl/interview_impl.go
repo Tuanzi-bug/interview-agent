@@ -68,12 +68,14 @@ func (s *InterviewServiceImpl) ContinueInterview(ctx context.Context, req *inter
 
 // SaveInterviewRecord 保存面试记录
 func (s *InterviewServiceImpl) SaveInterviewRecord(ctx context.Context, userID uint, title, query string) (uint64, error) {
+	now := time.Now()
 	record := &model.InterviewRecord{
-		UserID:   userID,
-		Title:    title,
-		Query:    query,
-		Status:   "pending",
-		Messages: "[]",
+		UserID:         userID,
+		Title:          title,
+		Query:          query,
+		Status:         "pending",
+		Messages:       "[]",
+		LastModifiedAt: now,
 	}
 	err := model.InterviewRecordDao.CreateInterviewRecord(record)
 	if err != nil {
@@ -83,13 +85,12 @@ func (s *InterviewServiceImpl) SaveInterviewRecord(ctx context.Context, userID u
 }
 
 // UpdateInterviewRecord 更新面试记录（用于保存对话历史和状态）
-func (s *InterviewServiceImpl) UpdateInterviewRecord(ctx context.Context, recordID uint64, messages string, status, currentAgent string, lastModifiedAt time.Time) error {
+func (s *InterviewServiceImpl) UpdateInterviewRecord(ctx context.Context, recordID uint64, messages string, status, currentAgent string) error {
 	record := &model.InterviewRecord{
-		ID:             recordID,
-		Messages:       messages,
-		Status:         status,
-		CurrentAgent:   currentAgent,
-		LastModifiedAt: lastModifiedAt,
+		ID:           recordID,
+		Messages:     messages,
+		Status:       status,
+		CurrentAgent: currentAgent,
 	}
 	return model.InterviewRecordDao.UpdateInterviewRecord(record)
 }
