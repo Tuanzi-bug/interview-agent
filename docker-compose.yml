@@ -113,16 +113,14 @@ services:
     restart: always
     ports:
       - "6379:6379"
-    command:
-      - "redis-server"
-      - "--appendonly"
-      - "yes"
-      - "--requirepass"
-      - "root"
+    command: redis-server --appendonly yes --requirepass root
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "root", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     volumes:
       - redis-data:/data
-    networks:
-      - milvus-network
 
 # 数据卷定义
 volumes:

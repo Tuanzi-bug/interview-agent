@@ -12,7 +12,7 @@ database:
 
 # Redis配置
 redis:
-  addr: "app-redis:6379"
+  addr: "localhost:6379"
   password: "root"
   db: 0
   dial_timeout: "5s"

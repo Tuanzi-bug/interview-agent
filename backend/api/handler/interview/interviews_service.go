@@ -4,12 +4,14 @@ package interview
 
 import (
 	"ai-eino-interview-agent/internal/middleware"
+	"ai-eino-interview-agent/internal/repository"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
@@ -109,9 +111,19 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		// 记录错误但不中断流程
 		fmt.Fprintf(os.Stderr, "Failed to save interview record: %v\n", err)
 	}
+	// 从Redis获取最大问题数配置
+	key := "interview:max:question"
+	client := repository.GetRedis()
+	maxQuestions := 5 // 默认5个问题
+	val, err := client.Get(ctx, key).Result()
+	if err == nil && val != "" {
+		if q, parseErr := strconv.Atoi(val); parseErr == nil && q > 0 {
+			maxQuestions = q
+		}
+	}
 
 	// 启动流式面试
-	eventChan, err := interviewService.StartInterviewStream(ctx, &req, 1)
+	eventChan, err := interviewService.StartInterviewStream(ctx, &req, maxQuestions)
 	if err != nil {
 		// 如果出错，清理上传的文件
 		if resumeFilePath != "" {
@@ -218,8 +230,20 @@ func ContinueInterview(ctx context.Context, c *app.RequestContext) {
 	// 获取面试服务实例
 	interviewService := interviewservice.NewInterviewService()
 
+	// 从Redis获取最大问题数配置
+	key := "interview:max:question"
+	client := repository.GetRedis()
+	maxQuestions := 5 // 默认5个问题
+
+	val, err := client.Get(ctx, key).Result()
+	if err == nil && val != "" {
+		if q, parseErr := strconv.Atoi(val); parseErr == nil && q > 0 {
+			maxQuestions = q
+		}
+	}
+
 	// 继续面试流程
-	eventChan, err := interviewService.ContinueInterview(ctx, &req, 2)
+	eventChan, err := interviewService.ContinueInterview(ctx, &req, maxQuestions)
 	if err != nil {
 		c.String(consts.StatusInternalServerError, err.Error())
 		return
