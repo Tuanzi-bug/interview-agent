@@ -3,32 +3,34 @@
 package interview
 
 import (
-	serviceMiddleware "ai-eino-interview-agent/internal/middleware"
+    "strings"
+    serviceMiddleware "ai-eino-interview-agent/internal/middleware"
 
-	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
+    "github.com/cloudwego/hertz/pkg/app"
+    "github.com/cloudwego/hertz/pkg/protocol/consts"
 )
 
 var jwtPublicRoutes = map[string]struct{}{
-	"/api/user/login":             {},
-	"/api/user/register":          {},
-	"/api/user/wechat/login":      {},
-	"/api/user/wechat/callback":   {},
-	"/api/interview/start/stream": {},
+    "/api/user/login":             {},
+    "/api/user/register":          {},
+    "/api/user/logout":            {},
+    "/api/user/wechat/login":      {},
+    "/api/user/wechat/callback":   {},
+    "/api/interview/start/stream": {},
 }
 
 func AuthSkipper() serviceMiddleware.JWTSkipper {
-	return func(ctx *app.RequestContext) bool {
-		if string(ctx.Method()) == consts.MethodOptions {
-			return true
-		}
+    return func(ctx *app.RequestContext) bool {
+        if string(ctx.Method()) == consts.MethodOptions {
+            return true
+        }
 
-		path := string(ctx.Path())
-		if _, ok := jwtPublicRoutes[path]; ok {
-			return true
-		}
-		return false
-	}
+        path := strings.TrimSuffix(string(ctx.Path()), "/")
+        if _, ok := jwtPublicRoutes[path]; ok {
+            return true
+        }
+        return false
+    }
 }
 
 func rootMw() []app.HandlerFunc {
@@ -92,11 +94,15 @@ func _getprofileMw() []app.HandlerFunc {
 }
 
 func _updateprofileMw() []app.HandlerFunc {
-	return nil
+    return nil
 }
 
 func _registerMw() []app.HandlerFunc {
-	return nil
+    return nil
+}
+
+func _logoutMw() []app.HandlerFunc {
+    return nil
 }
 
 func _wechatMw() []app.HandlerFunc {

@@ -1,7 +1,6 @@
 'use client';
 
 import { Typography, Row, Col, Card as AntCard, Avatar, Tag, Button, Space, Table, Select } from 'antd';
-import { LogoutOutlined } from '@ant-design/icons';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -33,7 +32,7 @@ export default function UserCenterPage() {
                   <Tag color="gold">牛面学员</Tag>
                 </div>
               </div>
-              <Button type="link" icon={<LogoutOutlined />}>退出登录</Button>
+              
             </div>
 
             <div className="mt-6 space-y-2 text-sm text-gray-700">

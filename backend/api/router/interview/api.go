@@ -33,6 +33,7 @@ func Register(r *server.Hertz) {
 			_user.GET("/profile", append(_getprofileMw(), interview.GetProfile)...)
 			_user.PUT("/profile", append(_updateprofileMw(), interview.UpdateProfile)...)
 			_user.POST("/register", append(_registerMw(), interview.Register)...)
+			_user.POST("/logout", append(_logoutMw(), interview.Logout)...)
 			{
 				_create := _user.Group("/create", _createMw()...)
 				_create.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
