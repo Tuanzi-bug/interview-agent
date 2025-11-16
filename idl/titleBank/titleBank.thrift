@@ -72,13 +72,13 @@ service TitleBankService {
             api.gen_path="titleBank"
         )
         // 3. 创建面试题解析
-        CreateInterviewParseResponse CreateInterviewParse(1: CreateUserTitleInteractRequest request) (
+        CreateInterviewParseResponse CreateInterviewParse(1: CreateInterviewParseRequest request) (
             api.post="/api/titleBank/create/parse",
             api.category="titleBank",
             api.gen_path="titleBank"
         )
         // 4. 创建面试题互动
-        CreateInterviewLabelResponse CreateUserTitleInteract(1: CreateUserTitleInteractResponse request) (
+        CreateInterviewLabelResponse CreateUserTitleInteract(1: CreateUserTitleInteractRequest request) (
             api.post="/api/titleBank/create/interact",
             api.category="titleBank",
             api.gen_path="titleBank"

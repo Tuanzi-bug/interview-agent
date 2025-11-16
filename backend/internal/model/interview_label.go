@@ -4,12 +4,12 @@ import (
 	"time"
 )
 
-//var InterviewLabelDao _InterviewLabel
+var InterviewLabelDao _InterviewLabel
 
 // InterviewLabel 面试题标签
 type (
-	//_InterviewLabel struct {
-	//}
+	_InterviewLabel struct {
+	}
 	InterviewLabel struct {
 		ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
 		Label     string    `json:"label" gorm:"size:255;not null;comment:面试标签"`
@@ -21,6 +21,18 @@ type (
 )
 
 // TableName 指定表名
-func (i *InterviewLabel) TableName() string {
+func (l *InterviewLabel) TableName() string {
 	return "interview_label"
+}
+
+// Create 创建面试题标签
+func (l *_InterviewLabel) CreateInterviewLabel(data *InterviewLabel) error {
+	if getDB == nil {
+		panic("getDB function not initialized, please call model.SetDBGetter first")
+	}
+	err := getDB().Model(&InterviewLabel{}).Create(data).Error
+	if err != nil {
+		return err
+	}
+	return nil
 }

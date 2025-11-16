@@ -1639,9 +1639,9 @@ type TitleBankService interface {
 	// 2. 创建面试题标签
 	CreateInterviewLabel(ctx context.Context, request *CreateInterviewLabelRequest) (r *CreateInterviewLabelResponse, err error)
 	// 3. 创建面试题解析
-	CreateInterviewParse(ctx context.Context, request *CreateUserTitleInteractRequest) (r *CreateInterviewParseResponse, err error)
+	CreateInterviewParse(ctx context.Context, request *CreateInterviewParseRequest) (r *CreateInterviewParseResponse, err error)
 	// 4. 创建面试题互动
-	CreateUserTitleInteract(ctx context.Context, request *CreateUserTitleInteractResponse) (r *CreateInterviewLabelResponse, err error)
+	CreateUserTitleInteract(ctx context.Context, request *CreateUserTitleInteractRequest) (r *CreateInterviewLabelResponse, err error)
 }
 
 type TitleBankServiceClient struct {
@@ -1688,7 +1688,7 @@ func (p *TitleBankServiceClient) CreateInterviewLabel(ctx context.Context, reque
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *TitleBankServiceClient) CreateInterviewParse(ctx context.Context, request *CreateUserTitleInteractRequest) (r *CreateInterviewParseResponse, err error) {
+func (p *TitleBankServiceClient) CreateInterviewParse(ctx context.Context, request *CreateInterviewParseRequest) (r *CreateInterviewParseResponse, err error) {
 	var _args TitleBankServiceCreateInterviewParseArgs
 	_args.Request = request
 	var _result TitleBankServiceCreateInterviewParseResult
@@ -1697,7 +1697,7 @@ func (p *TitleBankServiceClient) CreateInterviewParse(ctx context.Context, reque
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *TitleBankServiceClient) CreateUserTitleInteract(ctx context.Context, request *CreateUserTitleInteractResponse) (r *CreateInterviewLabelResponse, err error) {
+func (p *TitleBankServiceClient) CreateUserTitleInteract(ctx context.Context, request *CreateUserTitleInteractRequest) (r *CreateInterviewLabelResponse, err error) {
 	var _args TitleBankServiceCreateUserTitleInteractArgs
 	_args.Request = request
 	var _result TitleBankServiceCreateUserTitleInteractResult
@@ -2532,7 +2532,7 @@ func (p *TitleBankServiceCreateInterviewLabelResult) String() string {
 }
 
 type TitleBankServiceCreateInterviewParseArgs struct {
-	Request *CreateUserTitleInteractRequest `thrift:"request,1"`
+	Request *CreateInterviewParseRequest `thrift:"request,1"`
 }
 
 func NewTitleBankServiceCreateInterviewParseArgs() *TitleBankServiceCreateInterviewParseArgs {
@@ -2542,9 +2542,9 @@ func NewTitleBankServiceCreateInterviewParseArgs() *TitleBankServiceCreateInterv
 func (p *TitleBankServiceCreateInterviewParseArgs) InitDefault() {
 }
 
-var TitleBankServiceCreateInterviewParseArgs_Request_DEFAULT *CreateUserTitleInteractRequest
+var TitleBankServiceCreateInterviewParseArgs_Request_DEFAULT *CreateInterviewParseRequest
 
-func (p *TitleBankServiceCreateInterviewParseArgs) GetRequest() (v *CreateUserTitleInteractRequest) {
+func (p *TitleBankServiceCreateInterviewParseArgs) GetRequest() (v *CreateInterviewParseRequest) {
 	if !p.IsSetRequest() {
 		return TitleBankServiceCreateInterviewParseArgs_Request_DEFAULT
 	}
@@ -2616,7 +2616,7 @@ ReadStructEndError:
 }
 
 func (p *TitleBankServiceCreateInterviewParseArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewCreateUserTitleInteractRequest()
+	_field := NewCreateInterviewParseRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -2826,7 +2826,7 @@ func (p *TitleBankServiceCreateInterviewParseResult) String() string {
 }
 
 type TitleBankServiceCreateUserTitleInteractArgs struct {
-	Request *CreateUserTitleInteractResponse `thrift:"request,1"`
+	Request *CreateUserTitleInteractRequest `thrift:"request,1"`
 }
 
 func NewTitleBankServiceCreateUserTitleInteractArgs() *TitleBankServiceCreateUserTitleInteractArgs {
@@ -2836,9 +2836,9 @@ func NewTitleBankServiceCreateUserTitleInteractArgs() *TitleBankServiceCreateUse
 func (p *TitleBankServiceCreateUserTitleInteractArgs) InitDefault() {
 }
 
-var TitleBankServiceCreateUserTitleInteractArgs_Request_DEFAULT *CreateUserTitleInteractResponse
+var TitleBankServiceCreateUserTitleInteractArgs_Request_DEFAULT *CreateUserTitleInteractRequest
 
-func (p *TitleBankServiceCreateUserTitleInteractArgs) GetRequest() (v *CreateUserTitleInteractResponse) {
+func (p *TitleBankServiceCreateUserTitleInteractArgs) GetRequest() (v *CreateUserTitleInteractRequest) {
 	if !p.IsSetRequest() {
 		return TitleBankServiceCreateUserTitleInteractArgs_Request_DEFAULT
 	}
@@ -2910,7 +2910,7 @@ ReadStructEndError:
 }
 
 func (p *TitleBankServiceCreateUserTitleInteractArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewCreateUserTitleInteractResponse()
+	_field := NewCreateUserTitleInteractRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}

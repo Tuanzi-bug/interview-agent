@@ -154,3 +154,33 @@ func _getinterviewrecordMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _titlebankMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _createusertitleinteractMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _createinterviewlabelMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _createinterviewparseMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _createinterviewtitleMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _create0Mw() []app.HandlerFunc {
+	// your code...
+	return nil
+}

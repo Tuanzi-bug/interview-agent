@@ -4,12 +4,12 @@ import (
 	"time"
 )
 
-//var  UserTitleInteractDao _UserTitleInteract
+var UserTitleInteractDao _UserTitleInteract
 
 // UserTitleInteract 用户面试题互动
 type (
-	//_UserTitleInteract struct {
-	//}
+	_UserTitleInteract struct {
+	}
 	UserTitleInteract struct {
 		ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
 		UserId    uint64    `json:"user_id" gorm:"index;not null;comment:用户Id"`
@@ -24,4 +24,16 @@ type (
 // TableName 指定表名
 func (i *UserTitleInteract) TableName() string {
 	return "user_title_interact"
+}
+
+// Create 创建面试题
+func (t *_UserTitleInteract) CreateUserTitleInteract(data *UserTitleInteract) error {
+	if getDB == nil {
+		panic("getDB function not initialized, please call model.SetDBGetter first")
+	}
+	err := getDB().Model(&UserTitleInteract{}).Create(data).Error
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -4,12 +4,12 @@ import (
 	"time"
 )
 
-//var InterviewParseDao _InterviewParse
+var InterviewParseDao _InterviewParse
 
 // InterviewParse 面试题解析
 type (
-	//_InterviewParse struct {
-	//}
+	_InterviewParse struct {
+	}
 	InterviewParse struct {
 		ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
 		TitleId   uint64    `json:"title_id" gorm:"index;not null;comment:面试题目Id"`
@@ -22,6 +22,18 @@ type (
 )
 
 // TableName 指定表名
-func (i *InterviewParse) TableName() string {
+func (p *InterviewParse) TableName() string {
 	return "interview_parse"
+}
+
+// Create 创建面试题解析
+func (p *_InterviewParse) CreateInterviewParse(data *InterviewParse) error {
+	if getDB == nil {
+		panic("getDB function not initialized, please call model.SetDBGetter first")
+	}
+	err := getDB().Model(&InterviewParse{}).Create(data).Error
+	if err != nil {
+		return err
+	}
+	return nil
 }

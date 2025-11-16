@@ -45,7 +45,7 @@ func (t *TitleBankServer) CreateInterviewLabel(ctx context.Context, req titleBan
 	if interviewTitle == nil {
 		return nil, errors.New("面试题不存在")
 	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil {
 		return nil, err
 	}
 	interviewLabel := &model.InterviewLabel{
@@ -66,7 +66,7 @@ func (t *TitleBankServer) CreateInterviewParse(ctx context.Context, req titleBan
 	if interviewTitle == nil {
 		return nil, errors.New("面试题不存在")
 	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil {
 		return nil, err
 	}
 	interviewParse := &model.InterviewParse{
@@ -88,7 +88,7 @@ func (t *TitleBankServer) CreateUserTitleInteract(ctx context.Context, req title
 	if interviewTitle == nil {
 		return nil, errors.New("面试题不存在")
 	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil {
 		return nil, err
 	}
 
@@ -96,7 +96,7 @@ func (t *TitleBankServer) CreateUserTitleInteract(ctx context.Context, req title
 	if user == nil {
 		return nil, errors.New("用户不存在")
 	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil {
 		return nil, err
 	}
 	userTitleInteract := &model.UserTitleInteract{

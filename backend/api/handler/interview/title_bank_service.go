@@ -6,6 +6,8 @@ import (
 	"context"
 
 	titleBank "ai-eino-interview-agent/api/model/titleBank"
+	titleBankService "ai-eino-interview-agent/internal/service/titleBank"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
@@ -21,7 +23,12 @@ func CreateInterviewTitle(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	resp := new(titleBank.CreateInterviewTitleResponse)
+	manager := titleBankService.NewTitleBankManager()
+	resp, err := manager.CreateInterviewTitle(ctx, req)
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
 
 	c.JSON(consts.StatusOK, resp)
 }
@@ -37,7 +44,12 @@ func CreateInterviewLabel(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	resp := new(titleBank.CreateInterviewLabelResponse)
+	manager := titleBankService.NewTitleBankManager()
+	resp, err := manager.CreateInterviewLabel(ctx, req)
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
 
 	c.JSON(consts.StatusOK, resp)
 }
@@ -46,14 +58,19 @@ func CreateInterviewLabel(ctx context.Context, c *app.RequestContext) {
 // @router /api/titleBank/create/parse [POST]
 func CreateInterviewParse(ctx context.Context, c *app.RequestContext) {
 	var err error
-	var req titleBank.CreateUserTitleInteractRequest
+	var req titleBank.CreateInterviewParseRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
 		c.String(consts.StatusBadRequest, err.Error())
 		return
 	}
 
-	resp := new(titleBank.CreateInterviewParseResponse)
+	manager := titleBankService.NewTitleBankManager()
+	resp, err := manager.CreateInterviewParse(ctx, req)
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
 
 	c.JSON(consts.StatusOK, resp)
 }
@@ -62,14 +79,19 @@ func CreateInterviewParse(ctx context.Context, c *app.RequestContext) {
 // @router /api/titleBank/create/interact [POST]
 func CreateUserTitleInteract(ctx context.Context, c *app.RequestContext) {
 	var err error
-	var req titleBank.CreateUserTitleInteractResponse
+	var req titleBank.CreateUserTitleInteractRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
 		c.String(consts.StatusBadRequest, err.Error())
 		return
 	}
 
-	resp := new(titleBank.CreateInterviewLabelResponse)
+	manager := titleBankService.NewTitleBankManager()
+	resp, err := manager.CreateUserTitleInteract(ctx, req)
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
 
 	c.JSON(consts.StatusOK, resp)
 }
