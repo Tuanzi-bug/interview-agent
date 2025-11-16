@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { BellOutlined, UserOutlined, DownOutlined } from '@ant-design/icons';
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import apiClient from '@/services/api/client';
 
 const { Header } = Layout;
 const { Title } = Typography;
 
 const Navbar: FC = () => {
+  const router = useRouter();
   const [openAuth, setOpenAuth] = useState(false);
   const [activeKey, setActiveKey] = useState<'login' | 'register'>('login');
   const [authed, setAuthed] = useState(false);
@@ -27,7 +29,7 @@ const Navbar: FC = () => {
 
   const doLogin = async (values: { email: string; password: string }) => {
     try {
-      const res: any = await apiClient.post('http://localhost:8888/api/user/login', values);
+      const res: any = await apiClient.post('/user/login', values);
       const data = res?.data || res;
       const token = data?.token || data?.accessToken;
       if (!token) {
@@ -35,6 +37,7 @@ const Navbar: FC = () => {
         return;
       }
       localStorage.setItem('token', token);
+      try { document.cookie = `token=${token};path=/;max-age=${60 * 60 * 24}`; } catch {}
       if (data?.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
@@ -52,20 +55,36 @@ const Navbar: FC = () => {
 
   const doRegister = async (values: { username: string; email: string; password: string }) => {
     try {
-      await apiClient.post('http://localhost:8888/api/user/register', values);
-      message.success('注册成功，正在登录');
-      await doLogin({ email: values.email, password: values.password });
+      const data: any = await apiClient.post('/user/register', values);
+      const token = data?.token;
+      const userData = data?.user;
+      if (!token || !userData) {
+        message.error('注册失败：返回数据缺失');
+        return;
+      }
+      localStorage.setItem('token', token);
+      try { document.cookie = `token=${token};path=/;max-age=${60 * 60 * 24}`; } catch {}
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      setAuthed(true);
+      setOpenAuth(false);
+      message.success('注册并登录成功');
     } catch (e: any) {
       message.error(e?.response?.data?.message || '注册失败');
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await apiClient.post('/user/logout', {});
+    } catch (e) {
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setAuthed(false);
     setUser(null);
     message.success('已退出登录');
+    router.push('/');
   };
 
   return (
@@ -114,6 +133,7 @@ const Navbar: FC = () => {
                   { key: 'interviews', label: <Link href="/user/interviews">面试记录</Link> },
                   { key: 'press', label: <Link href="/user/press">押题记录</Link> },
                   { key: 'notes', label: <Link href="/user/notes">笔记列表</Link> },
+                  { key: 'models', label: <Link href="/user/models">用户模型</Link> },
                   { key: 'logout', label: <a onClick={logout}>退出登录</a> },
                 ],
               }}

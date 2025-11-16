@@ -275,6 +275,23 @@ func UpdateProfile(ctx context.Context, c *app.RequestContext) {
 	c.JSON(consts.StatusOK, resp)
 }
 
+// Logout .
+// @router /api/user/logout [POST]
+func Logout(ctx context.Context, c *app.RequestContext) {
+	userID := middleware.GetUserID(c)
+	data := map[string]interface{}{
+		"status": "logged_out",
+	}
+	if userID != 0 {
+		data["user_id"] = userID
+	}
+	c.JSON(consts.StatusOK, map[string]interface{}{
+		"code":    0,
+		"message": "ok",
+		"data":    data,
+	})
+}
+
 // WechatLogin .
 // @router /api/user/wechat/login [GET]
 func WechatLogin(ctx context.Context, c *app.RequestContext) {
