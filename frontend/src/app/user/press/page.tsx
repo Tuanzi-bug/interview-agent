@@ -55,7 +55,7 @@ export default function PressRecordsPage() {
             { title: '公司名称', dataIndex: 'company' },
             { title: '岗位名称', dataIndex: 'job' },
             { title: '押题时间', dataIndex: 'time' },
-            { title: '操作', render: () => <Space><Button type="link">查看详情</Button><Button type="link">继续押题</Button></Space> },
+            { title: '操作', render: (_: any, row: any) => <Space><a href={`/user/press/${row.key}`}>查看详情</a><Button type="link">继续押题</Button></Space> },
           ]}
           dataSource={filtered}
           pagination={{ pageSize: 20 }}

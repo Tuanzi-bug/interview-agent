@@ -1,6 +1,7 @@
 'use client';
 
 import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, Tag } from 'antd';
+import Link from 'next/link';
 import { CheckCircleOutlined, VideoCameraOutlined } from '@ant-design/icons';
 
 const { Title, Paragraph } = Typography;
@@ -62,7 +63,7 @@ export default function CampusInterviewPage() {
               </Row>
 
               <div className="mt-4">
-                <Button type="primary" className="bg-green-500 w-full h-12 text-base">开始校招面试</Button>
+                <Link href="/interview/campus/start"><Button type="primary" className="bg-green-500 w-full h-12 text-base">开始校招面试</Button></Link>
                 <div className="text-center text-gray-500 text-sm mt-2">1次面试时长 20分钟-60分钟，自动串联题目与追问链路</div>
               </div>
             </Form>
