@@ -25,6 +25,11 @@ struct InterviewEvent {
     4: optional string transfer_to     // 转让目标（当 Type 为 transfer 时）
     5: optional string error           // 错误信息（当 Type 为 error 时）
     6: optional string status          // 状态更新
+    7: optional string report          // 最终报告（当 Type 为 done 时）
+    8: optional double score           // 面试评分（当 Type 为 done 时）
+    9: optional i64 duration           // 面试时长（秒）（当 Type 为 done 时）
+    10: optional string feedback       // 反馈信息（当 Type 为 done 时）
+    11: optional string messages       // 对话历史（JSON 格式）（当 Type 为 done 时）
 }
 
 // ==================== 请求和响应结构 ====================
