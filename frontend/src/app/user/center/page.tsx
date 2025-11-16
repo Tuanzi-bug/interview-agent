@@ -1,6 +1,8 @@
 'use client';
 
 import { Typography, Row, Col, Card as AntCard, Avatar, Tag, Button, Space, Table, Select } from 'antd';
+import { useEffect, useState } from 'react';
+import apiClient from '@/services/api/client';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -19,6 +21,16 @@ const data = [
 ];
 
 export default function UserCenterPage() {
+  const [profile, setProfile] = useState<{ id?: number; username?: string; email?: string } | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res: any = await apiClient.get('/user/profile');
+        const data = res?.data || res;
+        setProfile(data || null);
+      } catch {}
+    })();
+  }, []);
   return (
     <div className="container mx-auto px-4">
       <Row gutter={[24, 24]}>
@@ -28,7 +40,7 @@ export default function UserCenterPage() {
               <div className="flex items-center gap-3">
                 <Avatar size={64} src="https://api.dicebear.com/7.x/adventurer/svg?seed=LB" />
                 <div>
-                  <div className="font-medium text-lg">LittleBear</div>
+                  <div className="font-medium text-lg">{profile?.username || '未登录'}</div>
                   <Tag color="gold">牛面学员</Tag>
                 </div>
               </div>
@@ -36,9 +48,8 @@ export default function UserCenterPage() {
             </div>
 
             <div className="mt-6 space-y-2 text-sm text-gray-700">
-              <div>姓名：李凯</div>
-              <div>邮箱：littlebear@example.com</div>
-              <div>ID：695965d5-1648-4c4f-bc94-38c978b17a19</div>
+              <div>用户名：{profile?.username ?? '-'}</div>
+              <div>邮箱：{profile?.email ?? '-'}</div>
             </div>
 
             <AntCard className="rounded-2xl mt-6 bg-green-500 text-white" variant="outlined">
