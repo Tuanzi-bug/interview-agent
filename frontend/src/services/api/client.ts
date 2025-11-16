@@ -18,6 +18,7 @@ apiClient.interceptors.request.use(
     if (token && !isAuthFree) {
       config.headers = (config.headers || {}) as any;
       (config.headers as any).Authorization = `Bearer ${token}`;
+      (config.headers as any)['X-Auth-Token'] = token;
     }
     return config;
   },

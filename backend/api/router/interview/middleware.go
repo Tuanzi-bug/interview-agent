@@ -50,7 +50,11 @@ func _createMw() []app.HandlerFunc {
 }
 
 func _createusermodelMw() []app.HandlerFunc {
-	return nil
+    return nil
+}
+
+func _createusermodelsMw() []app.HandlerFunc {
+    return nil
 }
 
 func _modelMw() []app.HandlerFunc {

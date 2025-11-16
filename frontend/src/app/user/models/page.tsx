@@ -1,6 +1,6 @@
 'use client';
 
-import { Typography, Card as AntCard, Table, Button, Space, Tag, Modal, Form, Input, Select, message } from 'antd';
+import { Typography, Card as AntCard, Table, Button, Space, Tag, Modal, Form, Input, Select, InputNumber, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import apiClient from '@/services/api/client';
 
@@ -32,14 +32,14 @@ export default function UserModelsPage() {
       const res: any = await apiClient.get('/user/model/list', { params: { page: p, size: s } });
       const data = res?.data || res;
       const items: ModelItem[] = (data?.list || []).map((it: any) => ({
-        id: it.id,
-        name: it.name,
-        modelKey: it.modelKey,
-        protocol: it.protocol,
-        baseURL: it.baseURL,
-        providerName: it.providerName,
-        status: it.status,
-        createdAt: it.createdAt,
+        id: it.id ?? it.ID,
+        name: it.name ?? it.Name,
+        modelKey: it.modelKey ?? it.model_key ?? it.ModelKey,
+        protocol: it.protocol ?? it.Protocol,
+        baseURL: it.baseURL ?? it.base_url ?? it.BaseURL,
+        providerName: it.providerName ?? it.provider_name ?? it.ProviderName,
+        status: it.status ?? it.Status,
+        createdAt: it.createdAt ?? it.created_at ?? it.CreatedAt,
       }));
       setList(items);
       setTotal(data?.total || items.length);
@@ -59,30 +59,33 @@ export default function UserModelsPage() {
     try {
       const v = await form.validateFields();
       const config = {
-        apiSecret: v.apiSecret,
-        iconURI: v.iconURI,
+        icon_uri: v.iconURI,
         temperature: v.temperature,
-        maxTokens: v.maxTokens,
-        topP: v.topP,
-        topK: v.topK,
+        max_tokens: v.maxTokens,
+        top_p: v.topP,
+        top_k: v.topK,
         timeout: v.timeout,
-        functionCall: v.functionCall,
-        jsonMode: v.jsonMode,
-        inputTokenLimit: v.inputTokenLimit,
-        outputTokenLimit: v.outputTokenLimit,
-        concurrency: v.concurrency,
+        capability: {
+          function_call: v.functionCall === true,
+          json_mode: v.jsonMode === true,
+          input_tokens: v.inputTokenLimit,
+          max_tokens: v.outputTokenLimit,
+        },
       };
       const payload = {
         name: v.name,
-        modelKey: v.modelKey,
+        model_key: v.modelKey,
         protocol: v.protocol,
-        providerName: v.providerName,
-        baseURL: v.baseURL,
-        status: v.status,
-        defaultParams: v.defaultParams,
-        configJSON: JSON.stringify(config),
+        base_url: v.baseURL,
+        api_key: v.apiSecret,
+        provider_name: v.providerName,
+        default_params: v.defaultParams || "{}",
+        meta_id: v.metaId !== undefined && v.metaId !== null && v.metaId !== '' ? Number(v.metaId) : undefined,
+        config_json: JSON.stringify(config),
+        scope: 7,
+        status: v.status !== undefined && v.status !== null ? Number(v.status) : 1,
       };
-      await apiClient.post('/user/create/model', payload);
+      await apiClient.post('/create/user-models', payload);
       message.success('创建成功');
       setOpenCreate(false);
       form.resetFields();
@@ -111,7 +114,7 @@ export default function UserModelsPage() {
       { title: '协议', dataIndex: 'protocol', render: (v: string) => <Tag color="blue">{v}</Tag> },
       { title: '提供商', dataIndex: 'providerName' },
       { title: '状态', dataIndex: 'status', render: (v: number) => <Tag color={v === 1 ? 'green' : 'red'}>{v === 1 ? '启用' : '停用'}</Tag> },
-      { title: '创建时间', dataIndex: 'createdAt', render: (ts?: number) => (ts ? new Date(ts).toLocaleString() : '-') },
+      { title: '创建时间', dataIndex: 'createdAt', render: (ts?: any) => (ts ? (typeof ts === 'number' ? new Date(ts).toLocaleString() : String(ts)) : '-') },
       {
         title: '操作',
         render: (_: any, row: ModelItem) => (
@@ -130,7 +133,7 @@ export default function UserModelsPage() {
     <div className="container mx-auto px-4">
       <Title level={2} className="mt-2">用户模型管理</Title>
 
-      <AntCard className="rounded-2xl mt-2" extra={<Button type="primary" onClick={() => setOpenCreate(true)}>创建模型</Button>}>
+      <AntCard className="rounded-2xl mt-2" extra={<Button type="primary" onClick={() => { const t = typeof window !== 'undefined' ? localStorage.getItem('token') : null; if (!t) { message.warning('请先登录后再创建'); return; } setOpenCreate(true); }}>创建模型</Button>}>
         <Table
           rowKey="id"
           loading={loading}
@@ -141,7 +144,7 @@ export default function UserModelsPage() {
       </AntCard>
 
       <Modal open={openCreate} title="创建模型" onCancel={() => setOpenCreate(false)} onOk={onCreate} okText="创建" width={800} styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }} destroyOnClose>
-        <Form form={form} layout="vertical" initialValues={{ protocol: 'ark', providerName: 'OpenAI', status: 1, temperature: 0.7, maxTokens: 2048, topP: 0.9, topK: 40, timeout: 30, functionCall: false, jsonMode: false, inputTokenLimit: 128000, outputTokenLimit: 128000, concurrency: 7 }}>
+        <Form form={form} layout="vertical" initialValues={{ protocol: 'ark', providerName: 'OpenAI', status: 1, temperature: 0.7, maxTokens: 2048, topP: 0.9, topK: 40, timeout: 30, functionCall: true, jsonMode: true, inputTokenLimit: 128000, outputTokenLimit: 128000 }}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Form.Item label="模型名称" name="name" rules={[{ required: true, message: '请输入模型名称' }]}>
               <Input placeholder="如：My GPT-4 Model" maxLength={100} />
@@ -158,8 +161,8 @@ export default function UserModelsPage() {
             <Form.Item label="协议" name="protocol" rules={[{ required: true }]}> 
               <Select options={[{ value: 'ark', label: 'ark' }, { value: 'openai', label: 'openai' }, { value: 'ollama', label: 'ollama' }]} />
             </Form.Item>
-            <Form.Item label="并发限制" name="concurrency">
-              <Input type="number" placeholder="如：7" />
+            <Form.Item label="Meta ID" name="metaId">
+              <InputNumber style={{ width: '100%' }} placeholder="如：1001" />
             </Form.Item>
             <Form.Item label="状态" name="status">
               <Select options={[{ value: 1, label: '启用' }, { value: 0, label: '停用' }]} />

@@ -39,6 +39,10 @@ func Register(r *server.Hertz) {
 				_create.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
 			}
 			{
+				_create2 := _api.Group("/create", _createMw()...)
+				_create2.POST("/user-models", append(_createusermodelsMw(), interview.CreateUserModel)...)
+			}
+			{
 				_model := _user.Group("/model", _modelMw()...)
 				_model.GET("/list", append(_listusermodelsMw(), interview.ListUserModels)...)
 				{

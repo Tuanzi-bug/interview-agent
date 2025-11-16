@@ -37,6 +37,7 @@ const Navbar: FC = () => {
         return;
       }
       localStorage.setItem('token', token);
+      try { document.cookie = `token=${token};path=/;max-age=${60 * 60 * 24}`; } catch {}
       if (data?.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
@@ -62,6 +63,7 @@ const Navbar: FC = () => {
         return;
       }
       localStorage.setItem('token', token);
+      try { document.cookie = `token=${token};path=/;max-age=${60 * 60 * 24}`; } catch {}
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
       setAuthed(true);
