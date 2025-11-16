@@ -3,16 +3,16 @@
 package interview
 
 import (
-    "context"
-    "errors"
+	"context"
+	"errors"
 
-    user "ai-eino-interview-agent/api/model/user"
-    "ai-eino-interview-agent/internal/middleware"
-    userservice "ai-eino-interview-agent/internal/service/user"
+	user "ai-eino-interview-agent/api/model/user"
+	"ai-eino-interview-agent/internal/middleware"
+	userservice "ai-eino-interview-agent/internal/service/user"
 
-    "github.com/cloudwego/hertz/pkg/app"
-    "github.com/cloudwego/hertz/pkg/protocol/consts"
-    "gorm.io/gorm"
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"gorm.io/gorm"
 )
 
 // CreateUserModel .
@@ -278,18 +278,18 @@ func UpdateProfile(ctx context.Context, c *app.RequestContext) {
 // Logout .
 // @router /api/user/logout [POST]
 func Logout(ctx context.Context, c *app.RequestContext) {
-    userID := middleware.GetUserID(c)
-    data := map[string]interface{}{
-        "status": "logged_out",
-    }
-    if userID != 0 {
-        data["user_id"] = userID
-    }
-    c.JSON(consts.StatusOK, map[string]interface{}{
-        "code":    0,
-        "message": "ok",
-        "data":    data,
-    })
+	userID := middleware.GetUserID(c)
+	data := map[string]interface{}{
+		"status": "logged_out",
+	}
+	if userID != 0 {
+		data["user_id"] = userID
+	}
+	c.JSON(consts.StatusOK, map[string]interface{}{
+		"code":    0,
+		"message": "ok",
+		"data":    data,
+	})
 }
 
 // WechatLogin .
