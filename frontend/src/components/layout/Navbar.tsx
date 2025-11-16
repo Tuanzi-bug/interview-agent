@@ -131,6 +131,7 @@ const Navbar: FC = () => {
                   { key: 'interviews', label: <Link href="/user/interviews">面试记录</Link> },
                   { key: 'press', label: <Link href="/user/press">押题记录</Link> },
                   { key: 'notes', label: <Link href="/user/notes">笔记列表</Link> },
+                  { key: 'models', label: <Link href="/user/models">用户模型</Link> },
                   { key: 'logout', label: <a onClick={logout}>退出登录</a> },
                 ],
               }}
