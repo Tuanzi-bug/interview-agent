@@ -31,4 +31,8 @@ type InterviewService interface {
 
 	// CompleteInterviewRecord 完成面试记录（保存最终报告和评分）
 	CompleteInterviewRecord(ctx context.Context, recordID uint64, report string, duration int64, score *float64) error
+
+	ListInterviewRecords(ctx context.Context, userID uint, page, pageSize int) ([]*interviewsapi.InterviewRecordDTO, int64, error)
+
+	GetInterviewRecord(ctx context.Context, userID uint, recordID uint64) (*interviewsapi.InterviewRecordDTO, error)
 }

@@ -100,6 +100,29 @@ func (s *InterviewServiceImpl) CompleteInterviewRecord(ctx context.Context, reco
 	return model.InterviewRecordDao.CompleteInterviewRecord(recordID, report, duration, score)
 }
 
+func (s *InterviewServiceImpl) ListInterviewRecords(ctx context.Context, userID uint, page, pageSize int) ([]*interviewsapi.InterviewRecordDTO, int64, error) {
+	records, total, err := model.InterviewRecordDao.ListInterviewRecords(userID, page, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	result := make([]*interviewsapi.InterviewRecordDTO, 0, len(records))
+	for _, r := range records {
+		result = append(result, convertToInterviewRecordDTO(r))
+	}
+	return result, total, nil
+}
+
+func (s *InterviewServiceImpl) GetInterviewRecord(ctx context.Context, userID uint, recordID uint64) (*interviewsapi.InterviewRecordDTO, error) {
+	record, err := model.InterviewRecordDao.GetInterviewRecordByID(recordID)
+	if err != nil {
+		return nil, err
+	}
+	if record.UserID != userID {
+		return nil, nil
+	}
+	return convertToInterviewRecordDTO(record), nil
+}
+
 // convertToAPIEvent 将 ext.InterviewEvent 转换为 interviewsapi.InterviewEvent
 func convertToAPIEvent(event *ext.InterviewEvent) *interviewsapi.InterviewEvent {
 	apiEvent := interviewsapi.NewInterviewEvent()
@@ -137,4 +160,50 @@ func convertToAPIEvent(event *ext.InterviewEvent) *interviewsapi.InterviewEvent 
 	}
 
 	return apiEvent
+}
+
+func convertToInterviewRecordDTO(record *model.InterviewRecord) *interviewsapi.InterviewRecordDTO {
+	dto := interviewsapi.NewInterviewRecordDTO()
+	dto.ID = int64(record.ID)
+	dto.UserID = int32(record.UserID)
+	dto.Title = record.Title
+	dto.Query = record.Query
+	dto.Status = record.Status
+	if record.Messages != "" {
+		v := record.Messages
+		dto.Messages = &v
+	}
+	if record.Report != "" {
+		v := record.Report
+		dto.Report = &v
+	}
+	if record.CurrentAgent != "" {
+		v := record.CurrentAgent
+		dto.CurrentAgent = &v
+	}
+	if record.Duration != 0 {
+		v := record.Duration
+		dto.Duration = &v
+	}
+	if record.Score != nil {
+		v := *record.Score
+		dto.Score = &v
+	}
+	if record.Feedback != "" {
+		v := record.Feedback
+		dto.Feedback = &v
+	}
+	if !record.CreatedAt.IsZero() {
+		ms := record.CreatedAt.UnixNano() / int64(time.Millisecond)
+		dto.CreatedAt = &ms
+	}
+	if !record.UpdatedAt.IsZero() {
+		ms := record.UpdatedAt.UnixNano() / int64(time.Millisecond)
+		dto.UpdatedAt = &ms
+	}
+	if record.CompletedAt != nil {
+		ms := record.CompletedAt.UnixNano() / int64(time.Millisecond)
+		dto.CompletedAt = &ms
+	}
+	return dto
 }

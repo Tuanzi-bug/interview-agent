@@ -257,3 +257,69 @@ func ContinueInterview(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 }
+
+// ListInterviewRecords .
+// @router /api/interview/records [GET]
+func ListInterviewRecords(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req interviewsapi.ListInterviewRecordsRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	page := int(req.GetPage())
+	if page <= 0 {
+		page = 1
+	}
+	pageSize := int(req.GetPageSize())
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	interviewService := interviewservice.NewInterviewService()
+	records, total, err := interviewService.ListInterviewRecords(ctx, userID, page, pageSize)
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
+
+	resp := &interviewsapi.ListInterviewRecordsResponse{
+		Records:  records,
+		Total:    total,
+		Page:     int32(page),
+		PageSize: int32(pageSize),
+	}
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetInterviewRecord .
+// @router /api/interview/records/:id [GET]
+func GetInterviewRecord(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req interviewsapi.GetInterviewRecordRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	interviewService := interviewservice.NewInterviewService()
+	record, err := interviewService.GetInterviewRecord(ctx, userID, uint64(req.ID))
+	if err != nil {
+		c.String(consts.StatusInternalServerError, err.Error())
+		return
+	}
+	if record == nil {
+		c.String(consts.StatusNotFound, "record not found")
+		return
+	}
+
+	resp := &interviewsapi.GetInterviewRecordResponse{Record: record}
+
+	c.JSON(consts.StatusOK, resp)
+}

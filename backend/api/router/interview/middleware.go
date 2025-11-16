@@ -129,3 +129,18 @@ func _startinterviewstreamMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _recordsMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listinterviewrecordsMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getinterviewrecordMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
