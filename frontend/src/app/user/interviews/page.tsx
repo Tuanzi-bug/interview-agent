@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Typography, Row, Col, Card as AntCard, Slider, DatePicker, Select, Empty, Button } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Typography, Row, Col, Card as AntCard, Slider, DatePicker, Select, Empty, Button, Table, Tag, Space, message } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import Link from 'next/link';
+import apiClient from '@/services/api/client';
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -11,6 +12,54 @@ const { RangePicker } = DatePicker;
 export default function InterviewRecordsPage() {
   const [scoreRange, setScoreRange] = useState<[number, number]>([0, 100]);
   const [filter, setFilter] = useState('全部');
+  const [list, setList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
+
+  const fetchList = async (p = page, s = pageSize) => {
+    setLoading(true);
+    try {
+      const res: any = await apiClient.get('/interview/records', { params: { page: p, page_size: s } });
+      const data = res?.data || res;
+      const items = (data?.records || data?.list || []).map((it: any) => ({
+        id: it.id ?? it.ID,
+        title: it.title ?? it.Title,
+        status: it.status ?? it.Status,
+        score: it.score ?? it.Score,
+        duration: it.duration ?? it.Duration,
+        createdAt: it.created_at ?? it.createdAt ?? it.CreatedAt,
+      }));
+      setList(items);
+      setTotal(data?.total ?? data?.Total ?? items.length);
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || '加载失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchList(page, pageSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize]);
+
+  const completedCount = useMemo(() => list.filter(i => (i.status || '').toLowerCase() === 'completed').length, [list]);
+  const averageScore = useMemo(() => {
+    const scores = list.map(i => Number(i.score)).filter(s => !isNaN(s));
+    if (scores.length === 0) return 0;
+    return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10;
+  }, [list]);
+  const filteredList = useMemo(() => {
+    const min = scoreRange?.[0] ?? 0;
+    const max = scoreRange?.[1] ?? 100;
+    return list.filter(it => {
+      const s = Number(it.score);
+      if (isNaN(s)) return true;
+      return s >= min && s <= max;
+    });
+  }, [list, scoreRange]);
 
   return (
     <div className="container mx-auto px-4">
@@ -21,11 +70,11 @@ export default function InterviewRecordsPage() {
           <Col xs={24} md={12}>
             <div className="grid grid-cols-2 gap-6 items-center">
               <div className="text-center">
-                <div className="text-3xl font-semibold">0</div>
+                <div className="text-3xl font-semibold">{completedCount}</div>
                 <div className="text-gray-500">已完成面试(次)</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-semibold">0</div>
+                <div className="text-3xl font-semibold">{averageScore}</div>
                 <div className="text-gray-500">平均得分(分)</div>
               </div>
             </div>
@@ -61,17 +110,36 @@ export default function InterviewRecordsPage() {
         </div>
 
         <div className="mt-8">
-          <Empty
-            imageStyle={{ height: 120 }}
-            description={
-              <div>
-                <div>暂时无面试记录</div>
-                <div className="mt-2">
-                  可以进行 <Link href="/interview/social">社招简历面试</Link> 或 <Link href="/interview/campus">校招简历面试</Link>
+          {list.length === 0 ? (
+            <Empty
+              imageStyle={{ height: 120 }}
+              description={
+                <div>
+                  <div>暂时无面试记录</div>
+                  <div className="mt-2">
+                    可以进行 <Link href="/interview/social">社招简历面试</Link> 或 <Link href="/interview/campus">校招简历面试</Link>
+                  </div>
                 </div>
-              </div>
-            }
-          />
+              }
+            />
+          ) : (
+            <AntCard className="rounded-2xl">
+              <Table
+                rowKey="id"
+                loading={loading}
+                dataSource={filteredList}
+                pagination={{ current: page, pageSize, total, onChange: setPage, showSizeChanger: true, onShowSizeChange: (_c, s) => setPageSize(s) }}
+                columns={[
+                  { title: '标题', dataIndex: 'title' },
+                  { title: '状态', dataIndex: 'status', render: (v: string) => <Tag color={String(v).toLowerCase() === 'completed' ? 'green' : 'blue'}>{v || '-'}</Tag> },
+                  { title: '分数', dataIndex: 'score', render: (v: any) => (v !== undefined && v !== null ? v : '-') },
+                  { title: '耗时(秒)', dataIndex: 'duration', render: (v: any) => (v !== undefined && v !== null ? v : '-') },
+                  { title: '创建时间', dataIndex: 'createdAt', render: (ts: any) => (ts ? (typeof ts === 'number' ? new Date(ts).toLocaleString() : String(ts)) : '-') },
+                  { title: '操作', render: (_: any, row: any) => <Space><Link href={`/user/interviews/${row.id}`}>查看详情</Link></Space> },
+                ]}
+              />
+            </AntCard>
+          )}
         </div>
       </div>
     </div>
