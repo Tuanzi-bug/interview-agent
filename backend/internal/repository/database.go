@@ -69,6 +69,7 @@ func migrateDatabase() error {
 		&model.QuestionBank{},
 		&model.EvaluationCriteria{},
 		&model.UserModel{},
+		&model.QuestionBankEntrance{},
 	)
 }
 

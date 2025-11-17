@@ -106,6 +106,20 @@ type EvaluationCriteria struct {
 	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
+type QuestionBankEntrance struct {
+	ID           uint           `json:"id" gorm:"primaryKey;comment:主键"`                           // 对应 bigint 主键
+	CategoryName string         `json:"category_name" gorm:"size:32;comment:分类名称"`                 // varchar(32)
+	CategoryType *int8          `json:"category_type,omitempty" gorm:"type:tinyint;comment:分类的类型"` // tinyint(4)，可选
+	ImageURL     string         `json:"image_url,omitempty" gorm:"size:64;comment:图标链接"`           // varchar(64)，可选
+	ParentID     *uint          `json:"parent_id,omitempty" gorm:"comment:父级id"`                   // 父分类ID，可选（层级关联）
+	CreatedBy    string         `json:"created_by,omitempty" gorm:"size:32;comment:创建人"`           // varchar(32)，可选
+	CreatedTime  time.Time      `json:"created_time" gorm:"comment:创建时间"`                          // datetime，自动填充
+	UpdatedBy    string         `json:"updated_by,omitempty" gorm:"size:32;comment:更新人"`           // varchar(32)，可选
+	UpdatedTime  time.Time      `json:"updated_time" gorm:"comment:更新时间"`                          // datetime，自动填充
+	IsDeleted    *int8          `json:"is_deleted,omitempty" gorm:"type:tinyint;comment:是否删除"`     // tinyint(2)，0=未删/1=已删，可选
+	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`                                            // 软删除字段，和 Resume 保持一致
+}
+
 func (User) TableName() string {
 	return "user"
 }
