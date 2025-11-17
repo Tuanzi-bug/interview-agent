@@ -14,7 +14,7 @@ var GlobalToolsNode *compose.ToolsNode
 func CreatOpenAiChatModel(ctx context.Context) model.ToolCallingChatModel {
 
 	//你的api Key
-	key := "6441ebfb-9d12-4a03-8108-9e91a794695d"
+	key := ""
 	//模型名称
 	modelName := "doubao-seed-1-6-250615"
 	//api url

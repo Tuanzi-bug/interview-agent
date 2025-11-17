@@ -12,11 +12,11 @@ import (
 	"github.com/cloudwego/eino/compose"
 )
 
-func NewResumAnalysisAgent() adk.Agent {
+func NewResumAnalysisAgent(supervisorName string) adk.Agent {
 	ctx := context.Background()
 
-	a, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
-		Name:        "ResumAnalysisAgent",
+	baseAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
+		Name:        "ResumeAnalysisAgent",
 		Description: "一个可以解析简历pdf分析简历的智能体",
 		Instruction: `你是一名资深的简历分析专家，负责对用户的简历进行分析,并输出对应的分析结果。
 
@@ -35,5 +35,9 @@ func NewResumAnalysisAgent() adk.Agent {
 		log.Fatal(fmt.Errorf("failed to create chatmodel: %w", err))
 	}
 
-	return a
+	// 增强：完成后自动回调Supervisor
+	return adk.AgentWithDeterministicTransferTo(context.Background(), &adk.DeterministicTransferConfig{
+		Agent:        baseAgent,
+		ToAgentNames: []string{supervisorName},
+	})
 }

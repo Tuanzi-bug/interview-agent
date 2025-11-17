@@ -5,7 +5,7 @@ port: 8888
 # 数据库配置
 database:
   driver: "mysql"
-  dsn: "user:password@tcp(localhost:3306)/interview_agent?charset=utf8mb4&parseTime=True&loc=Local"
+  dsn: "root:root@tcp(localhost:3306)/interview_agent?charset=utf8mb4&parseTime=True&loc=Local"
   max_open_conns: 100
   max_idle_conns: 10
   conn_max_lifetime: "1h"
@@ -95,11 +95,11 @@ Milvus:
   Username: "${MILVUS_USERNAME}"            # 从环境变量 MILVUS_USERNAME 读取
   Password: "${MILVUS_PASSWORD}"            # 从环境变量 MILVUS_PASSWORD 读取
   DatabaseName: "default"                   # 数据库名称
-  CollectionName: "documents"               # 集合名称
+  CollectionName: "knowledge"               # 集合名称
 
   # 检索配置
   TopK: 5                                   # 返回的最相似文档数量
-  MetricType: "L2"                          # 距离度量类型: L2, IP, COSINE
+  MetricType: "COSINE"                      # 距离度量类型: L2, IP, COSINE
 
   # 超时配置
   ConnectTimeout: 10s                       # 连接超时

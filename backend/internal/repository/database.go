@@ -46,6 +46,9 @@ func InitDatabase(dbConfig config.DatabaseConfig) error {
 	// 设置全局DB实例
 	DB = db
 
+	// 设置 model 包的 DB 获取函数
+	model.SetDBGetter(GetDB)
+
 	// 自动迁移数据库表结构
 	err = migrateDatabase()
 	if err != nil {
@@ -60,11 +63,12 @@ func InitDatabase(dbConfig config.DatabaseConfig) error {
 func migrateDatabase() error {
 	return DB.AutoMigrate(
 		&model.User{},
-		&model.Resume{},
-		&model.Interview{},
-		&model.Question{},
-		&model.QuestionBank{},
-		&model.EvaluationCriteria{},
+		&model.UserModel{},
+		&model.InterviewRecord{},
+		&model.InterviewTitle{},
+		&model.InterviewLabel{},
+		&model.InterviewParse{},
+		&model.UserTitleInteract{},
 	)
 }
 
