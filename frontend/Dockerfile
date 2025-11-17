@@ -35,8 +35,10 @@ WORKDIR /app
 # 从构建阶段复制依赖和构建产物
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
 COPY --from=builder /app/package*.json ./
+
+# 创建 public 目录（如果不存在）
+RUN mkdir -p ./public
 
 # 更改所有权
 RUN chown -R appuser:appuser /app

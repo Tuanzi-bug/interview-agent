@@ -1,8 +1,45 @@
-version: '3.8'
-
-# 向量数据库 Milvus 及其依赖服务
 services:
-  # 8. Etcd服务（Milvus依赖）
+  # 1. MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: app-mysql
+    restart: always
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-interview_agent}
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./backend/db_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # 2. Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: app-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-root}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-root}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+
+  # 3. Etcd服务（Milvus依赖）
   etcd:
     image: quay.io/coreos/etcd:v3.5.5
     container_name: milvus-etcd
@@ -33,9 +70,9 @@ services:
       timeout: 20s
       retries: 3
     networks:
-      - milvus-network
+      - app-network
 
-  # 9. MinIO对象存储服务（Milvus依赖）
+  # 4. MinIO对象存储服务（Milvus依赖）
   minio:
     image: minio/minio:RELEASE.2023-03-20T20-16-18Z
     container_name: milvus-minio
@@ -56,14 +93,13 @@ services:
       timeout: 20s
       retries: 3
     networks:
-      - milvus-network
+      - app-network
 
-  # 10. Milvus向量数据库服务
-  milvus-standalone:
+  # 5. Milvus向量数据库服务
+  milvus:
     image: milvusdb/milvus:v2.4.0
     container_name: milvus-standalone
     restart: always
-    # 使用更新版本 v2.4.0，支持更好的 ARM64 兼容性
     ports:
       - "19530:19530"
       - "9091:9091"
@@ -89,9 +125,9 @@ services:
       timeout: 20s
       retries: 3
     networks:
-      - milvus-network
+      - app-network
 
-  # 11. Attu - Milvus管理界面
+  # 6. Attu - Milvus管理界面
   attu:
     image: zilliz/attu:v2.3.4
     container_name: milvus-attu
@@ -99,42 +135,77 @@ services:
     ports:
       - "8000:3000"
     depends_on:
-      milvus-standalone:
+      milvus:
         condition: service_healthy
     environment:
-      - MILVUS_URL=milvus-standalone:19530
+      - MILVUS_URL=milvus:19530
     networks:
-      - milvus-network
+      - app-network
 
-  # Redis 缓存服务
-  redis:
-    image: redis:7-alpine
-    container_name: app-redis
+  # 12. 后端 API 服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: app-backend
     restart: always
     ports:
-      - "6379:6379"
-    command: redis-server --appendonly yes --requirepass root
-    healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "root", "ping" ]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+      - "8888:8888"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-ht123456}
+      DB_NAME: ${DB_NAME:-interview_agent}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-root}
+      MILVUS_ADDRESS: milvus:19530
+      PORT: 8888
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      milvus:
+        condition: service_healthy
     volumes:
-      - redis-data:/data
+      - ./backend/config.yaml:/app/config.yaml
+      - ./backend/logs:/app/logs
+    networks:
+      - app-network
+
+  # 13. 前端应用
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: app-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8888
+    depends_on:
+      - backend
+    networks:
+      - app-network
 
 # 数据卷定义
 volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
   etcd-data:
     driver: local
   minio-data:
     driver: local
   milvus-data:
     driver: local
-  redis-data:
-    driver: local
 
 # 网络定义
 networks:
-  milvus-network:
+  app-network:
     driver: bridge
 
