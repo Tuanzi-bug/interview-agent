@@ -3,6 +3,7 @@
 package interview
 
 import (
+	"ai-eino-interview-agent/api/response"
 	"ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/repository"
 	"context"
@@ -18,7 +19,6 @@ import (
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
 
 // StartInterviewStream 启动面试流程（流式）
@@ -29,7 +29,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 
 	err = c.BindAndValidate(&req)
 	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
@@ -39,18 +39,18 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 	if err == nil && fileHeader != nil {
 		// 验证文件类型
 		if filepath.Ext(fileHeader.Filename) != ".pdf" {
-			c.String(consts.StatusBadRequest, "只支持 PDF 格式的简历文件")
+			response.BadRequest(ctx, c, "只支持 PDF 格式的简历文件")
 			return
 		}
 		// 验证文件大小（限制为 10MB）
 		if fileHeader.Size > 10*1024*1024 {
-			c.String(consts.StatusBadRequest, "文件大小不能超过 10MB")
+			response.BadRequest(ctx, c, "文件大小不能超过 10MB")
 			return
 		}
 		// 打开上传的文件
 		file, err := fileHeader.Open()
 		if err != nil {
-			c.String(consts.StatusInternalServerError, "无法打开上传的文件: "+err.Error())
+			response.InternalServerError(ctx, c, "无法打开上传的文件: "+err.Error())
 			return
 		}
 		defer file.Close()
@@ -58,7 +58,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		tempDir := filepath.Join(os.TempDir(), "interview_resumes")
 		err = os.MkdirAll(tempDir, 0755)
 		if err != nil {
-			c.String(consts.StatusInternalServerError, "无法创建临时目录: "+err.Error())
+			response.InternalServerError(ctx, c, "无法创建临时目录: "+err.Error())
 			return
 		}
 		// 生成唯一的文件名
@@ -68,7 +68,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		// 创建临时文件
 		tempFile, err := os.Create(resumeFilePath)
 		if err != nil {
-			c.String(consts.StatusInternalServerError, "无法创建临时文件: "+err.Error())
+			response.InternalServerError(ctx, c, "无法创建临时文件: "+err.Error())
 			return
 		}
 		defer tempFile.Close()
@@ -76,7 +76,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		_, err = io.Copy(tempFile, file)
 		if err != nil {
 			os.Remove(resumeFilePath) // 清理失败的文件
-			c.String(consts.StatusInternalServerError, "无法保存文件: "+err.Error())
+			response.InternalServerError(ctx, c, "无法保存文件: "+err.Error())
 			return
 		}
 		// 确保文件已写入磁盘
@@ -129,7 +129,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		if resumeFilePath != "" {
 			os.Remove(resumeFilePath)
 		}
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
@@ -216,7 +216,7 @@ func ContinueInterview(ctx context.Context, c *app.RequestContext) {
 	var req interviewsapi.ContinueInterviewRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
@@ -245,7 +245,7 @@ func ContinueInterview(ctx context.Context, c *app.RequestContext) {
 	// 继续面试流程
 	eventChan, err := interviewService.ContinueInterview(ctx, &req, maxQuestions)
 	if err != nil {
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
@@ -289,7 +289,7 @@ func ListInterviewRecords(ctx context.Context, c *app.RequestContext) {
 	var req interviewsapi.ListInterviewRecordsRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
@@ -306,7 +306,7 @@ func ListInterviewRecords(ctx context.Context, c *app.RequestContext) {
 	interviewService := interviewservice.NewInterviewService()
 	records, total, err := interviewService.ListInterviewRecords(ctx, userID, page, pageSize)
 	if err != nil {
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
@@ -317,7 +317,7 @@ func ListInterviewRecords(ctx context.Context, c *app.RequestContext) {
 		PageSize: int32(pageSize),
 	}
 
-	c.JSON(consts.StatusOK, resp)
+	response.Success(ctx, c, resp)
 }
 
 // GetInterviewRecord .
@@ -327,7 +327,7 @@ func GetInterviewRecord(ctx context.Context, c *app.RequestContext) {
 	var req interviewsapi.GetInterviewRecordRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
@@ -335,15 +335,15 @@ func GetInterviewRecord(ctx context.Context, c *app.RequestContext) {
 	interviewService := interviewservice.NewInterviewService()
 	record, err := interviewService.GetInterviewRecord(ctx, userID, uint64(req.ID))
 	if err != nil {
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 	if record == nil {
-		c.String(consts.StatusNotFound, "record not found")
+		response.NotFound(ctx, c, "Record not found")
 		return
 	}
 
 	resp := &interviewsapi.GetInterviewRecordResponse{Record: record}
 
-	c.JSON(consts.StatusOK, resp)
+	response.Success(ctx, c, resp)
 }
