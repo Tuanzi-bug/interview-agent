@@ -6,26 +6,19 @@ import (
 
 var InterviewDialogueDao _InterviewDialogue
 
-// SpeakerType 发言人类型
-type SpeakerType string
-
-const (
-	SpeakerTypeInterviewer SpeakerType = "interviewer" // 面试官
-	SpeakerTypeCandidate   SpeakerType = "candidate"   // 候选人
-)
-
 // InterviewDialogue 面试对话记录
 // 对应 "回答"、"追问" 这些交错的对话条目
 type (
 	_InterviewDialogue struct {
 	}
 	InterviewDialogue struct {
-		ID           uint64      `json:"id" gorm:"primaryKey;autoIncrement"`
-		TopicID      uint64      `json:"topic_id" gorm:"not null;index:idx_topic_id_order;comment:关联的问题主题ID"`
-		SpeakerType  SpeakerType `json:"speaker_type" gorm:"type:enum('interviewer','candidate');not null;comment:发言人类型"`
-		Content      string      `json:"content" gorm:"type:text;not null;comment:对话内容(回答或追问的文本)"`
-		DisplayOrder uint32      `json:"display_order" gorm:"not null;default:0;index:idx_topic_id_order;comment:在主题内的显示顺序"`
-		CreatedAt    time.Time   `json:"created_at" gorm:"autoCreateTime:milli"`
+		ID           uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
+		UserID       uint      `json:"user_id" gorm:"not null;index:idx_user_id;comment:用户ID"`
+		TopicID      uint64    `json:"topic_id" gorm:"not null;index:idx_topic_id_order;comment:关联的问题主题ID"`
+		Question     string    `json:"question" gorm:"type:text;comment:智能体的提问内容"`
+		Answer       string    `json:"answer" gorm:"type:text;comment:用户的回答内容"`
+		DisplayOrder uint32    `json:"display_order" gorm:"not null;default:0;index:idx_topic_id_order;comment:在主题内的显示顺序"`
+		CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime:milli"`
 	}
 )
 

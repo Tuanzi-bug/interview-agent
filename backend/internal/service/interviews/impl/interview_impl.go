@@ -5,6 +5,7 @@ import (
 	"ai-eino-interview-agent/chatApp/agent/ext"
 	"ai-eino-interview-agent/internal/model"
 	"context"
+	"log"
 	"time"
 )
 
@@ -98,6 +99,151 @@ func (s *InterviewServiceImpl) UpdateInterviewRecord(ctx context.Context, record
 // CompleteInterviewRecord 完成面试记录（保存最终报告和评分）
 func (s *InterviewServiceImpl) CompleteInterviewRecord(ctx context.Context, recordID uint64, report string, duration int64, score *float64) error {
 	return model.InterviewRecordDao.CompleteInterviewRecord(recordID, report, duration, score)
+}
+
+// SaveInterviewDialogues 保存面试对话和问题主题
+func (s *InterviewServiceImpl) SaveInterviewDialogues(ctx context.Context, userID uint, recordID uint64, questions []interface{}, dialogues []interface{}) error {
+	log.Printf("[SaveInterviewDialogues] 开始保存，问题数: %d, 对话数: %d", len(questions), len(dialogues))
+
+	// 保存问题主题
+	for i, q := range questions {
+		qData, ok := q.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		topic := &model.InterviewQuestionTopic{
+			UserID:        userID,
+			ReportID:      recordID,
+			QuestionText:  toString(qData["question_text"]),
+			DisplayOrder:  uint32(i + 1),
+			EvalDimension: toString(qData["eval_dimension"]),
+		}
+
+		if err := model.InterviewQuestionTopicDao.Create(topic); err != nil {
+			return err
+		}
+
+		// 保存对应的对话记录 - 将提问和回答配对保存在一条记录中
+		dialogueMap := make(map[uint32]*model.InterviewDialogue)
+		dialogueCounter := uint32(1) // 用于自动分配 display_order
+
+		log.Printf("[SaveInterviewDialogues] 问题 %d: 开始收集对话", i+1)
+
+		// 第一遍：遍历所有对话，收集属于当前问题的对话
+		for _, d := range dialogues {
+			dData, ok := d.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			displayOrder := toUint32(dData["display_order"])
+			speakerType := toString(dData["speaker_type"])
+			content := toString(dData["content"])
+
+			// 如果 display_order 为 0，自动分配
+			if displayOrder == 0 {
+				// 自动分配 display_order：基于问题索引和对话计数
+				// 例如：第1个问题（i=0）的对话 display_order 为 1, 2, 3...
+				//      第2个问题（i=1）的对话 display_order 为 101, 102, 103...
+				// 注意：这里我们只在 interviewer 类型时增加计数，这样 interviewer 和 candidate 会共享同一个 displayOrder
+				if speakerType == "interviewer" {
+					displayOrder = uint32(i)*100 + dialogueCounter
+					log.Printf("[SaveInterviewDialogues] 对话自动分配 displayOrder=%d, speaker_type=%s", displayOrder, speakerType)
+				} else {
+					// candidate 回答使用前一个 interviewer 的 displayOrder
+					if dialogueCounter > 1 {
+						displayOrder = uint32(i)*100 + (dialogueCounter - 1)
+					} else {
+						displayOrder = uint32(i)*100 + dialogueCounter
+					}
+					log.Printf("[SaveInterviewDialogues] 对话自动分配 displayOrder=%d, speaker_type=%s", displayOrder, speakerType)
+				}
+			} else {
+				// 检查对话是否属于当前问题
+				minDisplayOrder := uint32(i) * 100
+				maxDisplayOrder := uint32(i)*100 + 199
+				if displayOrder <= minDisplayOrder || displayOrder > maxDisplayOrder {
+					log.Printf("[SaveInterviewDialogues] 对话被过滤: displayOrder=%d (超出范围), speaker_type=%s", displayOrder, speakerType)
+					continue
+				}
+				log.Printf("[SaveInterviewDialogues] 对话被收集: displayOrder=%d, speaker_type=%s", displayOrder, speakerType)
+			}
+
+			// 如果该 displayOrder 的记录不存在，创建新记录
+			if _, exists := dialogueMap[displayOrder]; !exists {
+				dialogueMap[displayOrder] = &model.InterviewDialogue{
+					UserID:       userID,
+					TopicID:      topic.ID,
+					Question:     "",
+					Answer:       "",
+					DisplayOrder: displayOrder,
+				}
+			}
+
+			// 根据发言人类型填充对应字段
+			if speakerType == "interviewer" {
+				dialogueMap[displayOrder].Question = content
+				// 只在 interviewer 时增加计数，这样下一个 candidate 会使用相同的 displayOrder
+				if displayOrder == uint32(i)*100+dialogueCounter {
+					dialogueCounter++
+				}
+			} else if speakerType == "candidate" {
+				dialogueMap[displayOrder].Answer = content
+			}
+		}
+
+		// 第二遍：保存所有对话记录到数据库
+		log.Printf("[SaveInterviewDialogues] 问题 %d: 收集到 %d 条对话", i+1, len(dialogueMap))
+		for displayOrder, dialogue := range dialogueMap {
+			// 只保存有内容的记录（至少有提问或回答）
+			if dialogue.Question != "" || dialogue.Answer != "" {
+				log.Printf("[SaveInterviewDialogues] 保存对话 displayOrder=%d, 问题='%s...', 回答='%s...'",
+					displayOrder,
+					truncateString(dialogue.Question, 30),
+					truncateString(dialogue.Answer, 30))
+				if err := model.InterviewDialogueDao.Create(dialogue); err != nil {
+					log.Printf("[SaveInterviewDialogues] 保存失败: %v", err)
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// 辅助函数：截断字符串用于日志输出
+func truncateString(s string, maxLen int) string {
+	if len(s) > maxLen {
+		return s[:maxLen] + "..."
+	}
+	return s
+}
+
+// 辅助函数：将 interface{} 转换为 string
+func toString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
+// 辅助函数：将 interface{} 转换为 uint32
+func toUint32(v interface{}) uint32 {
+	if v == nil {
+		return 0
+	}
+	if f, ok := v.(float64); ok {
+		return uint32(f)
+	}
+	if i, ok := v.(int); ok {
+		return uint32(i)
+	}
+	return 0
 }
 
 func (s *InterviewServiceImpl) ListInterviewRecords(ctx context.Context, userID uint, page, pageSize int) ([]*interviewsapi.InterviewRecordDTO, int64, error) {

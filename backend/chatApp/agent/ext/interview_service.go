@@ -147,7 +147,7 @@ func StartInterviewStream(ctx context.Context, query string, maxQuestions int) (
 					status = "report_generation"
 				}
 
-				// 将对话历史转换为 JSON（只保留面试官提问和用户回答）
+				// 将对话历史转换为 JSON
 				filtered := filterInterviewMessages(messageHistory)
 				var messagesJSON []byte
 				if len(filtered) > 0 {
