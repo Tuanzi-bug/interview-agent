@@ -3,18 +3,22 @@
 package interview
 
 import (
+	"ai-eino-interview-agent/api/response"
+	"ai-eino-interview-agent/internal/middleware"
+	"ai-eino-interview-agent/internal/repository"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
+
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
 
 // StartInterviewStream 启动面试流程（流式）
@@ -25,7 +29,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 
 	err = c.BindAndValidate(&req)
 	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
@@ -35,18 +39,18 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 	if err == nil && fileHeader != nil {
 		// 验证文件类型
 		if filepath.Ext(fileHeader.Filename) != ".pdf" {
-			c.String(consts.StatusBadRequest, "只支持 PDF 格式的简历文件")
+			response.BadRequest(ctx, c, "只支持 PDF 格式的简历文件")
 			return
 		}
 		// 验证文件大小（限制为 10MB）
 		if fileHeader.Size > 10*1024*1024 {
-			c.String(consts.StatusBadRequest, "文件大小不能超过 10MB")
+			response.BadRequest(ctx, c, "文件大小不能超过 10MB")
 			return
 		}
 		// 打开上传的文件
 		file, err := fileHeader.Open()
 		if err != nil {
-			c.String(consts.StatusInternalServerError, "无法打开上传的文件: "+err.Error())
+			response.InternalServerError(ctx, c, "无法打开上传的文件: "+err.Error())
 			return
 		}
 		defer file.Close()
@@ -54,7 +58,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		tempDir := filepath.Join(os.TempDir(), "interview_resumes")
 		err = os.MkdirAll(tempDir, 0755)
 		if err != nil {
-			c.String(consts.StatusInternalServerError, "无法创建临时目录: "+err.Error())
+			response.InternalServerError(ctx, c, "无法创建临时目录: "+err.Error())
 			return
 		}
 		// 生成唯一的文件名
@@ -64,7 +68,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		// 创建临时文件
 		tempFile, err := os.Create(resumeFilePath)
 		if err != nil {
-			c.String(consts.StatusInternalServerError, "无法创建临时文件: "+err.Error())
+			response.InternalServerError(ctx, c, "无法创建临时文件: "+err.Error())
 			return
 		}
 		defer tempFile.Close()
@@ -72,7 +76,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		_, err = io.Copy(tempFile, file)
 		if err != nil {
 			os.Remove(resumeFilePath) // 清理失败的文件
-			c.String(consts.StatusInternalServerError, "无法保存文件: "+err.Error())
+			response.InternalServerError(ctx, c, "无法保存文件: "+err.Error())
 			return
 		}
 		// 确保文件已写入磁盘
@@ -99,15 +103,33 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 			req.Query = fmt.Sprintf("%s\n\n我上传了简历PDF文件，文件路径：%s，请先分析简历", req.Query, resumeFilePath)
 		}
 	}
+	// 保存面试记录（
+	userID := middleware.GetUserID(c)
+	recordTitle := fmt.Sprintf("Interview - %s", time.Now().Format("2006-01-02 15:04:05"))
+	recordID, err := interviewService.SaveInterviewRecord(ctx, userID, recordTitle, req.Query)
+	if err != nil {
+		// 记录错误但不中断流程
+		fmt.Fprintf(os.Stderr, "Failed to save interview record: %v\n", err)
+	}
+	// 从Redis获取最大问题数配置
+	key := "interview:max:question"
+	client := repository.GetRedis()
+	maxQuestions := 5 // 默认5个问题
+	val, err := client.Get(ctx, key).Result()
+	if err == nil && val != "" {
+		if q, parseErr := strconv.Atoi(val); parseErr == nil && q > 0 {
+			maxQuestions = q
+		}
+	}
 
 	// 启动流式面试
-	eventChan, err := interviewService.StartInterviewStream(ctx, &req)
+	eventChan, err := interviewService.StartInterviewStream(ctx, &req, maxQuestions)
 	if err != nil {
 		// 如果出错，清理上传的文件
 		if resumeFilePath != "" {
 			os.Remove(resumeFilePath)
 		}
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
@@ -121,6 +143,111 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 			}()
 		}
 	}()
+
+	// 流式输出事件
+	writer := c.Response.BodyWriter()
+	startTime := time.Now()
+	for event := range eventChan {
+		// 将事件序列化为 JSON
+		eventJSON, err := json.Marshal(event)
+		if err != nil {
+			// 发送错误事件
+			errorEvent := map[string]string{
+				"type":  "error",
+				"error": "序列化事件失败: " + err.Error(),
+			}
+			errorJSON, _ := json.Marshal(errorEvent)
+			fmt.Fprintf(writer, "data: %s\n\n", string(errorJSON))
+			return
+		}
+
+		// 使用 SSE 格式发送事件
+		fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
+
+		// 如果是完成事件，结束流并更新面试记录为已完成
+		if event.Type == "done" {
+			if recordID > 0 {
+				// 异步更新面试记录状态为已完成
+				go func(report *string, score *float64) {
+					duration := int64(time.Since(startTime).Seconds())
+					var reportStr string
+					if report != nil {
+						reportStr = *report
+					}
+					_ = interviewService.CompleteInterviewRecord(ctx, recordID, reportStr, duration, score)
+				}(event.Report, event.Score)
+
+			}
+			break
+		}
+
+		// 保存消息事件中的对话历史
+		if recordID > 0 && event.Type == "message" && event.Messages != nil {
+			go func(status *string, agentName *string, messages *string) {
+				statusStr := ""
+				if status != nil {
+					statusStr = *status
+				}
+				agent := ""
+				if agentName != nil {
+					agent = *agentName
+				}
+				messagesStr := ""
+				if messages != nil {
+					messagesStr = *messages
+				}
+				_ = interviewService.UpdateInterviewRecord(ctx, recordID, messagesStr, statusStr, agent)
+			}(event.Status, event.AgentName, event.Messages)
+		}
+
+		// 检查上下文是否已取消
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+	}
+}
+
+// ContinueInterview 继续面试流程（用于多轮对话）
+// @router /api/interview/continue [POST]
+func ContinueInterview(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req interviewsapi.ContinueInterviewRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
+		return
+	}
+
+	// 设置 SSE 响应头
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Access-Control-Allow-Headers", "Cache-Control")
+
+	// 获取面试服务实例
+	interviewService := interviewservice.NewInterviewService()
+
+	// 从Redis获取最大问题数配置
+	key := "interview:max:question"
+	client := repository.GetRedis()
+	maxQuestions := 5 // 默认5个问题
+
+	val, err := client.Get(ctx, key).Result()
+	if err == nil && val != "" {
+		if q, parseErr := strconv.Atoi(val); parseErr == nil && q > 0 {
+			maxQuestions = q
+		}
+	}
+
+	// 继续面试流程
+	eventChan, err := interviewService.ContinueInterview(ctx, &req, maxQuestions)
+	if err != nil {
+		response.InternalServerError(ctx, c, err.Error())
+		return
+	}
 
 	// 流式输出事件
 	writer := c.Response.BodyWriter()
@@ -155,63 +282,68 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 	}
 }
 
-// ContinueInterview 继续面试流程（用于多轮对话）
-// @router /api/interview/continue [POST]
-func ContinueInterview(ctx context.Context, c *app.RequestContext) {
+// ListInterviewRecords .
+// @router /api/interview/records [GET]
+func ListInterviewRecords(ctx context.Context, c *app.RequestContext) {
 	var err error
-	var req interviewsapi.ContinueInterviewRequest
+	var req interviewsapi.ListInterviewRecordsRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
-	// 设置 SSE 响应头
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Headers", "Cache-Control")
+	userID := middleware.GetUserID(c)
+	page := int(req.GetPage())
+	if page <= 0 {
+		page = 1
+	}
+	pageSize := int(req.GetPageSize())
+	if pageSize <= 0 {
+		pageSize = 10
+	}
 
-	// 获取面试服务实例
 	interviewService := interviewservice.NewInterviewService()
-
-	// 继续面试流程
-	eventChan, err := interviewService.ContinueInterview(ctx, &req)
+	records, total, err := interviewService.ListInterviewRecords(ctx, userID, page, pageSize)
 	if err != nil {
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
-	// 流式输出事件
-	writer := c.Response.BodyWriter()
-	for event := range eventChan {
-		// 将事件序列化为 JSON
-		eventJSON, err := json.Marshal(event)
-		if err != nil {
-			// 发送错误事件
-			errorEvent := map[string]string{
-				"type":  "error",
-				"error": "序列化事件失败: " + err.Error(),
-			}
-			errorJSON, _ := json.Marshal(errorEvent)
-			fmt.Fprintf(writer, "data: %s\n\n", string(errorJSON))
-			return
-		}
-
-		// 使用 SSE 格式发送事件
-		fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-
-		// 如果是完成事件，结束流
-		if event.Type == "done" {
-			break
-		}
-
-		// 检查上下文是否已取消
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
+	resp := &interviewsapi.ListInterviewRecordsResponse{
+		Records:  records,
+		Total:    total,
+		Page:     int32(page),
+		PageSize: int32(pageSize),
 	}
+
+	response.Success(ctx, c, resp)
+}
+
+// GetInterviewRecord .
+// @router /api/interview/records/:id [GET]
+func GetInterviewRecord(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req interviewsapi.GetInterviewRecordRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	interviewService := interviewservice.NewInterviewService()
+	record, err := interviewService.GetInterviewRecord(ctx, userID, uint64(req.ID))
+	if err != nil {
+		response.InternalServerError(ctx, c, err.Error())
+		return
+	}
+	if record == nil {
+		response.NotFound(ctx, c, "Record not found")
+		return
+	}
+
+	resp := &interviewsapi.GetInterviewRecordResponse{Record: record}
+
+	response.Success(ctx, c, resp)
 }

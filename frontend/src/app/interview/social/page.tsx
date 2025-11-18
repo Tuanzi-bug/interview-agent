@@ -1,6 +1,7 @@
 'use client';
 
 import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, Tag } from 'antd';
+import Link from 'next/link';
 import { CheckCircleOutlined, VideoCameraOutlined } from '@ant-design/icons';
 
 const { Title, Paragraph } = Typography;
@@ -62,7 +63,7 @@ export default function SocialInterviewPage() {
               </Row>
 
               <div className="mt-4">
-                <Button type="primary" className="bg-green-500 w-full h-12 text-base">开始面试</Button>
+                <Link href="/interview/social/start"><Button type="primary" className="bg-green-500 w-full h-12 text-base">开始面试</Button></Link>
                 <div className="text-center text-gray-500 text-sm mt-2">1次体验价约等于20次AI陪练，单次2小时题目自动续集</div>
               </div>
             </Form>

@@ -9,8 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
@@ -19,6 +17,9 @@ import (
 	"runtime"
 	"syscall"
 	"time"
+
+	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -50,14 +51,14 @@ func main() {
 	}
 	log.Println("Database initialized successfully")
 
-	// 5. 初始化Redis
-	//log.Println("Initializing Redis connection...")
-	//err = repository.InitRedis(cfg.Redis)
-	//if err != nil {
-	//	log.Fatalf("Failed to initialize Redis: %v", err)
-	//}
-	//log.Println("Redis initialized successfully")
-	//
+	//5. 初始化Redis
+	log.Println("Initializing Redis connection...")
+	err = repository.InitRedis(cfg.Redis)
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+	log.Println("Redis initialized successfully")
+
 	//// 6. 初始化Eino框架
 	//log.Println("Initializing Eino framework...")
 	//err = eino.InitEino(cfg.Eino)
