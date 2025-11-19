@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"ai-eino-interview-agent/api/response"
 	"ai-eino-interview-agent/internal/config"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -56,20 +56,14 @@ func JWTMiddlewareWithSkipper(skipper JWTSkipper) app.HandlerFunc {
 				message = "Authorization token is required"
 			}
 
-			ctx.JSON(consts.StatusUnauthorized, map[string]interface{}{
-				"code":    401,
-				"message": message,
-			})
+			response.Unauthorized(c, ctx, message)
 			ctx.Abort()
 			return
 		}
 
 		claims, err := parseToken(tokenString)
 		if err != nil {
-			ctx.JSON(consts.StatusUnauthorized, map[string]interface{}{
-				"code":    401,
-				"message": "Invalid or expired token",
-			})
+			response.Unauthorized(c, ctx, "Invalid or expired token")
 			ctx.Abort()
 			return
 		}

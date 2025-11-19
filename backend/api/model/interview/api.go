@@ -4,6 +4,7 @@ package interview
 
 import (
 	"ai-eino-interview-agent/api/model/interviews"
+	titlebank "ai-eino-interview-agent/api/model/titleBank"
 	"ai-eino-interview-agent/api/model/user"
 	"github.com/apache/thrift/lib/go/thrift"
 )
@@ -60,6 +61,32 @@ func NewInterviewsServiceClient(c thrift.TClient) *InterviewsServiceClient {
 	}
 }
 
+type TitleBankService interface {
+	titlebank.TitleBankService
+}
+
+type TitleBankServiceClient struct {
+	*titlebank.TitleBankServiceClient
+}
+
+func NewTitleBankServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *TitleBankServiceClient {
+	return &TitleBankServiceClient{
+		TitleBankServiceClient: titlebank.NewTitleBankServiceClientFactory(t, f),
+	}
+}
+
+func NewTitleBankServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *TitleBankServiceClient {
+	return &TitleBankServiceClient{
+		TitleBankServiceClient: titlebank.NewTitleBankServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewTitleBankServiceClient(c thrift.TClient) *TitleBankServiceClient {
+	return &TitleBankServiceClient{
+		TitleBankServiceClient: titlebank.NewTitleBankServiceClient(c),
+	}
+}
+
 type UserServiceProcessor struct {
 	*user.UserServiceProcessor
 }
@@ -75,5 +102,14 @@ type InterviewsServiceProcessor struct {
 
 func NewInterviewsServiceProcessor(handler InterviewsService) *InterviewsServiceProcessor {
 	self := &InterviewsServiceProcessor{interviews.NewInterviewsServiceProcessor(handler)}
+	return self
+}
+
+type TitleBankServiceProcessor struct {
+	*titlebank.TitleBankServiceProcessor
+}
+
+func NewTitleBankServiceProcessor(handler TitleBankService) *TitleBankServiceProcessor {
+	self := &TitleBankServiceProcessor{titlebank.NewTitleBankServiceProcessor(handler)}
 	return self
 }

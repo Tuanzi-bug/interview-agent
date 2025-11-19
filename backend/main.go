@@ -1,17 +1,15 @@
 package main
 
 import (
+	"ai-eino-interview-agent/api/handler/interview"
 	"ai-eino-interview-agent/api/router"
 	interviewRouter "ai-eino-interview-agent/api/router/interview"
 	"ai-eino-interview-agent/internal/config"
-	"ai-eino-interview-agent/internal/eino/milvus"
 	appMiddleware "ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/repository"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
@@ -20,6 +18,9 @@ import (
 	"runtime"
 	"syscall"
 	"time"
+
+	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -51,14 +52,14 @@ func main() {
 	}
 	log.Println("Database initialized successfully")
 
-	// 5. 初始化Redis
-	//log.Println("Initializing Redis connection...")
-	//err = repository.InitRedis(cfg.Redis)
-	//if err != nil {
-	//	log.Fatalf("Failed to initialize Redis: %v", err)
-	//}
-	//log.Println("Redis initialized successfully")
-	//
+	//5. 初始化Redis
+	// log.Println("Initializing Redis connection...")
+	// err = repository.InitRedis(cfg.Redis)
+	// if err != nil {
+	// 	log.Fatalf("Failed to initialize Redis: %v", err)
+	// }
+	// log.Println("Redis initialized successfully")
+
 	//// 6. 初始化Eino框架
 	//log.Println("Initializing Eino framework...")
 	//err = eino.InitEino(cfg.Eino)
@@ -68,22 +69,29 @@ func main() {
 	//log.Println("Eino initialized successfully")
 
 	// 7. 初始化 Milvus Manager（向量数据库、Embedding、检索等服务）
-	log.Println("Initializing Milvus Manager...")
-	ctx := context.Background()
-	milvusManager, err := milvus.InitMilvusManager(ctx, cfg)
-	if err != nil {
-		log.Fatalf("Failed to initialize Milvus Manager: %v", err)
-	}
-	// 进行健康检查
-	if err := milvusManager.HealthCheck(ctx); err != nil {
-		log.Printf("Warning: Milvus health check failed: %v", err)
-	}
-	log.Println("Milvus Manager initialized successfully")
+	//log.Println("Initializing Milvus Manager...")
+	//ctx := context.Background()
+	//milvusManager, err := milvus.InitMilvusManager(ctx, cfg)
+	//if err != nil {
+	//	log.Fatalf("Failed to initialize Milvus Manager: %v", err)
+	//}
+	//// 进行健康检查
+	//if err := milvusManager.HealthCheck(ctx); err != nil {
+	//	log.Printf("Warning: Milvus health check failed: %v", err)
+	//}
+	//log.Println("Milvus Manager initialized successfully")
 
 	// 初始化Hertz服务器
 	s := server.Default(server.WithHostPorts(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)))
 	s.Use(appMiddleware.JWTMiddlewareWithSkipper(interviewRouter.AuthSkipper()))
 	router.GeneratedRegister(s)
+
+	// 注册自定义路由（非自动生成的） todo 后面真实实现之后，把mock接口这部分逻辑删除掉
+	// 添加mock面试记录接口，路径为/api/interview/records/mock
+	apiGroup := s.Group("/api")
+	interviewGroup := apiGroup.Group("/interview")
+	recordsGroup := interviewGroup.Group("/records")
+	recordsGroup.GET("/mock", interview.GetMockInterviewRecords)
 	// 创建一个通道来监听中断信号
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -101,11 +109,11 @@ func main() {
 	log.Println("Shutting down server...")
 
 	// 关闭 Milvus Manager
-	if milvusManager != nil {
-		if err := milvusManager.Close(); err != nil {
-			log.Printf("Warning: Failed to close Milvus Manager: %v", err)
-		}
-	}
+	//if milvusManager != nil {
+	//	if err := milvusManager.Close(); err != nil {
+	//		log.Printf("Warning: Failed to close Milvus Manager: %v", err)
+	//	}
+	//}
 
 	// 创建一个带有超时的上下文，用于关闭
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

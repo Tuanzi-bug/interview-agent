@@ -63,12 +63,15 @@ func InitDatabase(dbConfig config.DatabaseConfig) error {
 func migrateDatabase() error {
 	return DB.AutoMigrate(
 		&model.User{},
-		&model.Resume{},
-		&model.Interview{},
-		&model.Question{},
-		&model.QuestionBank{},
-		&model.EvaluationCriteria{},
 		&model.UserModel{},
+		&model.InterviewRecord{},
+		&model.InterviewTitle{},
+		&model.InterviewLabel{},
+		&model.InterviewParse{},
+		&model.UserTitleInteract{},
+		&model.InterviewDialogue{},
+		&model.InterviewQuestionTopic{},
+		&model.InterviewEvaluation{},
 	)
 }
 

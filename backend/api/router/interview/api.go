@@ -5,6 +5,7 @@ package interview
 import (
 	interview "ai-eino-interview-agent/api/handler/interview"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 )
 
@@ -14,6 +15,11 @@ import (
  So don't modify the contents of the file, or your code will be deleted when it is updated.
 */
 
+func _getmockinterviewrecordsMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 // Register register routes based on the IDL 'api.${HTTP Method}' annotation.
 func Register(r *server.Hertz) {
 
@@ -22,13 +28,24 @@ func Register(r *server.Hertz) {
 		_api := root.Group("/api", _apiMw()...)
 		{
 			_interview := _api.Group("/interview", _interviewMw()...)
-			_interview.POST("/continue", append(_continueinterviewMw(), interview.ContinueInterview)...)
-			_interview.GET("/records", append(_listinterviewrecordsMw(), interview.ListInterviewRecords)...)
-			_records := _interview.Group("/records", _recordsMw()...)
-			_records.GET("/:id", append(_getinterviewrecordMw(), interview.GetInterviewRecord)...)
+			_interview.GET("/evaluation", append(_getinterviewevaluationMw(), interview.GetInterviewEvaluation)...)
 			{
 				_start := _interview.Group("/start", _startMw()...)
 				_start.POST("/stream", append(_startinterviewstreamMw(), interview.StartInterviewStream)...)
+			}
+			{
+				_submit := _interview.Group("/submit", _submitMw()...)
+				_submit.POST("/answer", append(_submitinterviewanswerMw(), interview.SubmitInterviewAnswer)...)
+			}
+		}
+		{
+			_titlebank := _api.Group("/titleBank", _titlebankMw()...)
+			{
+				_create := _titlebank.Group("/create", _createMw()...)
+				_create.POST("/interact", append(_createusertitleinteractMw(), interview.CreateUserTitleInteract)...)
+				_create.POST("/label", append(_createinterviewlabelMw(), interview.CreateInterviewLabel)...)
+				_create.POST("/parse", append(_createinterviewparseMw(), interview.CreateInterviewParse)...)
+				_create.POST("/title", append(_createinterviewtitleMw(), interview.CreateInterviewTitle)...)
 			}
 		}
 		{
@@ -37,14 +54,9 @@ func Register(r *server.Hertz) {
 			_user.GET("/profile", append(_getprofileMw(), interview.GetProfile)...)
 			_user.PUT("/profile", append(_updateprofileMw(), interview.UpdateProfile)...)
 			_user.POST("/register", append(_registerMw(), interview.Register)...)
-			_user.POST("/logout", append(_logoutMw(), interview.Logout)...)
 			{
-				_create := _user.Group("/create", _createMw()...)
-				_create.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
-			}
-			{
-				_create2 := _api.Group("/create", _createMw()...)
-				_create2.POST("/user-models", append(_createusermodelsMw(), interview.CreateUserModel)...)
+				_create0 := _user.Group("/create", _create0Mw()...)
+				_create0.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
 			}
 			{
 				_model := _user.Group("/model", _modelMw()...)

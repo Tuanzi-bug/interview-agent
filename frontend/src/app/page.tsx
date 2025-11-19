@@ -50,14 +50,14 @@ export default function Home() {
   return (
     <div className="container mx-auto px-4">
       
-      <div className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg my-4 px-4 py-2 text-sm flex items-center justify-between">
+      {/* <div className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg my-4 px-4 py-2 text-sm flex items-center justify-between">
         <div>
           秋招特惠：免费简历押题体验+综合面试单次免费！快来无限问答，简历押题&专项面试免费体验！
         </div>
         <div className="hidden sm:block opacity-90">
           今日进行中：题量 +224；出题速度 +3.2 题/小时；板块活跃度 +32.1%
         </div>
-      </div>
+      </div> */}
 
       
       <section className="py-8">
