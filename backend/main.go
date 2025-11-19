@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ai-eino-interview-agent/api/handler/interview"
 	"ai-eino-interview-agent/api/router"
 	interviewRouter "ai-eino-interview-agent/api/router/interview"
 	"ai-eino-interview-agent/internal/config"
@@ -52,12 +53,12 @@ func main() {
 	log.Println("Database initialized successfully")
 
 	//5. 初始化Redis
-	log.Println("Initializing Redis connection...")
-	err = repository.InitRedis(cfg.Redis)
-	if err != nil {
-		log.Fatalf("Failed to initialize Redis: %v", err)
-	}
-	log.Println("Redis initialized successfully")
+	// log.Println("Initializing Redis connection...")
+	// err = repository.InitRedis(cfg.Redis)
+	// if err != nil {
+	// 	log.Fatalf("Failed to initialize Redis: %v", err)
+	// }
+	// log.Println("Redis initialized successfully")
 
 	//// 6. 初始化Eino框架
 	//log.Println("Initializing Eino framework...")
@@ -84,6 +85,13 @@ func main() {
 	s := server.Default(server.WithHostPorts(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)))
 	s.Use(appMiddleware.JWTMiddlewareWithSkipper(interviewRouter.AuthSkipper()))
 	router.GeneratedRegister(s)
+
+	// 注册自定义路由（非自动生成的） todo 后面真实实现之后，把mock接口这部分逻辑删除掉
+	// 添加mock面试记录接口，路径为/api/interview/records/mock
+	apiGroup := s.Group("/api")
+	interviewGroup := apiGroup.Group("/interview")
+	recordsGroup := interviewGroup.Group("/records")
+	recordsGroup.GET("/mock", interview.GetMockInterviewRecords)
 	// 创建一个通道来监听中断信号
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

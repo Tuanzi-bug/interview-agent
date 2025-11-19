@@ -4,6 +4,8 @@ package interview
 
 import (
 	interview "ai-eino-interview-agent/api/handler/interview"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 )
 
@@ -12,6 +14,11 @@ import (
  And it will update automatically when you use the "update" command for the idl.
  So don't modify the contents of the file, or your code will be deleted when it is updated.
 */
+
+func _getmockinterviewrecordsMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
 
 // Register register routes based on the IDL 'api.${HTTP Method}' annotation.
 func Register(r *server.Hertz) {
