@@ -4,6 +4,7 @@ package interview
 
 import (
 	interview "ai-eino-interview-agent/api/handler/interview"
+
 	"github.com/cloudwego/hertz/pkg/app/server"
 )
 
@@ -22,6 +23,9 @@ func Register(r *server.Hertz) {
 		{
 			_interview := _api.Group("/interview", _interviewMw()...)
 			_interview.POST("/continue", append(_continueinterviewMw(), interview.ContinueInterview)...)
+			_interview.GET("/records", append(_listinterviewrecordsMw(), interview.ListInterviewRecords)...)
+			_records := _interview.Group("/records", _recordsMw()...)
+			_records.GET("/:id", append(_getinterviewrecordMw(), interview.GetInterviewRecord)...)
 			{
 				_start := _interview.Group("/start", _startMw()...)
 				_start.POST("/stream", append(_startinterviewstreamMw(), interview.StartInterviewStream)...)
@@ -33,9 +37,14 @@ func Register(r *server.Hertz) {
 			_user.GET("/profile", append(_getprofileMw(), interview.GetProfile)...)
 			_user.PUT("/profile", append(_updateprofileMw(), interview.UpdateProfile)...)
 			_user.POST("/register", append(_registerMw(), interview.Register)...)
+			_user.POST("/logout", append(_logoutMw(), interview.Logout)...)
 			{
 				_create := _user.Group("/create", _createMw()...)
 				_create.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
+			}
+			{
+				_create2 := _api.Group("/create", _createMw()...)
+				_create2.POST("/user-models", append(_createusermodelsMw(), interview.CreateUserModel)...)
 			}
 			{
 				_model := _user.Group("/model", _modelMw()...)
