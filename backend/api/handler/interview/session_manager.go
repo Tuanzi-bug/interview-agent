@@ -195,7 +195,7 @@ func (sm *SessionManager) cleanupExpiredSessions() {
 
 	now := time.Now()
 	for sessionID, session := range sm.sessions {
-		if now.Sub(session.LastActivity) > 30*time.Minute {
+		if now.Sub(session.LastActivity) > 120*time.Minute {
 			close(session.AnswerChan)
 			delete(sm.sessions, sessionID)
 		}
