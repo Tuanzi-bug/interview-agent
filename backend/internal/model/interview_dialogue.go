@@ -1,0 +1,36 @@
+package model
+
+import (
+	"time"
+)
+
+var InterviewDialogueDao _InterviewDialogue
+
+// InterviewDialogue 面试对话记录
+// 对应 "回答"、"追问" 这些交错的对话条目
+type (
+	_InterviewDialogue struct {
+	}
+	InterviewDialogue struct {
+		ID           uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
+		UserID       uint      `json:"user_id" gorm:"not null;index:idx_user_id;comment:用户ID"`
+		TopicID      uint64    `json:"topic_id" gorm:"not null;index:idx_topic_id_order;comment:关联的问题主题ID"`
+		Question     string    `json:"question" gorm:"type:text;comment:智能体的提问内容"`
+		Answer       string    `json:"answer" gorm:"type:text;comment:用户的回答内容"`
+		DisplayOrder uint32    `json:"display_order" gorm:"not null;default:0;index:idx_topic_id_order;comment:在主题内的显示顺序"`
+		CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime:milli"`
+	}
+)
+
+// TableName 指定表名
+func (InterviewDialogue) TableName() string {
+	return "interview_dialogues"
+}
+
+// Create 创建对话记录
+func (dao *_InterviewDialogue) Create(dialogue *InterviewDialogue) error {
+	if getDB == nil {
+		panic("getDB function not initialized, please call model.SetDBGetter first")
+	}
+	return getDB().Create(dialogue).Error
+}

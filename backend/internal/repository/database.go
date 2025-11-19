@@ -69,6 +69,9 @@ func migrateDatabase() error {
 		&model.InterviewLabel{},
 		&model.InterviewParse{},
 		&model.UserTitleInteract{},
+		&model.InterviewDialogue{},
+		&model.InterviewQuestionTopic{},
+		&model.InterviewEvaluation{},
 	)
 }
 
