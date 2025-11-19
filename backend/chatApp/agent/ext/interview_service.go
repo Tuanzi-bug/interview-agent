@@ -65,9 +65,9 @@ var (
 )
 
 // getRunner 获取全局 runner 实例（懒加载单例）
-func getRunner(ctx context.Context) *adk.Runner {
+func getRunner(ctx context.Context, userId uint) *adk.Runner {
 	globalRunnerOnce.Do(func() {
-		interviewSupervisor := agent.NewInterviewSupervisorAgent()
+		interviewSupervisor := agent.NewInterviewSupervisorAgent(userId)
 		globalRunner = adk.NewRunner(ctx, adk.RunnerConfig{
 			Agent: interviewSupervisor,
 		})
@@ -80,8 +80,8 @@ func getRunner(ctx context.Context) *adk.Runner {
 // maxQuestions: 最大提问数量，0 表示无限制
 // 返回一个事件流 channel，可以实时获取 Agent 的输出
 // 注意：调用者需要负责关闭 channel（当事件流结束时，channel 会自动关闭）
-func StartInterviewStream(ctx context.Context, query string, maxQuestions int) (<-chan *InterviewEvent, error) {
-	runner := getRunner(ctx)
+func StartInterviewStream(ctx context.Context, query string, maxQuestions int, userId uint) (<-chan *InterviewEvent, error) {
+	runner := getRunner(ctx, userId)
 
 	// 将 maxQuestions 添加到 context 中，供 agents 使用
 	if maxQuestions > 0 {
@@ -210,12 +210,6 @@ func StartInterviewStream(ctx context.Context, query string, maxQuestions int) (
 	}()
 
 	return eventChan, nil
-}
-
-// ContinueInterview 继续面试流程（用于多轮对话）
-func ContinueInterview(ctx context.Context, query string, maxQuestions int) (<-chan *InterviewEvent, error) {
-
-	return StartInterviewStream(ctx, query, maxQuestions)
 }
 
 // filterInterviewMessages 只保留面试官提问

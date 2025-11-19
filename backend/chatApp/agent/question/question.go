@@ -13,7 +13,7 @@ import (
 )
 
 // NewQuestionAgent 基于现有模板构建的模拟面试智能体
-func NewQuestionAgent() adk.Agent {
+func NewQuestionAgent(userId uint) adk.Agent {
 	ctx := context.Background()
 	baseAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Name:        "QuestionAgent",
@@ -54,7 +54,7 @@ func NewQuestionAgent() adk.Agent {
   ]
 }`,
 
-		Model: chat.CreatOpenAiChatModel(ctx),
+		Model: chat.CreatOpenAiChatModel(ctx, userId),
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: []componenttool.BaseTool{

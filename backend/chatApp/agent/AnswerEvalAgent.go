@@ -14,7 +14,7 @@ import (
 )
 
 // NewAnswerEvalAgent 基于现有模板构建的模拟面试智能体
-func NewAnswerEvalAgent(supervisorName string) adk.Agent {
+func NewAnswerEvalAgent(supervisorName string, userId uint) adk.Agent {
 	ctx := context.Background()
 
 	// 从Redis获取提示词，失败则使用默认模板
@@ -24,7 +24,7 @@ func NewAnswerEvalAgent(supervisorName string) adk.Agent {
 		Name:        "AnswerEvalAgent",
 		Description: "根据简历分析、问题和答案进行多维度评估，生成结构化评估报告",
 		Instruction: instruction,
-		Model:       chat.CreatOpenAiChatModel(ctx),
+		Model:       chat.CreatOpenAiChatModel(ctx, userId),
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: []componenttool.BaseTool{

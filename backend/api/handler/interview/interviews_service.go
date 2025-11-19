@@ -111,7 +111,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 
 		// 启动异步面试循环
 		writer := &SSEWriter{ctx: c, writer: pipeWriter}
-		runInterviewLoopAsync(ctx, writer, session, interviewService)
+		runInterviewLoopAsync(ctx, userID, writer, session, interviewService)
 	}()
 }
 
@@ -184,7 +184,7 @@ func setupSSEResponse(c *app.RequestContext) {
 }
 
 // runInterviewLoopAsync 异步运行面试循环
-func runInterviewLoopAsync(ctx context.Context, writer io.Writer, session *InterviewSession, interviewService interviewservice.InterviewService) {
+func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, session *InterviewSession, interviewService interviewservice.InterviewService) {
 	fmt.Println("[DEBUG] runInterviewLoopAsync 开始")
 	defer func() {
 		if r := recover(); r != nil {
@@ -313,7 +313,7 @@ func runInterviewLoopAsync(ctx context.Context, writer io.Writer, session *Inter
 		}
 
 		// 调用智能体生成问题
-		result, err := ext.GenerateInterviewQuestions(ctx, prompt)
+		result, err := ext.GenerateInterviewQuestions(ctx, prompt, userId)
 		if err != nil {
 			sendErrorEvent(writer, "Failed to generate question: "+err.Error())
 			sendCompleteEvent(writer)

@@ -13,7 +13,7 @@ import (
 )
 
 // NewEvaluationAgent 用于生成评估报告的智能体
-func NewEvaluationAgent() adk.Agent {
+func NewEvaluationAgent(userId uint) adk.Agent {
 	ctx := context.Background()
 
 	// 构建系统指令
@@ -24,7 +24,7 @@ func NewEvaluationAgent() adk.Agent {
 		Description: "一个专业评估面试记录并生成专业报告的智能体",
 		Instruction: instruction,
 
-		Model: chat.CreatOpenAiChatModel(ctx),
+		Model: chat.CreatOpenAiChatModel(ctx, userId),
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: []componenttool.BaseTool{

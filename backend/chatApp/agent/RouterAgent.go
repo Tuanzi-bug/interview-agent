@@ -8,7 +8,7 @@ import (
 	"github.com/cloudwego/eino/adk"
 )
 
-func NewRouterAgent() adk.Agent {
+func NewRouterAgent(userId uint) adk.Agent {
 	ctx := context.Background()
 	a, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Name:        "RouterAgent",
@@ -21,7 +21,7 @@ func NewRouterAgent() adk.Agent {
 
 		约束: 将子Agent的返回结果原封不动的返回给用户
 		`,
-		Model: chat.CreatOpenAiChatModel(ctx),
+		Model: chat.CreatOpenAiChatModel(ctx, userId),
 	})
 	if err != nil {
 		log.Fatal(err)

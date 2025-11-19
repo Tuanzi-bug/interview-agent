@@ -35,7 +35,7 @@ type QuestionGeneratorResult struct {
 
 // GenerateInterviewQuestions 调用智能体生成面试问题
 // 返回生成的问题列表和对话列表
-func GenerateInterviewQuestions(ctx context.Context, resumeContent string) (*QuestionGeneratorResult, error) {
+func GenerateInterviewQuestions(ctx context.Context, resumeContent string, userId uint) (*QuestionGeneratorResult, error) {
 	// 添加 120 秒超时，防止无限等待（API 响应可能需要较长时间）
 	timeoutCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
@@ -43,7 +43,7 @@ func GenerateInterviewQuestions(ctx context.Context, resumeContent string) (*Que
 	fmt.Println("[GenerateInterviewQuestions] 开始生成问题...")
 
 	// 创建问题生成智能体
-	agent := question.NewQuestionAgent()
+	agent := question.NewQuestionAgent(userId)
 
 	// 创建 runner
 	runner := adk.NewRunner(timeoutCtx, adk.RunnerConfig{
