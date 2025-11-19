@@ -13,7 +13,7 @@ import (
 	"github.com/cloudwego/eino/compose"
 )
 
-func NewResumAnalysisAgent(supervisorName string) adk.Agent {
+func NewResumAnalysisAgent(supervisorName string, userId uint) adk.Agent {
 	ctx := context.Background()
 
 	// 从Redis获取提示词，失败则使用默认模板
@@ -23,7 +23,7 @@ func NewResumAnalysisAgent(supervisorName string) adk.Agent {
 		Name:        "ResumeAnalysisAgent",
 		Description: "一个可以解析简历pdf分析简历的智能体",
 		Instruction: instruction,
-		Model:       chat.CreatOpenAiChatModel(ctx),
+		Model:       chat.CreatOpenAiChatModel(ctx, userId),
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: []tool.BaseTool{tool2.CreatePDFToTextTool()},

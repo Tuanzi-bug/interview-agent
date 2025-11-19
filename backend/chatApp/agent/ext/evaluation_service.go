@@ -22,7 +22,7 @@ func GenerateInterviewEvaluation(ctx context.Context, userId uint, reportId uint
 	defer cancel()
 
 	// 创建评估智能体
-	agent := evaluation.NewEvaluationAgent()
+	agent := evaluation.NewEvaluationAgent(userId)
 
 	// 创建 runner
 	runner := adk.NewRunner(timeoutCtx, adk.RunnerConfig{

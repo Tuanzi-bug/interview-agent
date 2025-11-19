@@ -13,7 +13,7 @@ import (
 )
 
 // 面试报告
-func NewInterviewReportAgent(supervisorName string) adk.Agent {
+func NewInterviewReportAgent(supervisorName string, userId uint) adk.Agent {
 	ctx := context.Background()
 
 	// 从Redis获取提示词，失败则使用默认模板
@@ -24,7 +24,7 @@ func NewInterviewReportAgent(supervisorName string) adk.Agent {
 		Description: "一个可以解析面试记录生成面试报告的智能体",
 		Instruction: instruction,
 
-		Model: chat.CreatOpenAiChatModel(ctx),
+		Model: chat.CreatOpenAiChatModel(ctx, userId),
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: []tool.BaseTool{},
