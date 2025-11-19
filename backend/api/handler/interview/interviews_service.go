@@ -347,3 +347,69 @@ func GetInterviewRecord(ctx context.Context, c *app.RequestContext) {
 
 	response.Success(ctx, c, resp)
 }
+
+// InterviewRecord 面试记录结构
+type InterviewRecord struct {
+	// 用户头像URL
+	AvatarURL string `json:"avatar_url"`
+	// 用户昵称
+	Username string `json:"username"`
+	// 面试类型, 例如: "综合面试"
+	InterviewType string `json:"interview_type"`
+	// 使用的简历文件名, 例如: "golang.pdf"
+	ResumeName string `json:"resume_name"`
+	// 面试难度, 例如: "挑战"
+	Difficulty string `json:"difficulty"`
+	// 公司名称, 例如: "腾讯"
+	CompanyName string `json:"company_name"`
+	// 岗位名称, 例如: "软件开发-后台开发方向"
+	PositionName string `json:"position_name"`
+	// 面试时间
+	InterviewTime string `json:"interview_time"`
+	// 本次面试评分, 例如: 54
+	Score int `json:"score"`
+}
+
+// GetMockInterviewRecords 获取mock面试记录数据
+// @router /api/interview/records/mock [GET]
+func GetMockInterviewRecords(ctx context.Context, c *app.RequestContext) {
+	// 创建mock数据
+	mockRecords := []InterviewRecord{
+		{
+			AvatarURL:     "https://randomuser.me/api/portraits/men/1.jpg",
+			Username:      "张三",
+			InterviewType: "综合面试",
+			ResumeName:    "golang_resume.pdf",
+			Difficulty:    "挑战",
+			CompanyName:   "腾讯",
+			PositionName:  "软件开发-后台开发方向",
+			InterviewTime: "2025-11-17 20:31:23",
+			Score:         85,
+		},
+		{
+			AvatarURL:     "https://randomuser.me/api/portraits/women/2.jpg",
+			Username:      "李四",
+			InterviewType: "专项面试",
+			ResumeName:    "java_developer.pdf",
+			Difficulty:    "中等",
+			CompanyName:   "阿里巴巴",
+			PositionName:  "Java开发工程师",
+			InterviewTime: "2025-11-17 20:31:23",
+			Score:         76,
+		},
+		{
+			AvatarURL:     "https://randomuser.me/api/portraits/men/3.jpg",
+			Username:      "王五",
+			InterviewType: "简历押题",
+			ResumeName:    "full_stack_resume.pdf",
+			Difficulty:    "简单",
+			CompanyName:   "字节跳动",
+			PositionName:  "全栈开发工程师",
+			InterviewTime: "2025-11-17 20:31:23",
+			Score:         92,
+		},
+	}
+
+	// 直接返回mock数据
+	response.Success(ctx, c, mockRecords)
+}
