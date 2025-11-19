@@ -22,6 +22,29 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
+// SSEWriter 包装 Hertz RequestContext 用于 SSE 写入
+type SSEWriter struct {
+	ctx     *app.RequestContext
+	writer  io.Writer
+	flusher http.Flusher
+}
+
+// Write 实现 io.Writer 接口
+func (w *SSEWriter) Write(p []byte) (n int, err error) {
+	if w.writer != nil {
+		// 直接写入 io.PipeWriter，数据会立即流向客户端
+		fmt.Printf("[DEBUG] [SSEWriter] 写入 %d 字节到 pipeWriter\n", len(p))
+		n, err = w.writer.Write(p)
+		fmt.Printf("[DEBUG] [SSEWriter] 写入完成: %d 字节, 错误: %v\n", n, err)
+		return
+	}
+	fmt.Printf("[DEBUG] [SSEWriter] 使用 ctx.WriteString 写入 %d 字节\n", len(p))
+	n, err = w.ctx.WriteString(string(p))
+	w.ctx.Flush()
+	fmt.Printf("[DEBUG] [SSEWriter] ctx 写入完成: %d 字节, 错误: %v\n", n, err)
+	return
+}
+
 // StartInterviewStream 启动交互式面试流程（SSE + 前端交互模式）
 // @router /api/interview/start/stream [POST]
 func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
@@ -68,69 +91,65 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 	sm := GetSessionManager()
 	session := sm.CreateSession(userID, recordID, resumeFilePath, hasResume, req.Query)
 
-	// 7. 获取 SSE 响应写入器（必须在设置响应头之后）
-	// 尝试直接使用 Response 作为 http.ResponseWriter
-	var writer io.Writer
-	var flusher http.Flusher
+	// 7. 使用 io.Pipe 创建流式响应
+	fmt.Println("[DEBUG] ========== 开始 SSE 流式响应 ==========")
+	fmt.Println("[DEBUG] 创建 io.Pipe 用于流式响应...")
+	pipeReader, pipeWriter := io.Pipe()
+	fmt.Println("[DEBUG] io.Pipe 创建成功")
 
-	// 检查 Response 是否实现了 http.ResponseWriter 接口
-	if rw, ok := interface{}(c.Response).(http.ResponseWriter); ok {
-		writer = rw
-		flusher, _ = rw.(http.Flusher)
-		fmt.Println("[DEBUG] 使用 Response 作为 http.ResponseWriter")
-	} else {
-		// 降级到 BodyWriter
-		writer = c.Response.BodyWriter()
-		if f, ok := writer.(http.Flusher); ok {
-			flusher = f
-		}
-		fmt.Println("[DEBUG] 使用 BodyWriter")
-	}
+	// 设置 SetBodyStream 让 Hertz 流式发送数据
+	fmt.Println("[DEBUG] 调用 SetBodyStream...")
+	c.SetBodyStream(pipeReader, -1)
+	fmt.Println("[DEBUG] SetBodyStream 已设置，handler 即将返回")
 
-	// 9. 确保响应头已发送到客户端
-	if flusher != nil {
-		flusher.Flush()
-		fmt.Println("[DEBUG] 响应头已 flush")
-	}
-
-	// 10. 发送开始事件和 sessionID
-	fmt.Println("[DEBUG] 发送开始事件...")
-	sendStartEventWithSession(writer, session.SessionID)
-	fmt.Println("[DEBUG] 开始事件已发送，sessionID:", session.SessionID)
-
-	// 11. 创建完成通道
-	doneChan := make(chan struct{})
-
-	// 12. 异步运行面试循环（不阻塞 SSE 连接）
-	fmt.Println("[DEBUG] 启动异步面试循环...")
+	// 在 goroutine 中写入初始事件和处理面试循环
 	go func() {
-		defer close(doneChan)
-		runInterviewLoopAsync(ctx, writer, session, interviewService)
-	}()
-	fmt.Println("[DEBUG] 异步面试循环已启动，SSE 连接保持打开")
+		fmt.Println("[DEBUG] [GOROUTINE] 开始执行 goroutine")
+		defer func() {
+			fmt.Println("[DEBUG] [GOROUTINE] 关闭 pipeWriter")
+			pipeWriter.Close()
+			fmt.Println("[DEBUG] [GOROUTINE] pipeWriter 已关闭")
+		}()
 
-	// 13. 保持 SSE 连接打开（心跳机制）
-	ticker := time.NewTicker(10 * time.Second) // 改为 10 秒，便于测试
-	defer ticker.Stop()
+		fmt.Println("[DEBUG] [GOROUTINE] 准备发送初始事件...")
 
-	for {
-		select {
-		case <-ctx.Done():
-			fmt.Println("[DEBUG] SSE 连接已关闭（context 取消）")
-			return
-		case <-doneChan:
-			fmt.Println("[DEBUG] 面试循环已完成，发送最终事件")
-			sendCompleteEvent(writer)
-			return
-		case <-ticker.C:
-			// 发送心跳注释（不会被前端处理，但保持连接活跃）
-			fmt.Fprintf(writer, ": heartbeat\n\n")
-			if flusher != nil {
-				flusher.Flush()
-			}
-			fmt.Println("[DEBUG] 心跳已发送")
+		// 发送 session_id 事件
+		sessionEvent := map[string]interface{}{
+			"type":       "session_id",
+			"session_id": session.SessionID,
+			"message":    "Session created successfully",
 		}
-	}
+		sessionJSON, _ := json.Marshal(sessionEvent)
+		eventStr := fmt.Sprintf("data: %s\n\n", string(sessionJSON))
+		fmt.Printf("[DEBUG] [GOROUTINE] 写入 session_id 事件，长度: %d\n", len(eventStr))
+		n, err := pipeWriter.Write([]byte(eventStr))
+		fmt.Printf("[DEBUG] [GOROUTINE] session_id 事件写入完成: %d 字节, 错误: %v\n", n, err)
+		fmt.Println("[DEBUG] [GOROUTINE] session_id 事件已发送:", session.SessionID)
+
+		// 发送 start 事件
+		startEvent := map[string]interface{}{
+			"type":       "start",
+			"message":    "面试已开始，正在生成第一个问题...",
+			"session_id": session.SessionID,
+		}
+		startJSON, _ := json.Marshal(startEvent)
+		startEventStr := fmt.Sprintf("data: %s\n\n", string(startJSON))
+		fmt.Printf("[DEBUG] [GOROUTINE] 写入 start 事件，长度: %d\n", len(startEventStr))
+		n, err = pipeWriter.Write([]byte(startEventStr))
+		fmt.Printf("[DEBUG] [GOROUTINE] start 事件写入完成: %d 字节, 错误: %v\n", n, err)
+		fmt.Println("[DEBUG] [GOROUTINE] start 事件已发送")
+
+		// 创建 SSEWriter 用于后续事件
+		writer := &SSEWriter{ctx: c, writer: pipeWriter}
+		fmt.Println("[DEBUG] [GOROUTINE] SSEWriter 已创建")
+
+		// 启动异步面试循环
+		fmt.Println("[DEBUG] [GOROUTINE] 启动异步面试循环...")
+		runInterviewLoopAsync(ctx, writer, session, interviewService)
+		fmt.Println("[DEBUG] [GOROUTINE] 面试循环已完成")
+	}()
+
+	fmt.Println("[DEBUG] ========== Handler 返回，SSE 连接保持打开 ==========")
 }
 
 // handleResumeUpload 处理简历文件上传
@@ -443,6 +462,7 @@ func sendUserAnswerEvent(writer io.Writer, answer string) {
 }
 
 func sendQuestionEvent(writer io.Writer, questionIndex int, q ext.QuestionData) {
+	fmt.Printf("[DEBUG] [sendQuestionEvent] 发送问题事件，索引: %d\n", questionIndex)
 	event := map[string]interface{}{
 		"type":  "question",
 		"index": questionIndex,
@@ -453,10 +473,14 @@ func sendQuestionEvent(writer io.Writer, questionIndex int, q ext.QuestionData) 
 		},
 	}
 	eventJSON, _ := json.Marshal(event)
-	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
+	eventStr := fmt.Sprintf("data: %s\n\n", string(eventJSON))
+	fmt.Printf("[DEBUG] [sendQuestionEvent] 写入 %d 字节\n", len(eventStr))
+	fmt.Fprintf(writer, eventStr)
 	if flusher, ok := writer.(http.Flusher); ok {
+		fmt.Println("[DEBUG] [sendQuestionEvent] 执行 Flush")
 		flusher.Flush()
 	}
+	fmt.Println("[DEBUG] [sendQuestionEvent] 问题事件已发送")
 }
 
 func sendDialogueEvent(writer io.Writer, d ext.DialogueData, displayOrder uint32) {
