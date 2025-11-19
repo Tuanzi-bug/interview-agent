@@ -6,6 +6,7 @@ import (
 	"ai-eino-interview-agent/internal/model"
 	"context"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -106,10 +107,24 @@ func (s *InterviewServiceImpl) CompleteInterviewRecord(ctx context.Context, reco
 func (s *InterviewServiceImpl) SaveInterviewDialogues(ctx context.Context, userID uint, recordID uint64, questions []interface{}, dialogues []interface{}) error {
 	log.Printf("[SaveInterviewDialogues] 开始保存，问题数: %d, 对话数: %d", len(questions), len(dialogues))
 
-	// 保存问题主题
-	for i, q := range questions {
+	// 第一步：按 eval_dimension 去重，只创建 6 个主题
+	// 同时建立 questionIndex 到 eval_dimension 的映射
+	dimensionTopicMap := make(map[string]*model.InterviewQuestionTopic)
+	questionIndexToDimension := make(map[uint32]string)             // questionIndex -> eval_dimension
+	dimensionQuestionMap := make(map[string]map[string]interface{}) // 存储每个维度的第一个问题
+	dimensionOrder := make(map[string]uint32)
+	orderCounter := uint32(1)
+
+	// 第一遍：找到每个维度的第一个问题，并建立 questionIndex 映射
+	for _, q := range questions {
 		qData, ok := q.(map[string]interface{})
 		if !ok {
+			continue
+		}
+
+		// 获取 order 字段作为 questionIndex
+		order := toUint32(qData["order"])
+		if order == 0 {
 			continue
 		}
 
@@ -119,104 +134,125 @@ func (s *InterviewServiceImpl) SaveInterviewDialogues(ctx context.Context, userI
 			evalDim = evalDim[:idx]
 		}
 
+		// 记录 questionIndex 到 eval_dimension 的映射
+		if _, exists := questionIndexToDimension[order]; !exists {
+			questionIndexToDimension[order] = evalDim
+			log.Printf("[SaveInterviewDialogues] 映射 questionIndex=%d -> eval_dimension=%s", order, evalDim)
+		}
+
+		// 如果这个维度还没有记录过，就记录这个问题
+		if _, exists := dimensionQuestionMap[evalDim]; !exists {
+			dimensionQuestionMap[evalDim] = qData
+			log.Printf("[SaveInterviewDialogues] 找到维度 %s 的第一个问题: '%s...'", evalDim, truncateString(toString(qData["question_text"]), 30))
+		}
+	}
+
+	// 第二遍：为每个维度创建主题
+	for evalDim, qData := range dimensionQuestionMap {
 		topic := &model.InterviewQuestionTopic{
 			UserID:        userID,
 			ReportID:      recordID,
 			QuestionText:  toString(qData["question_text"]),
-			DisplayOrder:  uint32(i + 1),
+			DisplayOrder:  orderCounter,
 			EvalDimension: evalDim,
 		}
 
 		if err := model.InterviewQuestionTopicDao.Create(topic); err != nil {
+			log.Printf("[SaveInterviewDialogues] 创建主题失败: %v", err)
 			return err
 		}
 
-		// 保存对应的对话记录 - 将提问和回答配对保存在一条记录中
-		dialogueMap := make(map[uint32]*model.InterviewDialogue)
-		dialogueCounter := uint32(1) // 用于自动分配 display_order
+		dimensionTopicMap[evalDim] = topic
+		dimensionOrder[evalDim] = orderCounter
+		log.Printf("[SaveInterviewDialogues] 创建维度主题 %d: %s (ID: %d)", orderCounter, evalDim, topic.ID)
+		orderCounter++
+	}
 
-		log.Printf("[SaveInterviewDialogues] 问题 %d: 开始收集对话", i+1)
+	// 第二步：保存对话记录 - 一次性处理所有对话，避免重复
+	dialogueMap := make(map[uint32]*model.InterviewDialogue)
 
-		// 第一遍：遍历所有对话，收集属于当前问题的对话
-		for _, d := range dialogues {
-			dData, ok := d.(map[string]interface{})
-			if !ok {
-				continue
-			}
+	for i, d := range dialogues {
+		dData, ok := d.(map[string]interface{})
+		if !ok {
+			log.Printf("[SaveInterviewDialogues] 对话 %d: 类型转换失败，类型=%T", i, d)
+			continue
+		}
 
-			displayOrder := toUint32(dData["display_order"])
-			speakerType := toString(dData["speaker_type"])
-			content := toString(dData["content"])
+		displayOrder := toUint32(dData["display_order"])
+		speakerType := toString(dData["speaker_type"])
+		content := toString(dData["content"])
 
-			// 如果 display_order 为 0，自动分配
-			if displayOrder == 0 {
-				// 自动分配 display_order：基于问题索引和对话计数
-				// 例如：第1个问题（i=0）的对话 display_order 为 1, 2, 3...
-				//      第2个问题（i=1）的对话 display_order 为 101, 102, 103...
-				// 注意：这里我们只在 interviewer 类型时增加计数，这样 interviewer 和 candidate 会共享同一个 displayOrder
-				if speakerType == "interviewer" {
-					displayOrder = uint32(i)*100 + dialogueCounter
-					log.Printf("[SaveInterviewDialogues] 对话自动分配 displayOrder=%d, speaker_type=%s", displayOrder, speakerType)
-				} else {
-					// candidate 回答使用前一个 interviewer 的 displayOrder
-					if dialogueCounter > 1 {
-						displayOrder = uint32(i)*100 + (dialogueCounter - 1)
-					} else {
-						displayOrder = uint32(i)*100 + dialogueCounter
-					}
-					log.Printf("[SaveInterviewDialogues] 对话自动分配 displayOrder=%d, speaker_type=%s", displayOrder, speakerType)
-				}
-			} else {
-				// 检查对话是否属于当前问题
-				minDisplayOrder := uint32(i) * 100
-				maxDisplayOrder := uint32(i)*100 + 199
-				if displayOrder <= minDisplayOrder || displayOrder > maxDisplayOrder {
-					log.Printf("[SaveInterviewDialogues] 对话被过滤: displayOrder=%d (超出范围), speaker_type=%s", displayOrder, speakerType)
-					continue
-				}
-				log.Printf("[SaveInterviewDialogues] 对话被收集: displayOrder=%d, speaker_type=%s", displayOrder, speakerType)
-			}
+		log.Printf("[SaveInterviewDialogues] 对话 %d: displayOrder=%d, speakerType=%s, content='%s...'", i, displayOrder, speakerType, truncateString(content, 20))
 
-			// 如果该 displayOrder 的记录不存在，创建新记录
-			if _, exists := dialogueMap[displayOrder]; !exists {
-				dialogueMap[displayOrder] = &model.InterviewDialogue{
-					UserID:       userID,
-					TopicID:      topic.ID,
-					Question:     "",
-					Answer:       "",
-					DisplayOrder: displayOrder,
-				}
-			}
+		if displayOrder == 0 || content == "" {
+			log.Printf("[SaveInterviewDialogues] 对话 %d 被过滤: displayOrder=%d, content长度=%d", i, displayOrder, len(content))
+			continue
+		}
 
-			// 根据发言人类型填充对应字段
-			if speakerType == "interviewer" {
-				dialogueMap[displayOrder].Question = content
-				// 只在 interviewer 时增加计数，这样下一个 candidate 会使用相同的 displayOrder
-				if displayOrder == uint32(i)*100+dialogueCounter {
-					dialogueCounter++
-				}
-			} else if speakerType == "candidate" {
-				dialogueMap[displayOrder].Answer = content
+		// 根据 displayOrder 确定属于哪个问题（displayOrder 的百位数字是问题索引）
+		questionIndex := displayOrder / 100
+		if questionIndex == 0 {
+			log.Printf("[SaveInterviewDialogues] 对话被过滤: displayOrder=%d (questionIndex=0)", displayOrder)
+			continue
+		}
+
+		// 从映射中获取该 questionIndex 对应的 eval_dimension
+		evalDim, exists := questionIndexToDimension[questionIndex]
+		if !exists {
+			log.Printf("[SaveInterviewDialogues] 对话被过滤: displayOrder=%d (questionIndex=%d 没有对应的维度映射)", displayOrder, questionIndex)
+			continue
+		}
+
+		log.Printf("[SaveInterviewDialogues] 对话 %d: displayOrder=%d, questionIndex=%d, evalDim=%s", i, displayOrder, questionIndex, evalDim)
+
+		// 获取该维度的主题
+		topic, ok := dimensionTopicMap[evalDim]
+		if !ok {
+			log.Printf("[SaveInterviewDialogues] 找不到维度主题: %s", evalDim)
+			continue
+		}
+		log.Printf("[SaveInterviewDialogues] 分配 topic_id=%d 给 displayOrder=%d", topic.ID, displayOrder)
+
+		// 如果该 displayOrder 的记录不存在，创建新记录
+		if _, exists := dialogueMap[displayOrder]; !exists {
+			dialogueMap[displayOrder] = &model.InterviewDialogue{
+				UserID:       userID,
+				TopicID:      topic.ID,
+				Question:     "",
+				Answer:       "",
+				DisplayOrder: displayOrder,
 			}
 		}
 
-		// 第二遍：保存所有对话记录到数据库
-		log.Printf("[SaveInterviewDialogues] 问题 %d: 收集到 %d 条对话", i+1, len(dialogueMap))
-		for displayOrder, dialogue := range dialogueMap {
-			// 只保存有内容的记录（至少有提问或回答）
-			if dialogue.Question != "" || dialogue.Answer != "" {
-				log.Printf("[SaveInterviewDialogues] 保存对话 displayOrder=%d, 问题='%s...', 回答='%s...'",
-					displayOrder,
-					truncateString(dialogue.Question, 30),
-					truncateString(dialogue.Answer, 30))
-				if err := model.InterviewDialogueDao.Create(dialogue); err != nil {
-					log.Printf("[SaveInterviewDialogues] 保存失败: %v", err)
-					return err
-				}
+		// 根据发言人类型填充对应字段
+		if speakerType == "interviewer" {
+			// 只保存第一个提问，避免重复
+			if dialogueMap[displayOrder].Question == "" {
+				dialogueMap[displayOrder].Question = content
+				log.Printf("[SaveInterviewDialogues] 保存提问 displayOrder=%d, 内容='%s...'", displayOrder, truncateString(content, 30))
+			}
+		} else if speakerType == "candidate" {
+			// 只保存第一个回答，避免重复
+			if dialogueMap[displayOrder].Answer == "" {
+				dialogueMap[displayOrder].Answer = content
+				log.Printf("[SaveInterviewDialogues] 保存回答 displayOrder=%d, 内容='%s...'", displayOrder, truncateString(content, 30))
 			}
 		}
 	}
 
+	// 第三步：保存所有对话记录到数据库
+	log.Printf("[SaveInterviewDialogues] 准备保存 %d 条对话记录", len(dialogueMap))
+	for _, dialogue := range dialogueMap {
+		// 只保存有内容的记录（至少有提问或回答）
+		if dialogue.Question != "" || dialogue.Answer != "" {
+			if err := model.InterviewDialogueDao.Create(dialogue); err != nil {
+				log.Printf("[SaveInterviewDialogues] 保存失败: %v", err)
+				return err
+			}
+		}
+	}
+
+	log.Printf("[SaveInterviewDialogues] 保存完成，共创建 %d 个维度主题，保存 %d 条对话记录", len(dimensionTopicMap), len(dialogueMap))
 	return nil
 }
 
@@ -244,11 +280,28 @@ func toUint32(v interface{}) uint32 {
 	if v == nil {
 		return 0
 	}
-	if f, ok := v.(float64); ok {
-		return uint32(f)
-	}
-	if i, ok := v.(int); ok {
-		return uint32(i)
+	switch val := v.(type) {
+	case float64:
+		return uint32(val)
+	case float32:
+		return uint32(val)
+	case int:
+		return uint32(val)
+	case int32:
+		return uint32(val)
+	case int64:
+		return uint32(val)
+	case uint:
+		return uint32(val)
+	case uint32:
+		return val
+	case uint64:
+		return uint32(val)
+	case string:
+		// 尝试解析字符串
+		if i, err := strconv.ParseUint(val, 10, 32); err == nil {
+			return uint32(i)
+		}
 	}
 	return 0
 }

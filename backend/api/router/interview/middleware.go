@@ -194,3 +194,8 @@ func _submitinterviewanswerMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _getinterviewevaluationMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}

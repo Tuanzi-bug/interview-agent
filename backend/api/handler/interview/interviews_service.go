@@ -7,7 +7,6 @@ import (
 	"ai-eino-interview-agent/api/response"
 	"ai-eino-interview-agent/chatApp/agent/ext"
 	"ai-eino-interview-agent/internal/middleware"
-	"ai-eino-interview-agent/internal/repository"
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
 	"context"
 	"encoding/json"
@@ -16,7 +15,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -33,15 +31,10 @@ type SSEWriter struct {
 func (w *SSEWriter) Write(p []byte) (n int, err error) {
 	if w.writer != nil {
 		// 直接写入 io.PipeWriter，数据会立即流向客户端
-		fmt.Printf("[DEBUG] [SSEWriter] 写入 %d 字节到 pipeWriter\n", len(p))
-		n, err = w.writer.Write(p)
-		fmt.Printf("[DEBUG] [SSEWriter] 写入完成: %d 字节, 错误: %v\n", n, err)
-		return
+		return w.writer.Write(p)
 	}
-	fmt.Printf("[DEBUG] [SSEWriter] 使用 ctx.WriteString 写入 %d 字节\n", len(p))
 	n, err = w.ctx.WriteString(string(p))
 	w.ctx.Flush()
-	fmt.Printf("[DEBUG] [SSEWriter] ctx 写入完成: %d 字节, 错误: %v\n", n, err)
 	return
 }
 
@@ -79,7 +72,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// 4. 设置 SSE 响应（之后不能再调用 c.JSON() 或其他改变响应头的函数）
+	// 4. 设置 SSE 响应
 	setupSSEResponse(c)
 
 	// 5. 初始化面试服务和会话
@@ -92,64 +85,34 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 	session := sm.CreateSession(userID, recordID, resumeFilePath, hasResume, req.Query)
 
 	// 7. 使用 io.Pipe 创建流式响应
-	fmt.Println("[DEBUG] ========== 开始 SSE 流式响应 ==========")
-	fmt.Println("[DEBUG] 创建 io.Pipe 用于流式响应...")
 	pipeReader, pipeWriter := io.Pipe()
-	fmt.Println("[DEBUG] io.Pipe 创建成功")
-
-	// 设置 SetBodyStream 让 Hertz 流式发送数据
-	fmt.Println("[DEBUG] 调用 SetBodyStream...")
 	c.SetBodyStream(pipeReader, -1)
-	fmt.Println("[DEBUG] SetBodyStream 已设置，handler 即将返回")
 
 	// 在 goroutine 中写入初始事件和处理面试循环
 	go func() {
-		fmt.Println("[DEBUG] [GOROUTINE] 开始执行 goroutine")
-		defer func() {
-			fmt.Println("[DEBUG] [GOROUTINE] 关闭 pipeWriter")
-			pipeWriter.Close()
-			fmt.Println("[DEBUG] [GOROUTINE] pipeWriter 已关闭")
-		}()
+		defer pipeWriter.Close()
 
-		fmt.Println("[DEBUG] [GOROUTINE] 准备发送初始事件...")
-
-		// 发送 session_id 事件
+		// 发送 session_id 和 start 事件
 		sessionEvent := map[string]interface{}{
 			"type":       "session_id",
 			"session_id": session.SessionID,
 			"message":    "Session created successfully",
 		}
 		sessionJSON, _ := json.Marshal(sessionEvent)
-		eventStr := fmt.Sprintf("data: %s\n\n", string(sessionJSON))
-		fmt.Printf("[DEBUG] [GOROUTINE] 写入 session_id 事件，长度: %d\n", len(eventStr))
-		n, err := pipeWriter.Write([]byte(eventStr))
-		fmt.Printf("[DEBUG] [GOROUTINE] session_id 事件写入完成: %d 字节, 错误: %v\n", n, err)
-		fmt.Println("[DEBUG] [GOROUTINE] session_id 事件已发送:", session.SessionID)
+		fmt.Fprintf(pipeWriter, "data: %s\n\n", string(sessionJSON))
 
-		// 发送 start 事件
 		startEvent := map[string]interface{}{
 			"type":       "start",
 			"message":    "面试已开始，正在生成第一个问题...",
 			"session_id": session.SessionID,
 		}
 		startJSON, _ := json.Marshal(startEvent)
-		startEventStr := fmt.Sprintf("data: %s\n\n", string(startJSON))
-		fmt.Printf("[DEBUG] [GOROUTINE] 写入 start 事件，长度: %d\n", len(startEventStr))
-		n, err = pipeWriter.Write([]byte(startEventStr))
-		fmt.Printf("[DEBUG] [GOROUTINE] start 事件写入完成: %d 字节, 错误: %v\n", n, err)
-		fmt.Println("[DEBUG] [GOROUTINE] start 事件已发送")
-
-		// 创建 SSEWriter 用于后续事件
-		writer := &SSEWriter{ctx: c, writer: pipeWriter}
-		fmt.Println("[DEBUG] [GOROUTINE] SSEWriter 已创建")
+		fmt.Fprintf(pipeWriter, "data: %s\n\n", string(startJSON))
 
 		// 启动异步面试循环
-		fmt.Println("[DEBUG] [GOROUTINE] 启动异步面试循环...")
+		writer := &SSEWriter{ctx: c, writer: pipeWriter}
 		runInterviewLoopAsync(ctx, writer, session, interviewService)
-		fmt.Println("[DEBUG] [GOROUTINE] 面试循环已完成")
 	}()
-
-	fmt.Println("[DEBUG] ========== Handler 返回，SSE 连接保持打开 ==========")
 }
 
 // handleResumeUpload 处理简历文件上传
@@ -212,64 +175,53 @@ func setupSSEResponse(c *app.RequestContext) {
 	c.Header("Content-Type", "text/event-stream; charset=utf-8")
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
-	c.Header("Access-Control-Allow-Origin", "*") // 允许所有源（Apifox 等工具）
+	c.Header("Access-Control-Allow-Origin", "*")
 	c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, Cache-Control")
 	c.Header("Transfer-Encoding", "chunked")
-	c.Header("X-Accel-Buffering", "no")           // 禁用代理缓冲，立即发送数据
-	c.Header("X-Content-Type-Options", "nosniff") // 防止浏览器嗅探
-	fmt.Println("[DEBUG] SSE 响应头已设置")
-}
-
-// sendStartEvent 发送面试开始事件
-func sendStartEvent(writer io.Writer) {
-	startEvent := map[string]interface{}{
-		"type":    "start",
-		"message": "面试已开始，正在生成第一个问题...",
-	}
-	eventJSON, _ := json.Marshal(startEvent)
-	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-}
-
-// sendStartEventWithSession 发送面试开始事件（带会话ID）
-func sendStartEventWithSession(writer io.Writer, sessionID string) {
-	// 发送会话ID事件（单独发送，便于前端快速获取）
-	sessionEvent := map[string]interface{}{
-		"type":       "session_id",
-		"session_id": sessionID,
-		"message":    "Session created successfully",
-	}
-	sessionJSON, _ := json.Marshal(sessionEvent)
-	fmt.Fprintf(writer, "data: %s\n\n", string(sessionJSON))
-	if flusher, ok := writer.(http.Flusher); ok {
-		flusher.Flush()
-	}
-
-	// 发送开始事件
-	startEvent := map[string]interface{}{
-		"type":       "start",
-		"message":    "面试已开始，正在生成第一个问题...",
-		"session_id": sessionID,
-	}
-	eventJSON, _ := json.Marshal(startEvent)
-	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-	if flusher, ok := writer.(http.Flusher); ok {
-		flusher.Flush()
-	}
+	c.Header("X-Accel-Buffering", "no")
+	c.Header("X-Content-Type-Options", "nosniff")
 }
 
 // runInterviewLoopAsync 异步运行面试循环
 func runInterviewLoopAsync(ctx context.Context, writer io.Writer, session *InterviewSession, interviewService interviewservice.InterviewService) {
+	fmt.Println("[DEBUG] runInterviewLoopAsync 开始")
 	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("[DEBUG] runInterviewLoopAsync 发生 panic: %v\n", r)
+		}
+		fmt.Printf("[DEBUG] runInterviewLoopAsync 结束，AllDialogues 数量: %d\n", len(session.AllDialogues))
 		// 清理资源
 		cleanupResumeFile(session.ResumeFilePath)
-		GetSessionManager().DeleteSession(session.SessionID)
+		// 延迟删除会话，给前端充足时间来获取最后的数据
+		go func() {
+			time.Sleep(10 * time.Second)
+			GetSessionManager().DeleteSession(session.SessionID)
+		}()
 	}()
 
 	questionIndex := 0
 	sm := GetSessionManager()
+	var resumeContent string                   // 存储简历内容，只在第一次调用时获取
+	const maxFollowUps = 2                     // 每个维度最多 2 个追问
+	const answerTimeout = 30 * time.Minute     // 等待答案的超时时间
+	const heartbeatInterval = 30 * time.Second // 心跳间隔
+
+	// 6 个评估维度
+	dimensions := []string{
+		"professional_field",
+		"project_experience",
+		"technical_depth",
+		"technical_foundation",
+		"team_collaboration",
+		"system_architecture_design",
+	}
+	dimensionIndex := 0 // 当前维度索引
+	followUpCount := 0  // 当前维度的追问计数
 
 	for {
+		fmt.Printf("[DEBUG] 循环迭代：questionIndex=%d, dimensionIndex=%d, followUpCount=%d, AllDialogues=%d\n", questionIndex, dimensionIndex, followUpCount, len(session.AllDialogues))
+
 		// 检查上下文是否已取消
 		select {
 		case <-ctx.Done():
@@ -280,85 +232,137 @@ func runInterviewLoopAsync(ctx context.Context, writer io.Writer, session *Inter
 
 		// 如果不是第一个问题，等待用户答案
 		if questionIndex > 0 {
-			fmt.Println("[DEBUG] 等待用户答案...")
-			// 等待答案（最多等待 5 分钟）
-			answer, received := sm.GetAnswer(session.SessionID, 5*time.Minute)
+			// 等待答案（最多等待 30 分钟，并定期发送心跳保活）
+			answer, received := waitForAnswerWithHeartbeat(sm, session.SessionID, answerTimeout, heartbeatInterval, writer)
 			if !received {
-				fmt.Println("[DEBUG] 等待答案超时")
 				sendErrorEvent(writer, "等待答案超时，面试已结束")
 				sendCompleteEvent(writer)
 				break
 			}
 
-			fmt.Println("[DEBUG] 收到答案:", answer)
 			if answer == "quit" {
 				sendCompleteEvent(writer)
 				break
 			}
 
-			// 保存用户答案
+			// 保存用户答案（与提问使用相同的 displayOrder）
 			session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
 				"speaker_type":  "candidate",
 				"content":       answer,
-				"display_order": uint32(questionIndex)*100 + 50,
+				"display_order": uint32(questionIndex)*100 + uint32(followUpCount),
 			})
+
+			// 检查是否需要追问
+			if followUpCount < maxFollowUps {
+				// 继续追问
+				followUpCount++
+			} else {
+				// 追问完成，切换到下一个维度
+				dimensionIndex++
+				followUpCount = 0
+				questionIndex++ // 只在切换维度时才递增 questionIndex
+				if dimensionIndex >= len(dimensions) {
+					// 所有维度都问完了，面试结束
+					sendTopicCompleteEvent(writer)
+					sendCompleteEvent(writer)
+					break
+				}
+			}
 		}
 
-		// 生成问题
-		questionIndex++
-		fmt.Println("[DEBUG] 生成第", questionIndex, "个问题...")
-		prompt := buildPrompt(questionIndex, session.Query, session.ResumeFilePath, session.HasResume)
+		// 如果是第一个问题或继续追问，不递增 questionIndex（在切换维度时已经递增）
+		if questionIndex == 0 {
+			questionIndex++
+		}
+
+		// 构建提示词
+		var prompt string
+		if questionIndex == 1 {
+			// 第一次调用时解析简历，生成第一个主问题
+			prompt = buildPrompt(questionIndex, session.Query, session.ResumeFilePath, session.HasResume, dimensions[dimensionIndex], 0)
+		} else if followUpCount > 0 {
+			// 生成追问
+			// 获取用户对上一个问题的回答
+			lastAnswer := ""
+			// 当前 questionIndex 不变，上一个回答的 displayOrder = questionIndex*100 + (followUpCount-1)
+			displayOrder := uint32(questionIndex)*100 + uint32(followUpCount-1)
+			for _, dialogue := range session.AllDialogues {
+				d := dialogue.(map[string]interface{})
+				if d["speaker_type"] == "candidate" && d["display_order"] == displayOrder {
+					lastAnswer = toString(d["content"])
+					break
+				}
+			}
+			prompt = buildPrompt(questionIndex, lastAnswer, "", false, dimensions[dimensionIndex], followUpCount)
+		} else {
+			// 生成下一个维度的主问题
+			// 构建提示词，包含用户的回答
+			userAnswers := ""
+			for i := 1; i < questionIndex; i++ {
+				// 查找第 i 个问题的用户回答（主问题的 displayOrder = i*100 + 0）
+				displayOrder := uint32(i) * 100
+				for _, dialogue := range session.AllDialogues {
+					d := dialogue.(map[string]interface{})
+					if d["speaker_type"] == "candidate" && d["display_order"] == displayOrder {
+						userAnswers += fmt.Sprintf("问题 %d 的回答：%s\n", i, d["content"])
+						break
+					}
+				}
+			}
+			prompt = buildPrompt(questionIndex, resumeContent+"\n\n用户已回答的问题：\n"+userAnswers, "", false, dimensions[dimensionIndex], 0)
+		}
 
 		// 调用智能体生成问题
-		fmt.Println("[DEBUG] 调用智能体...")
 		result, err := ext.GenerateInterviewQuestions(ctx, prompt)
-		fmt.Println("[DEBUG] 智能体返回，错误:", err)
 		if err != nil {
-			fmt.Println("[DEBUG] 生成问题失败:", err)
 			sendErrorEvent(writer, "Failed to generate question: "+err.Error())
-			// 确保错误事件被发送到前端
 			sendCompleteEvent(writer)
 			break
 		}
 
 		// 检查是否有问题生成
-		fmt.Printf("[DEBUG] 检查问题数量: %d\n", len(result.Questions))
 		if len(result.Questions) == 0 {
-			fmt.Println("[DEBUG] 没有生成问题，发送主题完成事件")
-			// 发送主题完成事件
+			// 所有维度都问完了，面试结束
 			sendTopicCompleteEvent(writer)
-
-			// 等待用户选择（continue 或 quit）
-			choice, received := sm.GetAnswer(session.SessionID, 2*time.Minute)
-			if !received || choice == "quit" {
-				sendCompleteEvent(writer)
-				break
-			}
-
-			if choice == "continue" {
-				// 继续下一个主题
-				continue
-			}
-
-			// 其他情况，重新等待
-			questionIndex--
-			continue
+			sendCompleteEvent(writer)
+			break
 		}
 
-		// 处理问题和对话
-		fmt.Println("[DEBUG] 开始处理问题和对话...")
-		fmt.Printf("[DEBUG] 问题数: %d, 对话数: %d\n", len(result.Questions), len(result.Dialogues))
-		processQuestionAndDialoguesAsync(writer, result, questionIndex, session)
-		fmt.Println("[DEBUG] 问题和对话处理完成")
+		// 保存简历内容供后续使用（只在第一次调用时）
+		if questionIndex == 1 {
+			resumeContent = session.Query
+		}
+
+		// 发送问题
+		q := result.Questions[0]
+		sendQuestionEvent(writer, questionIndex, q)
+
+		// 保存问题到会话
+		session.AllQuestions = append(session.AllQuestions, map[string]interface{}{
+			"question_text":  q.QuestionText,
+			"eval_dimension": q.EvalDimension,
+			"order":          q.Order,
+		})
+
+		// 保存智能体返回的提问到对话中
+		if len(result.Dialogues) > 0 {
+			for _, d := range result.Dialogues {
+				if d.SpeakerType == "interviewer" {
+					session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
+						"speaker_type":  "interviewer",
+						"content":       d.Content,
+						"display_order": uint32(questionIndex)*100 + uint32(followUpCount),
+					})
+					break // 只保存第一个提问
+				}
+			}
+		}
 
 		// 发送就绪事件
-		fmt.Println("[DEBUG] 发送就绪事件...")
 		sendReadyEventWithSession(writer, questionIndex, session.SessionID)
-		fmt.Println("[DEBUG] 就绪事件已发送")
 
 		// 重置答案标志，准备接收下一个答案
 		sm.ClearAnswer(session.SessionID)
-		fmt.Println("[DEBUG] 准备等待用户答案...")
 	}
 
 	// 保存数据到数据库
@@ -367,103 +371,234 @@ func runInterviewLoopAsync(ctx context.Context, writer io.Writer, session *Inter
 	}
 }
 
+// waitForAnswerWithHeartbeat 等待用户答案，并定期发送心跳保活
+func waitForAnswerWithHeartbeat(sm *SessionManager, sessionID string, timeout time.Duration, heartbeatInterval time.Duration, writer io.Writer) (string, bool) {
+	deadline := time.Now().Add(timeout)
+	ticker := time.NewTicker(heartbeatInterval)
+	defer ticker.Stop()
+
+	for {
+		// 计算剩余等待时间
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return "", false // 超时
+		}
+
+		// 尝试获取答案（使用较短的等待时间）
+		answer, received := sm.GetAnswer(sessionID, heartbeatInterval)
+		if received {
+			return answer, true // 获取到答案
+		}
+
+		// 发送心跳保活
+		sendHeartbeatEvent(writer)
+
+		// 检查是否超时
+		if time.Now().After(deadline) {
+			return "", false // 超时
+		}
+	}
+}
+
+// sendHeartbeatEvent 发送心跳事件保活连接
+func sendHeartbeatEvent(writer io.Writer) {
+	sendSSEEvent(writer, map[string]interface{}{
+		"type":    "heartbeat",
+		"message": "连接保活",
+	})
+}
+
+// toString 将 interface{} 转换为 string
+func toString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
 // buildPrompt 构建提示词
-func buildPrompt(questionIndex int, query string, resumeFilePath string, hasResume bool) string {
-	if questionIndex == 1 {
-		// 第一个问题
-		if hasResume {
-			if resumeFilePath != "" {
-				return fmt.Sprintf(`请使用 pdf_to_text 工具解析以下简历文件，然后根据简历内容生成第一个面试问题。
+func buildPrompt(questionIndex int, query string, resumeFilePath string, hasResume bool, dimension string, followUpCount int) string {
+	dimensionMap := map[string]string{
+		"professional_field":         "专业领域",
+		"project_experience":         "项目经历",
+		"technical_depth":            "技术深度",
+		"technical_foundation":       "技术基础",
+		"team_collaboration":         "团队协作",
+		"system_architecture_design": "系统架构设计",
+	}
+	dimensionCN := dimensionMap[dimension]
+
+	// 根据 followUpCount 确定是主问题还是追问
+	if followUpCount == 0 {
+		// 主问题
+		if questionIndex == 1 {
+			// 第一个问题
+			if hasResume {
+				if resumeFilePath != "" {
+					return fmt.Sprintf(`请使用 pdf_to_text 工具解析以下简历文件，然后根据简历内容生成一个面试问题。
 
 简历文件路径：%s
 
 用户补充信息：%s
 
-请按照JSON格式返回结果，包含问题和对话。`, resumeFilePath, query)
-			}
-			return fmt.Sprintf(`根据以下信息生成第一个面试问题。
+重要提示：
+1. 只返回JSON格式，不返回其他文本
+2. 只生成面试官的提问，不要生成用户的回答
+3. dialogues数组中只包含speaker_type为"interviewer"的提问
+4. 问题必须围绕评估维度"%s"进行
+5. 生成一个主问题（不是追问）
+
+必须返回的JSON格式：
+{
+  "questions": [
+    {
+      "question_text": "问题内容",
+      "eval_dimension": "%s",
+      "order": 1
+    }
+  ],
+  "dialogues": [
+    {"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}
+  ]
+}`, resumeFilePath, query, dimensionCN, dimension)
+				}
+				return fmt.Sprintf(`根据以下信息生成一个面试问题。
 
 %s
 
-请按照JSON格式返回结果。`, query)
+重要提示：
+1. 只返回JSON格式，不返回其他文本
+2. 只生成面试官的提问，不要生成用户的回答
+3. dialogues数组中只包含speaker_type为"interviewer"的提问
+4. 问题必须围绕评估维度"%s"进行
+5. 生成一个主问题（不是追问）
+
+必须返回的JSON格式：
+{
+  "questions": [
+    {
+      "question_text": "问题内容",
+      "eval_dimension": "%s",
+      "order": 1
+    }
+  ],
+  "dialogues": [
+    {"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}
+  ]
+}`, query, dimensionCN, dimension)
+			}
+			return fmt.Sprintf(`生成一个面试问题。
+
+重要提示：
+1. 只返回JSON格式，不返回其他文本
+2. 只生成面试官的提问，不要生成用户的回答
+3. dialogues数组中只包含speaker_type为"interviewer"的提问
+4. 问题必须围绕评估维度"%s"进行
+5. 生成一个主问题（不是追问）
+
+必须返回的JSON格式：
+{
+  "questions": [
+    {
+      "question_text": "问题内容",
+      "eval_dimension": "%s",
+      "order": 1
+    }
+  ],
+  "dialogues": [
+    {"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}
+  ]
+}`, dimensionCN, dimension)
 		}
-		return `生成第一个面试问题。
 
-请按照JSON格式返回结果。`
+		// 后续的主问题
+		return fmt.Sprintf(`根据以下简历和用户的回答，生成下一个面试问题。
+
+%s
+
+重要提示：
+1. 只返回JSON格式，不返回其他文本
+2. 只生成面试官的提问，不要生成用户的回答
+3. dialogues数组中只包含speaker_type为"interviewer"的提问
+4. 问题必须围绕评估维度"%s"进行，且与之前的问题不同
+5. 生成一个主问题（不是追问）
+
+必须返回的JSON格式：
+{
+  "questions": [
+    {
+      "question_text": "问题内容",
+      "eval_dimension": "%s",
+      "order": %d
+    }
+  ],
+  "dialogues": [
+    {"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}
+  ]
+}`, query, dimensionCN, dimension, questionIndex)
 	}
 
-	// 后续问题
-	if hasResume {
-		return fmt.Sprintf(`用户已回答了第 %d 个问题。请根据用户的回答生成下一个面试问题。
+	// 追问
+	return fmt.Sprintf(`根据用户对上一个问题的回答，生成一个追问问题。
 
-请按照JSON格式返回结果。`, questionIndex-1)
-	}
-	return fmt.Sprintf(`用户已回答了第 %d 个问题。请生成下一个面试问题。
+用户的回答：
+%s
 
-请按照JSON格式返回结果。`, questionIndex-1)
-}
+重要提示：
+1. 只返回JSON格式，不返回其他文本
+2. 只生成面试官的追问，不要生成用户的回答
+3. dialogues数组中只包含speaker_type为"interviewer"的追问
+4. 追问必须围绕评估维度"%s"进行
+5. 追问必须基于用户的回答内容，深入探讨相关话题
+6. 这是第 %d 个追问
 
-// processQuestionAndDialogues 处理问题和对话
-func processQuestionAndDialogues(writer io.Writer, result *ext.QuestionGeneratorResult, questionIndex int, allQuestions, allDialogues *[]interface{}) {
-	// 输出问题
-	if len(result.Questions) > 0 {
-		q := result.Questions[0]
-		sendQuestionEvent(writer, questionIndex, q)
-		*allQuestions = append(*allQuestions, map[string]interface{}{
-			"question_text":  q.QuestionText,
-			"eval_dimension": q.EvalDimension,
-			"order":          q.Order,
-		})
-	}
-
-	// 输出对话
-	for idx, d := range result.Dialogues {
-		normalizedDisplayOrder := uint32(questionIndex)*100 + uint32(idx+1)
-		sendDialogueEvent(writer, d, normalizedDisplayOrder)
-		*allDialogues = append(*allDialogues, map[string]interface{}{
-			"speaker_type":  d.SpeakerType,
-			"content":       d.Content,
-			"display_order": normalizedDisplayOrder,
-		})
-	}
+必须返回的JSON格式：
+{
+  "questions": [
+    {
+      "question_text": "追问内容",
+      "eval_dimension": "%s",
+      "order": %d
+    }
+  ],
+  "dialogues": [
+    {"speaker_type": "interviewer", "content": "追问内容", "display_order": 1}
+  ]
+}`, query, dimensionCN, followUpCount, dimension, questionIndex)
 }
 
 // 事件发送辅助函数
 
-func sendErrorEvent(writer io.Writer, message string) {
-	event := map[string]interface{}{"type": "error", "message": message}
+// sendSSEEvent 发送 SSE 事件的通用函数
+func sendSSEEvent(writer io.Writer, event map[string]interface{}) {
 	eventJSON, _ := json.Marshal(event)
 	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
 	if flusher, ok := writer.(http.Flusher); ok {
 		flusher.Flush()
 	}
+}
+
+func sendErrorEvent(writer io.Writer, message string) {
+	sendSSEEvent(writer, map[string]interface{}{"type": "error", "message": message})
 }
 
 func sendCompleteEvent(writer io.Writer) {
-	event := map[string]interface{}{"type": "complete", "message": "面试已结束"}
-	eventJSON, _ := json.Marshal(event)
-	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-	if flusher, ok := writer.(http.Flusher); ok {
-		flusher.Flush()
-	}
+	sendSSEEvent(writer, map[string]interface{}{"type": "complete", "message": "面试已结束"})
 }
 
 func sendUserAnswerEvent(writer io.Writer, answer string) {
-	event := map[string]interface{}{
+	sendSSEEvent(writer, map[string]interface{}{
 		"type":    "user_answer",
 		"message": "已收到你的回答，正在生成下一个问题...",
 		"answer":  answer,
-	}
-	eventJSON, _ := json.Marshal(event)
-	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-	if flusher, ok := writer.(http.Flusher); ok {
-		flusher.Flush()
-	}
+	})
 }
 
 func sendQuestionEvent(writer io.Writer, questionIndex int, q ext.QuestionData) {
-	fmt.Printf("[DEBUG] [sendQuestionEvent] 发送问题事件，索引: %d\n", questionIndex)
-	event := map[string]interface{}{
+	sendSSEEvent(writer, map[string]interface{}{
 		"type":  "question",
 		"index": questionIndex,
 		"data": map[string]interface{}{
@@ -471,98 +606,36 @@ func sendQuestionEvent(writer io.Writer, questionIndex int, q ext.QuestionData) 
 			"eval_dimension": q.EvalDimension,
 			"order":          q.Order,
 		},
-	}
-	eventJSON, _ := json.Marshal(event)
-	eventStr := fmt.Sprintf("data: %s\n\n", string(eventJSON))
-	fmt.Printf("[DEBUG] [sendQuestionEvent] 写入 %d 字节\n", len(eventStr))
-	fmt.Fprintf(writer, eventStr)
-	if flusher, ok := writer.(http.Flusher); ok {
-		fmt.Println("[DEBUG] [sendQuestionEvent] 执行 Flush")
-		flusher.Flush()
-	}
-	fmt.Println("[DEBUG] [sendQuestionEvent] 问题事件已发送")
+	})
 }
 
 func sendDialogueEvent(writer io.Writer, d ext.DialogueData, displayOrder uint32) {
-	event := map[string]interface{}{
+	sendSSEEvent(writer, map[string]interface{}{
 		"type": "dialogue",
 		"data": map[string]interface{}{
 			"speaker_type":  d.SpeakerType,
 			"content":       d.Content,
 			"display_order": displayOrder,
 		},
-	}
-	eventJSON, _ := json.Marshal(event)
-	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-	if flusher, ok := writer.(http.Flusher); ok {
-		flusher.Flush()
-	}
-}
-
-func sendReadyEvent(writer io.Writer, questionIndex int) {
-	event := map[string]interface{}{
-		"type":           "ready_for_answer",
-		"message":        "请回答上述问题",
-		"question_index": questionIndex,
-	}
-	eventJSON, _ := json.Marshal(event)
-	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-	if flusher, ok := writer.(http.Flusher); ok {
-		flusher.Flush()
-	}
+	})
 }
 
 // sendReadyEventWithSession 发送就绪事件（带会话ID）
 func sendReadyEventWithSession(writer io.Writer, questionIndex int, sessionID string) {
-	event := map[string]interface{}{
+	sendSSEEvent(writer, map[string]interface{}{
 		"type":           "ready_for_answer",
 		"message":        "请回答上述问题",
 		"question_index": questionIndex,
 		"session_id":     sessionID,
-	}
-	eventJSON, _ := json.Marshal(event)
-	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-	if flusher, ok := writer.(http.Flusher); ok {
-		flusher.Flush()
-	}
+	})
 }
 
 // sendTopicCompleteEvent 发送主题完成事件
 func sendTopicCompleteEvent(writer io.Writer) {
-	event := map[string]interface{}{
+	sendSSEEvent(writer, map[string]interface{}{
 		"type":    "topic_complete",
 		"message": "当前主题的面试已完成。输入 'continue' 继续下一个主题，或输入 'quit' 结束面试。",
-	}
-	eventJSON, _ := json.Marshal(event)
-	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-	if flusher, ok := writer.(http.Flusher); ok {
-		flusher.Flush()
-	}
-}
-
-// processQuestionAndDialoguesAsync 处理问题和对话（异步版本）
-func processQuestionAndDialoguesAsync(writer io.Writer, result *ext.QuestionGeneratorResult, questionIndex int, session *InterviewSession) {
-	// 输出问题
-	if len(result.Questions) > 0 {
-		q := result.Questions[0]
-		sendQuestionEvent(writer, questionIndex, q)
-		session.AllQuestions = append(session.AllQuestions, map[string]interface{}{
-			"question_text":  q.QuestionText,
-			"eval_dimension": q.EvalDimension,
-			"order":          q.Order,
-		})
-	}
-
-	// 输出对话
-	for idx, d := range result.Dialogues {
-		normalizedDisplayOrder := uint32(questionIndex)*100 + uint32(idx+1)
-		sendDialogueEvent(writer, d, normalizedDisplayOrder)
-		session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
-			"speaker_type":  d.SpeakerType,
-			"content":       d.Content,
-			"display_order": normalizedDisplayOrder,
-		})
-	}
+	})
 }
 
 // cleanupResumeFile 删除简历文件
@@ -570,359 +643,6 @@ func cleanupResumeFile(resumeFilePath string) {
 	if resumeFilePath != "" {
 		_ = os.Remove(resumeFilePath)
 	}
-}
-
-// ============ Hertz 版本的 SSE 函数 ============
-
-// sendStartEventWithSessionHertzPipe 发送开始事件（Pipe 版本）
-func sendStartEventWithSessionHertzPipe(writer *io.PipeWriter, sessionID string) {
-	// 发送会话ID事件
-	sessionEvent := map[string]interface{}{
-		"type":       "session_id",
-		"session_id": sessionID,
-		"message":    "Session created successfully",
-	}
-	sessionJSON, _ := json.Marshal(sessionEvent)
-	fmt.Fprintf(writer, "data: %s\n\n", string(sessionJSON))
-	fmt.Println("[DEBUG] 会话ID事件已写入")
-
-	// 发送开始事件
-	startEvent := map[string]interface{}{
-		"type":       "start",
-		"message":    "面试已开始，正在生成第一个问题...",
-		"session_id": sessionID,
-	}
-	eventJSON, _ := json.Marshal(startEvent)
-	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-	fmt.Println("[DEBUG] 开始事件已写入")
-}
-
-// sendCompleteEventHertzPipe 发送完成事件（Pipe 版本）
-func sendCompleteEventHertzPipe(writer *io.PipeWriter) {
-	event := map[string]interface{}{"type": "complete", "message": "面试已结束"}
-	eventJSON, _ := json.Marshal(event)
-	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-}
-
-// runInterviewLoopAsyncHertzPipe 异步运行面试循环（Pipe 版本）
-func runInterviewLoopAsyncHertzPipe(ctx context.Context, writer *io.PipeWriter, session *InterviewSession, interviewService interviewservice.InterviewService) {
-	defer func() {
-		// 清理资源
-		cleanupResumeFile(session.ResumeFilePath)
-		GetSessionManager().DeleteSession(session.SessionID)
-	}()
-
-	questionIndex := 0
-	sm := GetSessionManager()
-
-	for {
-		// 检查上下文是否已取消
-		select {
-		case <-ctx.Done():
-			fmt.Println("[DEBUG] 面试循环：context 已取消")
-			return
-		default:
-		}
-
-		// 如果不是第一个问题，等待用户答案
-		if questionIndex > 0 {
-			fmt.Println("[DEBUG] 等待用户答案...")
-			// 等待答案（最多等待 5 分钟）
-			answer, received := sm.GetAnswer(session.SessionID, 5*time.Minute)
-			if !received {
-				fmt.Println("[DEBUG] 等待答案超时")
-				sendErrorEvent(writer, "等待答案超时，面试已结束")
-				sendCompleteEvent(writer)
-				break
-			}
-
-			fmt.Println("[DEBUG] 收到答案:", answer)
-			if answer == "quit" {
-				sendCompleteEvent(writer)
-				break
-			}
-
-			// 保存用户答案
-			session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
-				"speaker_type":  "candidate",
-				"content":       answer,
-				"display_order": uint32(questionIndex)*100 + 50,
-			})
-		}
-
-		// 生成问题
-		questionIndex++
-		fmt.Println("[DEBUG] 生成第", questionIndex, "个问题...")
-		prompt := buildPrompt(questionIndex, session.Query, session.ResumeFilePath, session.HasResume)
-
-		// 调用智能体生成问题
-		fmt.Println("[DEBUG] 调用智能体...")
-		result, err := ext.GenerateInterviewQuestions(ctx, prompt)
-		fmt.Println("[DEBUG] 智能体返回，错误:", err)
-		if err != nil {
-			fmt.Println("[DEBUG] 生成问题失败:", err)
-			sendErrorEvent(writer, "Failed to generate question: "+err.Error())
-			// 确保错误事件被发送到前端
-			sendCompleteEvent(writer)
-			break
-		}
-
-		// 检查是否有问题生成
-		fmt.Printf("[DEBUG] 检查问题数量: %d\n", len(result.Questions))
-		if len(result.Questions) == 0 {
-			fmt.Println("[DEBUG] 没有生成问题，发送主题完成事件")
-			// 发送主题完成事件
-			sendTopicCompleteEvent(writer)
-
-			// 等待用户选择（continue 或 quit）
-			choice, received := sm.GetAnswer(session.SessionID, 2*time.Minute)
-			if !received || choice == "quit" {
-				sendCompleteEvent(writer)
-				break
-			}
-
-			if choice == "continue" {
-				// 继续下一个主题
-				continue
-			}
-
-			// 其他情况，重新等待
-			questionIndex--
-			continue
-		}
-
-		// 处理问题和对话
-		fmt.Println("[DEBUG] 开始处理问题和对话...")
-		fmt.Printf("[DEBUG] 问题数: %d, 对话数: %d\n", len(result.Questions), len(result.Dialogues))
-		processQuestionAndDialoguesAsync(writer, result, questionIndex, session)
-		fmt.Println("[DEBUG] 问题和对话处理完成")
-
-		// 发送就绪事件
-		fmt.Println("[DEBUG] 发送就绪事件...")
-		readyEvent := map[string]interface{}{
-			"type":           "ready_for_answer",
-			"message":        "请回答上述问题",
-			"question_index": questionIndex,
-			"session_id":     session.SessionID,
-		}
-		readyJSON, _ := json.Marshal(readyEvent)
-		fmt.Fprintf(writer, "data: %s\n\n", string(readyJSON))
-		fmt.Println("[DEBUG] 就绪事件已发送")
-
-		// 重置答案标志，准备接收下一个答案
-		sm.ClearAnswer(session.SessionID)
-		fmt.Println("[DEBUG] 准备等待用户答案...")
-	}
-
-	// 保存数据到数据库
-	if err := interviewService.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, session.AllQuestions, session.AllDialogues); err != nil {
-		_ = err
-	}
-}
-
-// ContinueInterview 继续面试流程（用于多轮对话）
-// @router /api/interview/continue [POST]
-func ContinueInterview(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req interviewsapi.ContinueInterviewRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
-		return
-	}
-
-	// 设置 SSE 响应头
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Headers", "Cache-Control")
-
-	// 获取面试服务实例
-	interviewService := interviewservice.NewInterviewService()
-
-	// 从Redis获取最大问题数配置
-	key := "interview:max:question"
-	client := repository.GetRedis()
-	maxQuestions := 5 // 默认5个问题
-
-	val, err := client.Get(ctx, key).Result()
-	if err == nil && val != "" {
-		if q, parseErr := strconv.Atoi(val); parseErr == nil && q > 0 {
-			maxQuestions = q
-		}
-	}
-
-	// 继续面试流程
-	eventChan, err := interviewService.ContinueInterview(ctx, &req, maxQuestions)
-	if err != nil {
-		response.InternalServerError(ctx, c, err.Error())
-		return
-	}
-
-	// 流式输出事件
-	writer := c.Response.BodyWriter()
-	for event := range eventChan {
-		// 将事件序列化为 JSON
-		eventJSON, err := json.Marshal(event)
-		if err != nil {
-			// 发送错误事件
-			errorEvent := map[string]string{
-				"type":  "error",
-				"error": "序列化事件失败: " + err.Error(),
-			}
-			errorJSON, _ := json.Marshal(errorEvent)
-			fmt.Fprintf(writer, "data: %s\n\n", string(errorJSON))
-			return
-		}
-
-		// 使用 SSE 格式发送事件
-		fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-
-		// 如果是完成事件，结束流
-		if event.Type == "done" {
-			break
-		}
-
-		// 检查上下文是否已取消
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-	}
-	//err = c.BindAndValidate(&req)
-	//if err != nil {
-	//	response.BadRequest(ctx, c, "Invalid request: "+err.Error())
-	//	return
-	//}
-	//
-	//// 设置 SSE 响应头
-	//c.Header("Content-Type", "text/event-stream")
-	//c.Header("Cache-Control", "no-cache")
-	//c.Header("Connection", "keep-alive")
-	//c.Header("Access-Control-Allow-Origin", "*")
-	//c.Header("Access-Control-Allow-Headers", "Cache-Control")
-	//
-	//// 获取面试服务实例
-	//interviewService := interviewservice.NewInterviewService()
-	//
-	//// 从Redis获取最大问题数配置
-	//key := "interview:max:question"
-	//client := repository.GetRedis()
-	//maxQuestions := 5 // 默认5个问题
-	//
-	//val, err := client.Get(ctx, key).Result()
-	//if err == nil && val != "" {
-	//	if q, parseErr := strconv.Atoi(val); parseErr == nil && q > 0 {
-	//		maxQuestions = q
-	//	}
-	//}
-	//
-	//// 继续面试流程
-	//eventChan, err := interviewService.ContinueInterview(ctx, &req, maxQuestions)
-	//if err != nil {
-	//	response.InternalServerError(ctx, c, err.Error())
-	//	return
-	//}
-	//
-	//// 流式输出事件
-	//writer := c.Response.BodyWriter()
-	//for event := range eventChan {
-	//	// 将事件序列化为 JSON
-	//	eventJSON, err := json.Marshal(event)
-	//	if err != nil {
-	//		// 发送错误事件
-	//		errorEvent := map[string]string{
-	//			"type":  "error",
-	//			"error": "序列化事件失败: " + err.Error(),
-	//		}
-	//		errorJSON, _ := json.Marshal(errorEvent)
-	//		fmt.Fprintf(writer, "data: %s\n\n", string(errorJSON))
-	//		return
-	//	}
-	//
-	//	// 使用 SSE 格式发送事件
-	//	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-	//
-	//	// 如果是完成事件，结束流
-	//	if event.Type == "done" {
-	//		break
-	//	}
-	//
-	//	// 检查上下文是否已取消
-	//	select {
-	//	case <-ctx.Done():
-	//		return
-	//	default:
-	//	}
-	//}
-}
-
-// ListInterviewRecords .
-// @router /api/interview/records [GET]
-func ListInterviewRecords(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req interviewsapi.ListInterviewRecordsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
-		return
-	}
-
-	userID := middleware.GetUserID(c)
-	page := int(req.GetPage())
-	if page <= 0 {
-		page = 1
-	}
-	pageSize := int(req.GetPageSize())
-	if pageSize <= 0 {
-		pageSize = 10
-	}
-
-	interviewService := interviewservice.NewInterviewService()
-	records, total, err := interviewService.ListInterviewRecords(ctx, userID, page, pageSize)
-	if err != nil {
-		response.InternalServerError(ctx, c, err.Error())
-		return
-	}
-
-	resp := &interviewsapi.ListInterviewRecordsResponse{
-		Records:  records,
-		Total:    total,
-		Page:     int32(page),
-		PageSize: int32(pageSize),
-	}
-
-	response.Success(ctx, c, resp)
-}
-
-// GetInterviewRecord .
-// @router /api/interview/records/:id [GET]
-func GetInterviewRecord(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req interviewsapi.GetInterviewRecordRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
-		return
-	}
-
-	userID := middleware.GetUserID(c)
-	interviewService := interviewservice.NewInterviewService()
-	record, err := interviewService.GetInterviewRecord(ctx, userID, uint64(req.ID))
-	if err != nil {
-		response.InternalServerError(ctx, c, err.Error())
-		return
-	}
-	if record == nil {
-		response.NotFound(ctx, c, "Record not found")
-		return
-	}
-
-	resp := &interviewsapi.GetInterviewRecordResponse{Record: record}
-
-	response.Success(ctx, c, resp)
 }
 
 // SubmitInterviewAnswer 提交面试回答
@@ -983,5 +703,28 @@ func SubmitInterviewAnswer(ctx context.Context, c *app.RequestContext) {
 		SessionID: &req.SessionID,
 	}
 
+	response.Success(ctx, c, resp)
+}
+
+// GetInterviewEvaluation .
+// @router /api/interview/evaluation [GET]
+func GetInterviewEvaluation(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req interviewsapi.GetInterviewEvaluationRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
+		return
+	}
+	userId := middleware.GetUserID(c)
+	if userId == 0 {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+	resp, err := ext.GenerateInterviewEvaluation(ctx, userId, uint64(req.ReportID))
+	if err != nil {
+		response.InternalServerError(ctx, c, err.Error())
+		return
+	}
 	response.Success(ctx, c, resp)
 }

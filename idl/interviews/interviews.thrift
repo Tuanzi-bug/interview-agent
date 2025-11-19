@@ -105,6 +105,24 @@ struct SubmitInterviewAnswerResponse {
     3: optional string session_id  // 会话ID
 }
 
+// 评估维度
+struct EvaluationDimension {
+    1: required string dimension_name  // 维度名称（如：技术能力、沟通能力等）
+    2: required string evaluation      // 该维度的评估内容
+    3: required i32 score              // 该维度的评分（0-100）
+}
+
+// 获取面试评估请求
+struct GetInterviewEvaluationRequest {
+    1: required i64 report_id (api.query="report_id")  // 面试报告ID
+}
+
+// 获取面试评估响应
+struct GetInterviewEvaluationResponse {
+    1: required string comment                          // 整体评价
+    2: required list<EvaluationDimension> dimensions   // 各维度评估列表
+}
+
 
 
 // ==================== 服务定义 ====================
@@ -117,30 +135,16 @@ service InterviewsService {
         api.gen_path="interviews"
     )
 
-    // 继续面试流程（用于多轮对话）
-    StartInterviewResponse ContinueInterview(1: ContinueInterviewRequest request) (
-        api.post="/api/interview/continue",
-        api.category="interviews",
-        api.gen_path="interviews"
-    )
-
-    // 获取当前用户的面试记录列表
-    ListInterviewRecordsResponse ListInterviewRecords(1: ListInterviewRecordsRequest request) (
-        api.get="/api/interview/records",
-        api.category="interviews",
-        api.gen_path="interviews"
-    )
-    
-    // 获取单条面试记录详情
-    GetInterviewRecordResponse GetInterviewRecord(1: GetInterviewRecordRequest request) (
-        api.get="/api/interview/records/:id",
-        api.category="interviews",
-        api.gen_path="interviews"
-    )
-
     // 提交面试回答
     SubmitInterviewAnswerResponse SubmitInterviewAnswer(1: SubmitInterviewAnswerRequest request) (
         api.post="/api/interview/submit/answer",
+        api.category="interviews",
+        api.gen_path="interviews"
+    )
+
+    // 获取面试评估
+    GetInterviewEvaluationResponse GetInterviewEvaluation(1: GetInterviewEvaluationRequest request) (
+        api.get="/api/interview/evaluation",
         api.category="interviews",
         api.gen_path="interviews"
     )

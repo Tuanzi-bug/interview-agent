@@ -21,10 +21,7 @@ func Register(r *server.Hertz) {
 		_api := root.Group("/api", _apiMw()...)
 		{
 			_interview := _api.Group("/interview", _interviewMw()...)
-			_interview.POST("/continue", append(_continueinterviewMw(), interview.ContinueInterview)...)
-			_interview.GET("/records", append(_listinterviewrecordsMw(), interview.ListInterviewRecords)...)
-			_records := _interview.Group("/records", _recordsMw()...)
-			_records.GET("/:id", append(_getinterviewrecordMw(), interview.GetInterviewRecord)...)
+			_interview.GET("/evaluation", append(_getinterviewevaluationMw(), interview.GetInterviewEvaluation)...)
 			{
 				_start := _interview.Group("/start", _startMw()...)
 				_start.POST("/stream", append(_startinterviewstreamMw(), interview.StartInterviewStream)...)

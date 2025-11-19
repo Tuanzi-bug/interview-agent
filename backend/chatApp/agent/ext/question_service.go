@@ -51,31 +51,27 @@ func GenerateInterviewQuestions(ctx context.Context, resumeContent string) (*Que
 	})
 
 	// 构建查询消息
-	query := fmt.Sprintf(`如果简历存在则请根据以下简历内容生成适当数量的面试问题。
+	query := fmt.Sprintf(`根据以下简历内容生成面试问题。
 
 简历内容：
 %s
 
-请按照以下JSON格式返回结果：
+重要提示：
+1. 只返回JSON格式，不返回其他文本
+2. 只生成面试官的提问，不要生成用户的回答
+3. dialogues数组中只包含speaker_type为"interviewer"的提问
+
+必须返回的JSON格式：
 {
   "questions": [
     {
-      "question_text": "问题文本",
+      "question_text": "问题内容",
       "eval_dimension": "professional_field|project_experience|technical_depth|technical_foundation|team_collaboration|system_architecture_design",
       "order": 1
     }
   ],
   "dialogues": [
-    {
-      "speaker_type": "interviewer",
-      "content": "问题内容",
-      "display_order": 1
-    },
-    {
-      "speaker_type": "candidate",
-      "content": "回答内容",
-      "display_order": 2
-    }
+    {"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}
   ]
 }`, resumeContent)
 
