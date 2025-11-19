@@ -205,6 +205,7 @@ func (s *InterviewServiceImpl) SaveInterviewDialogues(ctx context.Context, userI
 			dialogueMap[displayOrder] = &model.InterviewDialogue{
 				UserID:       userID,
 				TopicID:      topic.ID,
+				ReportID:     recordID,
 				Question:     "",
 				Answer:       "",
 				DisplayOrder: displayOrder,
