@@ -1,8 +1,9 @@
 package ext
 
 import (
-	"ai-eino-interview-agent/api/model/interviews"
+	interviewsapi "ai-eino-interview-agent/api/model/interviews"
 	"ai-eino-interview-agent/chatApp/agent/evaluation"
+	"ai-eino-interview-agent/internal/model"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -14,13 +15,11 @@ import (
 )
 
 // GenerateInterviewEvaluation 调用评估智能体生成面试评估
-// 返回评估响应数据
-func GenerateInterviewEvaluation(ctx context.Context, userId uint, reportId uint64) (*interviews.GetInterviewEvaluationResponse, error) {
+// 返回评估响应数据，并将评估结果保存到数据库
+func GenerateInterviewEvaluation(ctx context.Context, userId uint, reportId uint64) (*interviewsapi.GetInterviewEvaluationResponse, error) {
 	// 添加 120 秒超时
 	timeoutCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
-
-	fmt.Printf("[GenerateInterviewEvaluation] 开始为用户 %d 报告 %d 生成评估...\n", userId, reportId)
 
 	// 创建评估智能体
 	agent := evaluation.NewEvaluationAgent()
@@ -58,69 +57,60 @@ func GenerateInterviewEvaluation(ctx context.Context, userId uint, reportId uint
 	}
 
 	// 运行智能体
-	fmt.Println("[GenerateInterviewEvaluation] 调用智能体...")
 	iter := runner.Run(timeoutCtx, messages)
 
 	var lastMessage string
-	eventCount := 0
 	for {
 		select {
 		case <-timeoutCtx.Done():
-			fmt.Println("[GenerateInterviewEvaluation] 超时：等待智能体响应超过 120 秒")
+			log.Printf("[GenerateInterviewEvaluation] 超时：等待智能体响应超过 120 秒")
 			return nil, fmt.Errorf("timeout waiting for evaluation (120s)")
 		default:
 		}
 
 		event, ok := iter.Next()
 		if !ok {
-			fmt.Printf("[GenerateInterviewEvaluation] 迭代器结束，共收到 %d 个事件\n", eventCount)
 			break
 		}
 
-		eventCount++
-		fmt.Printf("[GenerateInterviewEvaluation] 事件 %d: ", eventCount)
-
 		if event.Err != nil {
-			fmt.Printf("错误 - %v\n", event.Err)
+			log.Printf("[GenerateInterviewEvaluation] 错误: %v", event.Err)
 			return nil, fmt.Errorf("error during evaluation: %w", event.Err)
 		}
 
 		// 收集最后一条消息
 		if event.Output != nil && event.Output.MessageOutput != nil {
 			lastMessage = event.Output.MessageOutput.Message.Content
-			fmt.Printf("收到消息，长度=%d\n", len(lastMessage))
-		} else {
-			fmt.Println("其他事件类型")
 		}
 	}
 
 	// 构建评估响应
 	response := buildEvaluationResponse(lastMessage)
-	fmt.Printf("[GenerateInterviewEvaluation] 评估完成: 维度数=%d\n", len(response.Dimensions))
+
+	// 保存评估数据到数据库
+	if err := saveEvaluationToDatabase(ctx, userId, reportId, response); err != nil {
+		log.Printf("Warning: Failed to save evaluation: %v", err)
+	}
 
 	return response, nil
 }
 
 // buildEvaluationResponse 从智能体响应构建评估响应
 // 直接反序列化智能体返回的 JSON
-func buildEvaluationResponse(agentResponse string) *interviews.GetInterviewEvaluationResponse {
-	response := &interviews.GetInterviewEvaluationResponse{
+func buildEvaluationResponse(agentResponse string) *interviewsapi.GetInterviewEvaluationResponse {
+	response := &interviewsapi.GetInterviewEvaluationResponse{
 		Comment:    "",
-		Dimensions: make([]*interviews.EvaluationDimension, 0),
+		Dimensions: make([]*interviewsapi.EvaluationDimension, 0),
 	}
 
 	// 尝试直接解析 JSON
 	if err := json.Unmarshal([]byte(agentResponse), response); err != nil {
-		fmt.Printf("[buildEvaluationResponse] 直接解析 JSON 失败: %v\n", err)
-
 		// 尝试从文本中提取 JSON
 		jsonStr := extractJSONFromResponse(agentResponse)
 		if jsonStr == "" {
 			log.Printf("[buildEvaluationResponse] 无法提取 JSON，使用默认响应")
 			return buildDefaultResponse()
 		}
-
-		fmt.Printf("[buildEvaluationResponse] 提取的 JSON 长度: %d\n", len(jsonStr))
 
 		// 尝试解析提取的 JSON
 		if err := json.Unmarshal([]byte(jsonStr), response); err != nil {
@@ -129,7 +119,6 @@ func buildEvaluationResponse(agentResponse string) *interviews.GetInterviewEvalu
 		}
 	}
 
-	fmt.Printf("[buildEvaluationResponse] 成功解析评估响应: 维度数=%d\n", len(response.Dimensions))
 	return response
 }
 
@@ -151,9 +140,7 @@ func extractJSONFromResponse(text string) string {
 				jsonStr := text[start : i+1]
 				// 尝试验证 JSON 是否有效
 				var temp interface{}
-				if err := json.Unmarshal([]byte(jsonStr), &temp); err != nil {
-					fmt.Printf("[extractJSONFromResponse] 提取的 JSON 无效: %v\n", err)
-				} else {
+				if err := json.Unmarshal([]byte(jsonStr), &temp); err == nil {
 					return jsonStr
 				}
 			}
@@ -164,10 +151,10 @@ func extractJSONFromResponse(text string) string {
 }
 
 // buildDefaultResponse 构建默认响应
-func buildDefaultResponse() *interviews.GetInterviewEvaluationResponse {
-	return &interviews.GetInterviewEvaluationResponse{
+func buildDefaultResponse() *interviewsapi.GetInterviewEvaluationResponse {
+	return &interviewsapi.GetInterviewEvaluationResponse{
 		Comment: "评估处理失败，无法解析智能体响应",
-		Dimensions: []*interviews.EvaluationDimension{
+		Dimensions: []*interviewsapi.EvaluationDimension{
 			{DimensionName: "专业领域", Evaluation: "无法评估", Score: 0},
 			{DimensionName: "项目经历", Evaluation: "无法评估", Score: 0},
 			{DimensionName: "技术深度", Evaluation: "无法评估", Score: 0},
@@ -176,4 +163,45 @@ func buildDefaultResponse() *interviews.GetInterviewEvaluationResponse {
 			{DimensionName: "系统架构设计", Evaluation: "无法评估", Score: 0},
 		},
 	}
+}
+
+// saveEvaluationToDatabase 将评估数据保存到数据库
+func saveEvaluationToDatabase(ctx context.Context, userId uint, reportId uint64, response *interviewsapi.GetInterviewEvaluationResponse) error {
+	// 将维度数据转换为 []*model.EvaluationDimension
+	var dimensionList []*model.EvaluationDimension
+	for _, dim := range response.Dimensions {
+		dimensionList = append(dimensionList, &model.EvaluationDimension{
+			DimensionName: dim.DimensionName,
+			Evaluation:    dim.Evaluation,
+			Score:         float64(dim.Score),
+		})
+	}
+
+	// 计算总体评分（各维度评分的平均值）
+	var totalScore float64
+	if len(response.Dimensions) > 0 {
+		for _, dim := range response.Dimensions {
+			totalScore += float64(dim.Score)
+		}
+		totalScore = totalScore / float64(len(response.Dimensions))
+	}
+
+	// 创建评估记录
+	evaluation := &model.InterviewEvaluation{
+		UserID:     userId,
+		ReportID:   reportId,
+		Comment:    response.Comment,
+		Score:      totalScore,
+		Dimensions: dimensionList,
+		Deleted:    0,
+	}
+
+	// 直接调用 DAO 方法保存到数据库
+	err := model.InterviewEvaluationDao.CreateEvaluation(evaluation)
+	if err != nil {
+		log.Printf("[saveEvaluationToDatabase] 保存评估失败: %v", err)
+		return fmt.Errorf("failed to save evaluation: %w", err)
+	}
+
+	return nil
 }

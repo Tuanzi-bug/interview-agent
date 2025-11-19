@@ -19,89 +19,76 @@ func NewInterviewServiceImpl() *InterviewServiceImpl {
 	return &InterviewServiceImpl{}
 }
 
-// StartInterviewStream 启动面试流程（流式）
-func (s *InterviewServiceImpl) StartInterviewStream(ctx context.Context, req *interviewsapi.StartInterviewRequest, maxQuestions int) (<-chan *interviewsapi.InterviewEvent, error) {
-	// 调用 chatApp 中的流式接口
-	eventChan, err := ext.StartInterviewStream(ctx, req.Query, maxQuestions)
-	if err != nil {
-		return nil, err
-	}
-
-	// 转换事件类型：从 ext.InterviewEvent 转换为 interviewsapi.InterviewEvent
-	apiEventChan := make(chan *interviewsapi.InterviewEvent, 10)
-	go func() {
-		defer close(apiEventChan)
-		for event := range eventChan {
-			apiEvent := convertToAPIEvent(event)
-			select {
-			case apiEventChan <- apiEvent:
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-
-	return apiEventChan, nil
-}
-
-// ContinueInterview 继续面试流程（用于多轮对话）
-func (s *InterviewServiceImpl) ContinueInterview(ctx context.Context, req *interviewsapi.ContinueInterviewRequest, maxQuestions int) (<-chan *interviewsapi.InterviewEvent, error) {
-	// 调用 chatApp 中的继续面试接口
-	eventChan, err := ext.ContinueInterview(ctx, req.Query, maxQuestions)
-	if err != nil {
-		return nil, err
-	}
-
-	// 转换事件类型：从 ext.InterviewEvent 转换为 interviewsapi.InterviewEvent
-	apiEventChan := make(chan *interviewsapi.InterviewEvent, 10)
-	go func() {
-		defer close(apiEventChan)
-		for event := range eventChan {
-			apiEvent := convertToAPIEvent(event)
-			select {
-			case apiEventChan <- apiEvent:
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-
-	return apiEventChan, nil
-}
-
-// SaveInterviewRecord 保存面试记录
-func (s *InterviewServiceImpl) SaveInterviewRecord(ctx context.Context, userID uint, title, query string) (uint64, error) {
-	now := time.Now()
-	record := &model.InterviewRecord{
-		UserID:         userID,
-		Title:          title,
-		Query:          query,
-		Status:         "pending",
-		Messages:       "[]",
-		LastModifiedAt: now,
-	}
-	err := model.InterviewRecordDao.CreateInterviewRecord(record)
-	if err != nil {
-		return 0, err
-	}
-	return record.ID, nil
-}
-
-// UpdateInterviewRecord 更新面试记录（用于保存对话历史和状态）
-func (s *InterviewServiceImpl) UpdateInterviewRecord(ctx context.Context, recordID uint64, messages string, status, currentAgent string) error {
-	record := &model.InterviewRecord{
-		ID:           recordID,
-		Messages:     messages,
-		Status:       status,
-		CurrentAgent: currentAgent,
-	}
-	return model.InterviewRecordDao.UpdateInterviewRecord(record)
-}
-
-// CompleteInterviewRecord 完成面试记录（保存最终报告和评分）
-func (s *InterviewServiceImpl) CompleteInterviewRecord(ctx context.Context, recordID uint64, report string, duration int64, score *float64) error {
-	return model.InterviewRecordDao.CompleteInterviewRecord(recordID, report, duration, score)
-}
+//
+//// StartInterviewStream 启动面试流程（流式）
+//func (s *InterviewServiceImpl) StartInterviewStream(ctx context.Context, req *interviewsapi.StartInterviewRequest, maxQuestions int) (<-chan *interviewsapi.InterviewEvent, error) {
+//	// 调用 chatApp 中的流式接口
+//	eventChan, err := ext.StartInterviewStream(ctx, req.Query, maxQuestions)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	// 转换事件类型：从 ext.InterviewEvent 转换为 interviewsapi.InterviewEvent
+//	apiEventChan := make(chan *interviewsapi.InterviewEvent, 10)
+//	go func() {
+//		defer close(apiEventChan)
+//		for event := range eventChan {
+//			apiEvent := convertToAPIEvent(event)
+//			select {
+//			case apiEventChan <- apiEvent:
+//			case <-ctx.Done():
+//				return
+//			}
+//		}
+//	}()
+//
+//	return apiEventChan, nil
+//}
+//
+//// ContinueInterview 继续面试流程（用于多轮对话）
+//func (s *InterviewServiceImpl) ContinueInterview(ctx context.Context, req *interviewsapi.ContinueInterviewRequest, maxQuestions int) (<-chan *interviewsapi.InterviewEvent, error) {
+//	// 调用 chatApp 中的继续面试接口
+//	eventChan, err := ext.ContinueInterview(ctx, req.Query, maxQuestions)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	// 转换事件类型：从 ext.InterviewEvent 转换为 interviewsapi.InterviewEvent
+//	apiEventChan := make(chan *interviewsapi.InterviewEvent, 10)
+//	go func() {
+//		defer close(apiEventChan)
+//		for event := range eventChan {
+//			apiEvent := convertToAPIEvent(event)
+//			select {
+//			case apiEventChan <- apiEvent:
+//			case <-ctx.Done():
+//		Query:          query,
+//		Status:         "pending",
+//		Messages:       "[]",
+//		LastModifiedAt: now,
+//	}
+//	err := model.InterviewRecordDao.CreateInterviewRecord(record)
+//	if err != nil {
+//		return 0, err
+//	}
+//	return record.ID, nil
+//}
+//
+//// UpdateInterviewRecord 更新面试记录（用于保存对话历史和状态）
+//func (s *InterviewServiceImpl) UpdateInterviewRecord(ctx context.Context, recordID uint64, messages string, status, currentAgent string) error {
+//	record := &model.InterviewRecord{
+//		ID:           recordID,
+//		Messages:     messages,
+//		Status:       status,
+//		CurrentAgent: currentAgent,
+//	}
+//	return model.InterviewRecordDao.UpdateInterviewRecord(record)
+//}
+//
+//// CompleteInterviewRecord 完成面试记录（保存最终报告和评分）
+//func (s *InterviewServiceImpl) CompleteInterviewRecord(ctx context.Context, recordID uint64, report string, duration int64, score *float64) error {
+//	return model.InterviewRecordDao.CompleteInterviewRecord(recordID, report, duration, score)
+//}
 
 // SaveInterviewDialogues 保存面试对话和问题主题
 func (s *InterviewServiceImpl) SaveInterviewDialogues(ctx context.Context, userID uint, recordID uint64, questions []interface{}, dialogues []interface{}) error {
@@ -306,6 +293,35 @@ func toUint32(v interface{}) uint32 {
 	return 0
 }
 
+// 辅助函数：将 interface{} 转换为 float64
+func toFloat64(v interface{}) float64 {
+	if v == nil {
+		return 0
+	}
+	switch val := v.(type) {
+	case float64:
+		return val
+	case float32:
+		return float64(val)
+	case int:
+		return float64(val)
+	case int64:
+		return float64(val)
+	case uint:
+		return float64(val)
+	case uint32:
+		return float64(val)
+	case uint64:
+		return float64(val)
+	case string:
+		// 尝试解析字符串
+		if f, err := strconv.ParseFloat(val, 64); err == nil {
+			return f
+		}
+	}
+	return 0
+}
+
 func (s *InterviewServiceImpl) ListInterviewRecords(ctx context.Context, userID uint, page, pageSize int) ([]*interviewsapi.InterviewRecordDTO, int64, error) {
 	records, total, err := model.InterviewRecordDao.ListInterviewRecords(userID, page, pageSize)
 	if err != nil {
@@ -412,4 +428,64 @@ func convertToInterviewRecordDTO(record *model.InterviewRecord) *interviewsapi.I
 		dto.CompletedAt = &ms
 	}
 	return dto
+}
+
+//// SaveInterviewEvaluation 保存面试评估数据
+//func (s *InterviewServiceImpl) SaveInterviewEvaluation(ctx context.Context, userID uint, reportID uint64, comment string, score float64, dimensions interface{}) error {
+//	// 将 dimensions 转换为 []*model.EvaluationDimension
+//	var dimensionList []*model.EvaluationDimension
+//
+//	// 如果 dimensions 是 []interface{}，则转换为 []*model.EvaluationDimension
+//	if dimSlice, ok := dimensions.([]interface{}); ok {
+//		for _, dim := range dimSlice {
+//			if dimMap, ok := dim.(map[string]interface{}); ok {
+//				evalDim := &model.EvaluationDimension{
+//					DimensionName: toString(dimMap["dimension_name"]),
+//					Evaluation:    toString(dimMap["evaluation"]),
+//					Score:         toFloat64(dimMap["score"]),
+//				}
+//				dimensionList = append(dimensionList, evalDim)
+//			}
+//		}
+//	}
+//
+//	// 创建评估记录
+//	evaluation := &model.InterviewEvaluation{
+//		UserID:     userID,
+//		ReportID:   reportID,
+//		Comment:    comment,
+//		Score:      score,
+//		Dimensions: dimensionList,
+//		Deleted:    0,
+//	}
+//
+//	// 保存到数据库
+//	err := model.InterviewEvaluationDao.CreateEvaluation(evaluation)
+//	if err != nil {
+//		log.Printf("Failed to save interview evaluation: %v", err)
+//		return err
+//	}
+//
+//	return nil
+//}
+
+// GetInterviewEvaluation 根据用户ID和报告ID获取面试评估报告
+func (s *InterviewServiceImpl) GetInterviewEvaluation(ctx context.Context, userID uint, reportID uint64) (interface{}, error) {
+	evaluation, err := model.InterviewEvaluationDao.GetEvaluationByUserIDAndReportID(userID, reportID)
+	if err != nil {
+		log.Printf("Failed to get interview evaluation: %v", err)
+		return nil, err
+	}
+
+	// 返回评估数据
+	return map[string]interface{}{
+		"id":         evaluation.ID,
+		"user_id":    evaluation.UserID,
+		"report_id":  evaluation.ReportID,
+		"comment":    evaluation.Comment,
+		"score":      evaluation.Score,
+		"dimensions": evaluation.Dimensions,
+		"created_at": evaluation.CreatedAt,
+		"updated_at": evaluation.UpdatedAt,
+	}, nil
 }

@@ -706,7 +706,7 @@ func SubmitInterviewAnswer(ctx context.Context, c *app.RequestContext) {
 	response.Success(ctx, c, resp)
 }
 
-// GetInterviewEvaluation .
+// GetInterviewEvaluation 获取面试评估报告
 // @router /api/interview/evaluation [GET]
 func GetInterviewEvaluation(ctx context.Context, c *app.RequestContext) {
 	var err error
@@ -721,10 +721,20 @@ func GetInterviewEvaluation(ctx context.Context, c *app.RequestContext) {
 		response.Unauthorized(ctx, c, "Unauthorized")
 		return
 	}
-	resp, err := ext.GenerateInterviewEvaluation(ctx, userId, uint64(req.ReportID))
-	if err != nil {
-		response.InternalServerError(ctx, c, err.Error())
+
+	reportID := uint64(req.ReportID)
+
+	interviewService := interviewservice.NewInterviewService()
+	existingEvaluation, err := interviewService.GetInterviewEvaluation(ctx, userId, reportID)
+	if err == nil && existingEvaluation != nil {
+		response.Success(ctx, c, existingEvaluation)
 		return
 	}
+	resp, err := ext.GenerateInterviewEvaluation(ctx, userId, reportID)
+	if err != nil {
+		response.InternalServerError(ctx, c, "Failed to generate evaluation: "+err.Error())
+		return
+	}
+
 	response.Success(ctx, c, resp)
 }
