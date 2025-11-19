@@ -6,6 +6,7 @@ import (
 	"ai-eino-interview-agent/internal/model"
 	"context"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -112,12 +113,18 @@ func (s *InterviewServiceImpl) SaveInterviewDialogues(ctx context.Context, userI
 			continue
 		}
 
+		// 获取 eval_dimension，如果包含多个维度（用|分隔），只取第一个
+		evalDim := toString(qData["eval_dimension"])
+		if idx := strings.Index(evalDim, "|"); idx >= 0 {
+			evalDim = evalDim[:idx]
+		}
+
 		topic := &model.InterviewQuestionTopic{
 			UserID:        userID,
 			ReportID:      recordID,
 			QuestionText:  toString(qData["question_text"]),
 			DisplayOrder:  uint32(i + 1),
-			EvalDimension: toString(qData["eval_dimension"]),
+			EvalDimension: evalDim,
 		}
 
 		if err := model.InterviewQuestionTopicDao.Create(topic); err != nil {

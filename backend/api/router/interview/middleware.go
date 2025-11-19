@@ -184,3 +184,13 @@ func _create0Mw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _submitMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _submitinterviewanswerMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}

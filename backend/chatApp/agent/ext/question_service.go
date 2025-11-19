@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
@@ -35,11 +36,17 @@ type QuestionGeneratorResult struct {
 // GenerateInterviewQuestions 调用智能体生成面试问题
 // 返回生成的问题列表和对话列表
 func GenerateInterviewQuestions(ctx context.Context, resumeContent string) (*QuestionGeneratorResult, error) {
+	// 添加 120 秒超时，防止无限等待（API 响应可能需要较长时间）
+	timeoutCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+
+	fmt.Println("[GenerateInterviewQuestions] 开始生成问题...")
+
 	// 创建问题生成智能体
 	agent := question.NewQuestionAgent()
 
 	// 创建 runner
-	runner := adk.NewRunner(ctx, adk.RunnerConfig{
+	runner := adk.NewRunner(timeoutCtx, adk.RunnerConfig{
 		Agent: agent,
 	})
 
@@ -83,34 +90,58 @@ func GenerateInterviewQuestions(ctx context.Context, resumeContent string) (*Que
 	}
 
 	// 运行智能体
-	iter := runner.Run(ctx, messages)
+	fmt.Println("[GenerateInterviewQuestions] 调用智能体...")
+	iter := runner.Run(timeoutCtx, messages)
 
 	var lastMessage string
+	eventCount := 0
 	for {
+		select {
+		case <-timeoutCtx.Done():
+			fmt.Println("[GenerateInterviewQuestions] 超时：等待智能体响应超过 30 秒")
+			return nil, fmt.Errorf("timeout waiting for question generation (30s)")
+		default:
+		}
+
 		event, ok := iter.Next()
 		if !ok {
+			fmt.Printf("[GenerateInterviewQuestions] 迭代器结束，共收到 %d 个事件\n", eventCount)
 			break
 		}
 
+		eventCount++
+		fmt.Printf("[GenerateInterviewQuestions] 事件 %d: ", eventCount)
+
 		if event.Err != nil {
+			fmt.Printf("错误 - %v\n", event.Err)
 			return nil, fmt.Errorf("error during question generation: %w", event.Err)
 		}
 
 		// 收集最后一条消息
 		if event.Output != nil && event.Output.MessageOutput != nil {
 			lastMessage = event.Output.MessageOutput.Message.Content
+			fmt.Printf("收到消息，长度=%d\n", len(lastMessage))
+		} else {
+			fmt.Println("其他事件类型")
 		}
 	}
 
 	// 解析 JSON 结果
 	result := &QuestionGeneratorResult{}
+	fmt.Printf("[GenerateInterviewQuestions] 原始消息长度: %d\n", len(lastMessage))
+	fmt.Printf("[GenerateInterviewQuestions] 原始消息前 200 字符: %s\n", truncateString(lastMessage, 200))
+
 	if err := json.Unmarshal([]byte(lastMessage), result); err != nil {
+		fmt.Printf("[GenerateInterviewQuestions] 直接解析失败: %v\n", err)
 		// 尝试从文本中提取 JSON
 		jsonStr := extractJSON(lastMessage)
 		if jsonStr == "" {
-			log.Printf("Failed to extract JSON from response. Raw message: %s", lastMessage)
+			fmt.Printf("[GenerateInterviewQuestions] 无法提取 JSON\n")
 			return nil, fmt.Errorf("failed to parse question generation result: %w", err)
 		}
+
+		fmt.Printf("[GenerateInterviewQuestions] 提取的 JSON 长度: %d\n", len(jsonStr))
+		fmt.Printf("[GenerateInterviewQuestions] 提取的 JSON 前 200 字符: %s\n", truncateString(jsonStr, 200))
 
 		// 清理 JSON 字符串中的非法字符
 		jsonStr = cleanJSON(jsonStr)
@@ -118,44 +149,49 @@ func GenerateInterviewQuestions(ctx context.Context, resumeContent string) (*Que
 		// 如果提取的是数组格式，需要包装成对象
 		trimmedJSON := strings.TrimSpace(jsonStr)
 		if len(trimmedJSON) > 0 && trimmedJSON[0] == '[' {
+			fmt.Println("[GenerateInterviewQuestions] 检测到数组格式")
 			// 尝试解析为问题数组
 			var questions []QuestionData
 			if err := json.Unmarshal([]byte(jsonStr), &questions); err == nil {
+				fmt.Printf("[GenerateInterviewQuestions] 解析为问题数组成功，共 %d 个问题\n", len(questions))
 				result.Questions = questions
 				return result, nil
 			}
 			// 尝试解析为对话数组
 			var dialogues []DialogueData
 			if err := json.Unmarshal([]byte(jsonStr), &dialogues); err == nil {
+				fmt.Printf("[GenerateInterviewQuestions] 解析为对话数组成功，共 %d 条对话\n", len(dialogues))
 				result.Dialogues = dialogues
-				log.Printf("[DEBUG] 解析为对话数组，共 %d 条对话", len(dialogues))
 				// 从对话中提取问题：找到第一个 speaker_type="interviewer" 的对话作为问题
 				for i, d := range dialogues {
-					log.Printf("[DEBUG] 对话 %d: speaker_type='%s', content='%.50s'", i, d.SpeakerType, d.Content)
+					fmt.Printf("[GenerateInterviewQuestions] 对话 %d: speaker_type='%s', content='%.50s'\n", i, d.SpeakerType, d.Content)
 					if d.SpeakerType == "interviewer" {
 						result.Questions = append(result.Questions, QuestionData{
 							QuestionText:  d.Content,
 							EvalDimension: "professional_field", // 默认维度
 							Order:         1,
 						})
-						log.Printf("[DEBUG] 从对话中提取问题成功")
+						fmt.Println("[GenerateInterviewQuestions] 从对话中提取问题成功")
 						break // 只取第一个问题
 					}
 				}
 				if len(result.Questions) == 0 {
-					log.Printf("[DEBUG] 警告：从对话数组中未找到 interviewer 类型的对话")
+					fmt.Println("[GenerateInterviewQuestions] 警告：从对话数组中未找到 interviewer 类型的对话")
 				}
 				return result, nil
 			}
 		}
 
 		// 尝试解析为对象
+		fmt.Println("[GenerateInterviewQuestions] 尝试解析为对象")
 		if err := json.Unmarshal([]byte(jsonStr), result); err != nil {
-			log.Printf("Failed to parse extracted JSON: %s, Error: %v", jsonStr, err)
+			fmt.Printf("[GenerateInterviewQuestions] 解析为对象失败: %v\n", err)
+			fmt.Printf("[GenerateInterviewQuestions] JSON 字符串: %s\n", jsonStr)
 			return nil, fmt.Errorf("failed to parse extracted JSON: %w", err)
 		}
 	}
 
+	fmt.Printf("[GenerateInterviewQuestions] 最终结果: 问题数=%d, 对话数=%d\n", len(result.Questions), len(result.Dialogues))
 	return result, nil
 }
 
@@ -242,6 +278,14 @@ func cleanJSON(jsonStr string) string {
 	}
 
 	return builder.String()
+}
+
+// truncateString 截断字符串到指定长度
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
 
 // ParseQuestionResponse 解析问题生成响应中的 JSON

@@ -91,6 +91,22 @@ struct GetInterviewRecordResponse {
     1: required InterviewRecordDTO record
 }
 
+// 提交面试答案请求
+struct SubmitInterviewAnswerRequest {
+    1: required string session_id (api.body="session_id")  // 会话ID
+    2: required string answer     (api.body="answer")      // 用户的答案内容
+    3: optional string action     (api.body="action")      // 操作类型：answer, continue, quit（默认为 answer）
+}
+
+// 提交面试答案响应
+struct SubmitInterviewAnswerResponse {
+    1: required string status      // 状态：received, error
+    2: optional string message     // 消息说明
+    3: optional string session_id  // 会话ID
+}
+
+
+
 // ==================== 服务定义 ====================
 
 service InterviewsService {
@@ -118,6 +134,13 @@ service InterviewsService {
     // 获取单条面试记录详情
     GetInterviewRecordResponse GetInterviewRecord(1: GetInterviewRecordRequest request) (
         api.get="/api/interview/records/:id",
+        api.category="interviews",
+        api.gen_path="interviews"
+    )
+
+    // 提交面试回答
+    SubmitInterviewAnswerResponse SubmitInterviewAnswer(1: SubmitInterviewAnswerRequest request) (
+        api.post="/api/interview/submit/answer",
         api.category="interviews",
         api.gen_path="interviews"
     )
