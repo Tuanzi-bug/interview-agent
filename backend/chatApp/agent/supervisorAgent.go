@@ -16,6 +16,7 @@ func NewInterviewSupervisorAgent() adk.Agent {
 
 	// 步骤1：创建所有增强子Agent（传入Supervisor名称）
 	resumeAgent := NewResumAnalysisAgent(supervisorName)
+	resumeReviewAgent := NewResumeReviewAgent(supervisorName)
 	questionAgent := NewQuestionGeneratorAgent(supervisorName)
 	evalAgent := NewAnswerEvalAgent(supervisorName)
 	reportAgent := NewInterviewReportAgent(supervisorName)
@@ -41,6 +42,7 @@ func NewInterviewSupervisorAgent() adk.Agent {
 	// 步骤4：注册子Agent到Supervisor（关键：让Supervisor能找到子Agent）
 	registeredSupervisor, err := adk.SetSubAgents(context.Background(), supervisor, []adk.Agent{
 		resumeAgent,
+		resumeReviewAgent,
 		questionAgent,
 		evalAgent,
 		reportAgent,

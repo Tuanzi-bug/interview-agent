@@ -19,6 +19,7 @@ require (
 	github.com/cloudwego/hertz v0.10.3
 	github.com/coze-dev/coze-studio/backend v0.0.0-20251112025517-2945e3dc86e0
 	github.com/golang-jwt/jwt/v5 v5.2.2
+	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/mark3labs/mcp-go v0.43.0
 	github.com/milvus-io/milvus-sdk-go/v2 v2.4.2
@@ -74,7 +75,6 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.5 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/goph/emperror v0.17.2 // indirect

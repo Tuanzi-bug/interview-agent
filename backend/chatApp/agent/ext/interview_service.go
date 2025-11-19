@@ -139,6 +139,8 @@ func StartInterviewStream(ctx context.Context, query string, maxQuestions int) (
 				switch event.Action.TransferToAgent.DestAgentName {
 				case "ResumeAnalysisAgent":
 					status = "resume_analysis"
+				case "ResumeReviewAgent":
+					status = "resume_review"
 				case "QuestionGeneratorAgent":
 					status = "question_generation"
 				case "AnswerEvalAgent":
@@ -185,6 +187,21 @@ func StartInterviewStream(ctx context.Context, query string, maxQuestions int) (
 
 				// 如果是报告Agent的输出，发送完成事件并返回
 				if event.AgentName == "InterviewReportAgent" {
+					completed := "completed"
+					var score *float64
+					score = extractScoreFromReport(messageContent)
+					eventChan <- &InterviewEvent{
+						Type:     "done",
+						Status:   &completed,
+						Score:    score,
+						Report:   messageContent,
+						Messages: string(messagesJSON),
+					}
+					return
+				}
+
+				// 如果是简历评审Agent的输出，发送完成事件并返回
+				if event.AgentName == "ResumeReviewAgent" {
 					completed := "completed"
 					var score *float64
 					score = extractScoreFromReport(messageContent)
