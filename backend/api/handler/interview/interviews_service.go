@@ -80,7 +80,24 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 
 	// 5. 初始化面试服务和会话
 	interviewService := interviewservice.NewInterviewService()
-	recordID := uint64(time.Now().UnixNano() / 1000000)
+
+	// 创建面试记录 DTO
+	recordDTO := &interviewsapi.InterviewRecordDTO{
+		UserID:       int32(userID),
+		Title:        req.Title,
+		Type:         req.Type,
+		Difficulty:   req.Difficulty,
+		PositionName: req.PositionName,
+		CompanyName:  req.CompanyName,
+		Status:       "pending",
+	}
+
+	recordID, err := interviewService.CreateInterviewRecord(ctx, recordDTO)
+	if err != nil {
+		response.InternalServerError(ctx, c, "Failed to create interview record: "+err.Error())
+		return
+	}
+
 	hasResume := req.Query != "" || resumeFilePath != ""
 
 	// 6. 创建会话
