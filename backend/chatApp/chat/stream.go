@@ -3,10 +3,11 @@ package chat
 import (
 	"context"
 	"fmt"
-	"github.com/cloudwego/eino/components/model"
-	"github.com/cloudwego/eino/schema"
 	"io"
 	"log"
+
+	"github.com/cloudwego/eino/components/model"
+	"github.com/cloudwego/eino/schema"
 )
 
 func ReportSteam(sr *schema.StreamReader[*schema.Message]) {

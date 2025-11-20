@@ -11,17 +11,17 @@ import (
 )
 
 var jwtPublicRoutes = map[string]struct{}{
-	"/api/user/login":           {},
-	"/api/user/register":        {},
-	"/api/user/logout":          {},
-	"/api/user/wechat/login":    {},
-	"/api/user/wechat/callback": {},
-	"/api/interview/records/mock": {},
-	"/api/interview/start":      {},
-	"/api/interview/start/stream": {},
-	"/api/interview/titleBank":      {},
-	"/api/interview/titleBank/:id":  {},
-	"/api/interview/continue":    {},
+	"/api/user/login":                {},
+	"/api/user/register":             {},
+	"/api/user/logout":               {},
+	"/api/user/wechat/login":         {},
+	"/api/user/wechat/callback":      {},
+	"/api/interview/records/mock":    {},
+	"/api/interview/start":           {},
+	"/api/interview/start/stream":    {},
+	"/api/interview/titleBank":       {},
+	"/api/interview/titleBank/:id":   {},
+	"/api/interview/continue":        {},
 	"/api/interview/continue/stream": {},
 }
 
