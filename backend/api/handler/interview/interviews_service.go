@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"io"
 	"net/http"
 	"os"
@@ -803,4 +804,20 @@ func GetMockInterviewRecords(ctx context.Context, c *app.RequestContext) {
 
 	// 直接返回mock数据
 	response.Success(ctx, c, mockRecords)
+}
+
+// GetInterviewRecords .
+// @router /api/interview/records [GET]
+func GetInterviewRecords(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req interviewsapi.ListInterviewRecordsRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(interviewsapi.ListInterviewRecordsResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }

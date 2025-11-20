@@ -202,3 +202,8 @@ func _getinterviewevaluationMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _getinterviewrecordsMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
