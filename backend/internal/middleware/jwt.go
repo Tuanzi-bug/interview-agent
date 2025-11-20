@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"ai-eino-interview-agent/api/response"
 	"ai-eino-interview-agent/internal/config"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -21,43 +21,54 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-// JWTMiddleware JWT认证中间件
+type JWTSkipper func(ctx *app.RequestContext) bool
+
+var (
+	errAuthorizationHeaderRequired = errors.New("authorization header is required")
+	errAuthorizationFormatInvalid  = errors.New("authorization header format must be Bearer {token}")
+	errTokenNotFound               = errors.New("token not found")
+)
+
+// JWTMiddleware JWT认证中间件（兼容默认行为）
 func JWTMiddleware() app.HandlerFunc {
+	return JWTMiddlewareWithSkipper(nil)
+}
+
+// JWTMiddlewareWithSkipper JWT认证中间件，支持跳过特定请求
+func JWTMiddlewareWithSkipper(skipper JWTSkipper) app.HandlerFunc {
+	if skipper == nil {
+		skipper = func(*app.RequestContext) bool { return false }
+	}
+
 	return func(c context.Context, ctx *app.RequestContext) {
-		// 获取Authorization头
-		authHeader := string(ctx.GetHeader("Authorization"))
-		if authHeader == "" {
-			ctx.JSON(consts.StatusUnauthorized, map[string]interface{}{
-				"code":    401,
-				"message": "Authorization header is required",
-			})
-			ctx.Abort()
+		if skipper(ctx) {
+			ctx.Next(c)
 			return
 		}
 
-		// 检查Bearer前缀
-		parts := strings.SplitN(authHeader, " ", 2)
-		if !(len(parts) == 2 && parts[0] == "Bearer") {
-			ctx.JSON(consts.StatusUnauthorized, map[string]interface{}{
-				"code":    401,
-				"message": "Authorization header format must be Bearer {token}",
-			})
-			ctx.Abort()
-			return
-		}
-
-		// 解析JWT token
-		claims, err := parseToken(parts[1])
+		tokenString, err := extractToken(ctx)
 		if err != nil {
-			ctx.JSON(consts.StatusUnauthorized, map[string]interface{}{
-				"code":    401,
-				"message": "Invalid or expired token",
-			})
+			message := "Authorization header is required"
+			switch {
+			case errors.Is(err, errAuthorizationFormatInvalid):
+				message = "Authorization header format must be Bearer {token}"
+			case errors.Is(err, errTokenNotFound):
+				message = "Authorization token is required"
+			}
+
+			response.Unauthorized(c, ctx, message)
 			ctx.Abort()
 			return
 		}
 
-		// 将用户信息存储到上下文
+		claims, err := parseToken(tokenString)
+		if err != nil {
+			response.Unauthorized(c, ctx, "Invalid or expired token")
+			ctx.Abort()
+			return
+		}
+
+		ctx.Set("jwt_claims", claims)
 		ctx.Set("user_id", claims.UserID)
 		ctx.Set("username", claims.Username)
 		ctx.Set("role", claims.Role)
@@ -147,4 +158,34 @@ func GetUserRole(ctx *app.RequestContext) string {
 		return ""
 	}
 	return role.(string)
+}
+
+func extractToken(ctx *app.RequestContext) (string, error) {
+	authHeader := strings.TrimSpace(string(ctx.GetHeader("Authorization")))
+	if authHeader != "" {
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+			token := strings.TrimSpace(parts[1])
+			if token != "" {
+				return token, nil
+			}
+		}
+		return "", errAuthorizationFormatInvalid
+	}
+
+	if tokenHeader := strings.TrimSpace(string(ctx.GetHeader("X-Auth-Token"))); tokenHeader != "" {
+		return tokenHeader, nil
+	}
+
+	if queryToken := strings.TrimSpace(string(ctx.Query("token"))); queryToken != "" {
+		return queryToken, nil
+	}
+
+	if cookieToken := ctx.Cookie("token"); len(cookieToken) > 0 {
+		if token := strings.TrimSpace(string(cookieToken)); token != "" {
+			return token, nil
+		}
+	}
+
+	return "", errTokenNotFound
 }

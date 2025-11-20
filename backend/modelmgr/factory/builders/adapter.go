@@ -11,11 +11,11 @@ import (
 // einoChatModelAdapter 是通用的 eino ChatModel 到 factory.ChatModel 的适配器。
 // 可以被 OpenAI、Ark 等所有基于 eino 的构建器共享使用。
 type einoChatModelAdapter struct {
-	model model.ChatModel // eino 的 ChatModel 实例
+	model model.ToolCallingChatModel // eino 的 ChatModel 实例
 }
 
 // newEinoChatModelAdapter 创建一个新的 eino ChatModel 适配器。
-func newEinoChatModelAdapter(model model.ChatModel) factory.ChatModel {
+func newEinoChatModelAdapter(model model.ToolCallingChatModel) factory.ChatModel {
 	return &einoChatModelAdapter{model: model}
 }
 

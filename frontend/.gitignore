@@ -9,6 +9,7 @@
 # production
 /build
 /out
+/.next
 
 # misc
 .DS_Store
@@ -41,4 +42,4 @@ next-env.d.ts
 *~
 
 # OS generated files
-Thumbs.db","}}}
+Thumbs.db

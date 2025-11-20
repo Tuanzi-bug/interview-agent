@@ -1,8 +1,8 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
 // 创建axios实例
 const apiClient: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api',
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || '/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -11,11 +11,14 @@ const apiClient: AxiosInstance = axios.create({
 
 // 请求拦截器
 apiClient.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
-    // 这里可以添加token等认证信息
+  (config: InternalAxiosRequestConfig) => {
+    const url = config.url || '';
+    const isAuthFree = url.includes('/user/register') || url.includes('/user/login') || url.includes('/user/logout');
     const token = localStorage.getItem('token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (token && !isAuthFree) {
+      config.headers = (config.headers || {}) as any;
+      (config.headers as any).Authorization = `Bearer ${token}`;
+      (config.headers as any)['X-Auth-Token'] = token;
     }
     return config;
   },
@@ -26,7 +29,7 @@ apiClient.interceptors.request.use(
 
 // 响应拦截器
 apiClient.interceptors.response.use(
-  (response: AxiosResponse) => {
+  (response: AxiosResponse<any>) => {
     // 对响应数据做点什么
     return response.data;
   },
@@ -41,4 +44,4 @@ apiClient.interceptors.response.use(
   }
 );
 
-export default apiClient;","}}}
+export default apiClient;
