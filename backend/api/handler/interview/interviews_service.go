@@ -391,6 +391,23 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 	if err := interviewService.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, session.AllQuestions, session.AllDialogues); err != nil {
 		_ = err
 	}
+
+	// 计算面试耗时（秒）
+	duration := int64(time.Since(session.StartTime).Seconds())
+	interviewDuration := time.Since(session.StartTime).String()
+
+	// 更新面试记录：status、duration、interview_duration
+	updateDTO := &interviewsapi.InterviewRecordDTO{
+		ID:                int64(session.RecordID),
+		UserID:            int32(session.UserID),
+		Status:            "completed",
+		Duration:          &duration,
+		InterviewDuration: &interviewDuration,
+	}
+
+	if err := interviewService.UpdateInterviewRecord(ctx, updateDTO); err != nil {
+		fmt.Printf("[ERROR] 更新面试记录失败: %v\n", err)
+	}
 }
 
 // waitForAnswerWithHeartbeat 等待用户答案，并定期发送心跳保活

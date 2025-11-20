@@ -26,6 +26,7 @@ type InterviewSession struct {
 	UserAnswer      string        // 用户的答案
 	AnswerReceived  bool          // 是否收到答案
 	CreatedAt       time.Time     // 创建时间
+	StartTime       time.Time     // 面试开始时间
 	LastActivity    time.Time     // 最后活动时间
 	ResumeFilePath  string        // 简历文件路径
 	HasResume       bool          // 是否有简历
@@ -63,6 +64,7 @@ func (sm *SessionManager) CreateSession(userID uint, recordID uint64, resumeFile
 	defer sm.mu.Unlock()
 
 	sessionID := generateSessionID()
+	now := time.Now()
 	session := &InterviewSession{
 		SessionID:       sessionID,
 		UserID:          userID,
@@ -70,8 +72,9 @@ func (sm *SessionManager) CreateSession(userID uint, recordID uint64, resumeFile
 		CurrentQuestion: 0,
 		AllQuestions:    []interface{}{},
 		AllDialogues:    []interface{}{},
-		CreatedAt:       time.Now(),
-		LastActivity:    time.Now(),
+		CreatedAt:       now,
+		StartTime:       now,
+		LastActivity:    now,
 		ResumeFilePath:  resumeFilePath,
 		HasResume:       hasResume,
 		Query:           query,
