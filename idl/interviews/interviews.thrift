@@ -34,38 +34,31 @@ struct InterviewEvent {
 
 // 面试记录 DTO（对应 interview_record 表）
 struct InterviewRecordDTO {
-    1: required i64   id              // 记录ID
-    2: required i32   user_id         // 用户ID
-    3: required string title          // 面试标题
-    4: required string type     //面试类型
-    5: required string domain  //面试领域
-    6: required string difficulty //面试难度
-    7: optional string company_name //公司名称
-    8: optional string position_name //岗位名称
-    9: optional string interview_duration //面试时长
-    10: required string query          // 初始查询/问题
-    11: optional string messages       // 对话历史（JSON格式）
-    12: optional string report         // 最终报告
-    13: required string status         // 面试状态
-    14: optional string current_agent  // 当前活跃的Agent名称
-    15: optional i64   duration        // 面试耗时（秒）
-    16: optional double score         // 面试评分
-    17: optional string feedback      // 反馈信息
-    18: optional i64   created_at     // 创建时间（毫秒时间戳）
-    19: optional i64   updated_at     // 更新时间（毫秒时间戳）
-    20: optional i64   completed_at   // 完成时间（毫秒时间戳）
+    1: required i64   id                    // 记录ID
+    2: required i32   user_id               // 用户ID
+    3: required string title                // 面试标题
+    4: required string type                 // 面试类型(综合面试、专项面试)
+    5: required string difficulty           // 面试难度(简单、中等、困难)
+    6: required string domain               // 面试领域(校招、社招；java、golang)
+    7: optional string company_name         // 公司名称
+    8: optional string position_name        // 岗位名称
+    9: optional string interview_duration   // 面试时长
+    10: required string status              // 面试状态(pending/completed)
+    11: optional i64   duration             // 面试耗时（秒）
+    12: optional i64   created_at           // 创建时间（毫秒时间戳）
+    13: optional i64   updated_at           // 更新时间（毫秒时间戳）
 }
 
 // ==================== 请求和响应结构 ====================
 
 // 启动面试请求
 struct StartInterviewRequest {
-    1: required string query (api.body="query")  // 用户输入的查询
-    2: required string type (api.body="type")  // 面试类型(综合面试、专项面试)
-    3: required string domain (api.body="domain")  // 面试领域（综合面试对应：校招、社招；专项面试对应java、golang等)
-    4: required string difficulty (api.body="difficulty")  // 难度级别（简单、中等、困难）
-    5: optional string company_name (api.body="company_name")  // 公司名称（专项面试不用填写）
-    6: optional string position_name (api.body="position_name")  // 岗位名称（专项面试不用填写）
+    1: required string title (api.body="title")  // 面试标题
+    3: required string type (api.body="type")  // 面试类型(综合面试、专项面试)
+    4: required string domain (api.body="domain")  // 面试领域（综合面试对应：校招、社招；专项面试对应java、golang等)
+    5: required string difficulty (api.body="difficulty")  // 难度级别（简单、中等、困难）
+    6: optional string company_name (api.body="company_name")  // 公司名称（专项面试不用填写）
+    7: optional string position_name (api.body="position_name")  // 岗位名称（专项面试不用填写）
 }
 
 // 启动面试响应

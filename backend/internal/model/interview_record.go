@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -12,27 +11,19 @@ type (
 	_InterviewRecord struct {
 	}
 	InterviewRecord struct {
-		ID                uint64     `json:"id" gorm:"primaryKey;autoIncrement;comment:面试主表"`
-		UserID            uint       `json:"user_id" gorm:"index;not null;comment:用户ID"`
-		Title             string     `json:"title" gorm:"size:255;not null;comment:面试标题"`
-		Type              string     `json:"type" gorm:"size:255;not null;comment:面试类型(综合面试、专项面试)"`
-		Domain            string     `json:"domain" gorm:"size:255;not null;comment:专项面试"`
-		Difficulty        string     `json:"difficulty" gorm:"size:128;not null;comment:难度级别（简单、中等、困难）"`
-		CompanyName       string     `json:"company_name" gorm:"size:128;comment:公司名称"`
-		PositionName      string     `json:"position_name" gorm:"size:128;comment:岗位名称"`
-		InterviewDuration string     `json:"interview_duration" gorm:"size:128;comment:面试时长"`
-		Query             string     `json:"query" gorm:"type:text;not null;comment:初始查询/问题"`
-		Messages          string     `json:"messages" gorm:"type:json;comment:对话历史（JSON格式）"`
-		Report            string     `json:"report" gorm:"type:text;comment:最终报告"`
-		Status            string     `json:"status" gorm:"size:50;not null;default:'pending';comment:面试状态（pending/resume_analysis/question_generation/answer_evaluation/report_generation/completed）"`
-		CurrentAgent      string     `json:"current_agent" gorm:"size:100;comment:当前活跃的Agent名称"`
-		Duration          int64      `json:"duration" gorm:"comment:面试耗时（秒）"`
-		Score             *float64   `json:"score" gorm:"comment:面试评分"`
-		Feedback          string     `json:"feedback" gorm:"type:text;comment:反馈信息"`
-		LastModifiedAt    time.Time  `json:"last_modified_at" gorm:"autoCreateTime:milli;comment:最后修改时间戳，用于并发控制"`
-		CreatedAt         time.Time  `json:"created_at" gorm:"autoCreateTime:milli"`
-		UpdatedAt         time.Time  `json:"updated_at" gorm:"autoUpdateTime:milli"`
-		CompletedAt       *time.Time `json:"completed_at" gorm:"comment:完成时间"`
+		ID                uint64    `json:"id" gorm:"primaryKey;autoIncrement;comment:面试主表"`
+		UserID            uint      `json:"user_id" gorm:"index;not null;comment:用户ID"`
+		Title             string    `json:"title" gorm:"size:255;not null;comment:面试标题"`
+		Type              string    `json:"type" gorm:"size:255;not null;comment:面试类型(综合面试、专项面试)"`
+		Difficulty        string    `json:"difficulty" gorm:"size:128;not null;comment:难度级别（简单、中等、困难）"`
+		Domain            string    `json:" " gorm:"size:255;not null;comment:面试领域(校招、社招；java、golang)"`
+		CompanyName       string    `json:"company_name" gorm:"size:128;comment:公司名称"`
+		PositionName      string    `json:"position_name" gorm:"size:128;comment:岗位名称"`
+		InterviewDuration string    `json:"interview_duration" gorm:"size:128;comment:面试时长"`
+		Status            string    `json:"status" gorm:"size:50;not null;default:'pending';comment:面试状态（pending/completed）"`
+		Duration          int64     `json:"duration" gorm:"comment:面试耗时（秒）"`
+		CreatedAt         time.Time `json:"created_at" gorm:"autoCreateTime:milli"`
+		UpdatedAt         time.Time `json:"updated_at" gorm:"autoUpdateTime:milli"`
 	}
 )
 
@@ -41,12 +32,15 @@ func (i *InterviewRecord) TableName() string {
 	return "interview_record"
 }
 
-// CreateInterviewRecord 创建面试记录
-func (i *_InterviewRecord) CreateInterviewRecord(record *InterviewRecord) error {
+// CreateInterviewRecord 创建面试记录，返回记录ID
+func (i *_InterviewRecord) CreateInterviewRecord(record *InterviewRecord) (uint64, error) {
 	if getDB == nil {
 		panic("getDB function not initialized, please call model.SetDBGetter first")
 	}
-	return getDB().Create(record).Error
+	if err := getDB().Create(record).Error; err != nil {
+		return 0, err
+	}
+	return record.ID, nil
 }
 
 // GetInterviewRecordByID 根据ID查询面试记录
@@ -88,88 +82,48 @@ func (i *_InterviewRecord) ListInterviewRecords(userID uint, page, pageSize *int
 	return records, total, nil
 }
 
-// UpdateInterviewRecord 更新面试记录（带时间戳检查）
+// UpdateInterviewRecord 更新面试记录（只更新非零值字段）
 func (i *_InterviewRecord) UpdateInterviewRecord(record *InterviewRecord) error {
 	if getDB == nil {
 		panic("getDB function not initialized, please call model.SetDBGetter first")
 	}
-
-	// 先获取当前记录的最后修改时间
-	var currentRecord InterviewRecord
-	if err := getDB().Where("id = ?", record.ID).First(&currentRecord).Error; err != nil {
-		return err
-	}
-
-	// 检查时间戳：如果当前记录的修改时间晚于请求中的时间戳，说明有更新的操作
-	if !record.LastModifiedAt.IsZero() && currentRecord.LastModifiedAt.After(record.LastModifiedAt) {
-		return fmt.Errorf("update rejected: record was modified after this update was initiated (current: %v, request: %v)",
-			currentRecord.LastModifiedAt, record.LastModifiedAt)
-	}
-
-	// 更新记录和时间戳
-	now := time.Now()
-	result := getDB().Model(&InterviewRecord{}).
-		Where("id = ?", record.ID).
-		Updates(map[string]interface{}{
-			"messages":         record.Messages,
-			"status":           record.Status,
-			"current_agent":    record.CurrentAgent,
-			"last_modified_at": now,
-		})
-
-	return result.Error
-}
-
-// UpdateInterviewRecordStatus 更新面试记录状态
-func (i *_InterviewRecord) UpdateInterviewRecordStatus(id uint64, status string, currentAgent string) error {
-	if getDB == nil {
-		panic("getDB function not initialized, please call model.SetDBGetter first")
-	}
+	// 使用 map 方式更新，只更新非零值字段，避免覆盖原有数据
 	updates := make(map[string]interface{})
-	if status != "" {
-		updates["status"] = status
+
+	if record.Title != "" {
+		updates["title"] = record.Title
 	}
-	if currentAgent != "" {
-		updates["current_agent"] = currentAgent
+	if record.Type != "" {
+		updates["type"] = record.Type
 	}
+	if record.Difficulty != "" {
+		updates["difficulty"] = record.Difficulty
+	}
+	if record.Domain != "" {
+		updates["domain"] = record.Domain
+	}
+	if record.CompanyName != "" {
+		updates["company_name"] = record.CompanyName
+	}
+	if record.PositionName != "" {
+		updates["position_name"] = record.PositionName
+	}
+	if record.InterviewDuration != "" {
+		updates["interview_duration"] = record.InterviewDuration
+	}
+	if record.Status != "" {
+		updates["status"] = record.Status
+	}
+	if record.Duration != 0 {
+		updates["duration"] = record.Duration
+	}
+
+	// 如果没有需要更新的字段，直接返回
 	if len(updates) == 0 {
-		return nil // 没有需要更新的字段
-	}
-	return getDB().Model(&InterviewRecord{}).
-		Where("id = ?", id).
-		Updates(updates).Error
-}
-
-// CompleteInterviewRecord 完成面试记录（带时间戳检查）
-func (i *_InterviewRecord) CompleteInterviewRecord(id uint64, report string, duration int64, score *float64) error {
-	if getDB == nil {
-		panic("getDB function not initialized, please call model.SetDBGetter first")
+		return nil
 	}
 
-	// 先获取当前记录，检查是否已完成
-	var record InterviewRecord
-	if err := getDB().Where("id = ?", id).First(&record).Error; err != nil {
-		return err
-	}
-
-	// 防止重复完成：如果已经是 completed 状态，返回错误
-	if record.Status == "completed" {
-		return fmt.Errorf("complete failed: record already completed (id=%d)", id)
-	}
-
-	now := time.Now()
-	result := getDB().Model(&InterviewRecord{}).
-		Where("id = ?", id).
-		Updates(map[string]interface{}{
-			"status":           "completed",
-			"report":           report,
-			"duration":         duration,
-			"score":            score,
-			"completed_at":     now,
-			"last_modified_at": now,
-		})
-
-	return result.Error
+	return getDB().Model(&InterviewRecord{}).Where("id = ?", record.ID).Updates(updates).Error
 }
 
 // DeleteInterviewRecord 删除面试记录

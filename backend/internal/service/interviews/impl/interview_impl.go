@@ -2,13 +2,11 @@ package impl
 
 import (
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
-	"ai-eino-interview-agent/chatApp/agent/ext"
 	"ai-eino-interview-agent/internal/model"
 	"context"
 	"log"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // InterviewServiceImpl 面试服务实现
@@ -19,76 +17,174 @@ func NewInterviewServiceImpl() *InterviewServiceImpl {
 	return &InterviewServiceImpl{}
 }
 
-//
-//// StartInterviewStream 启动面试流程（流式）
-//func (s *InterviewServiceImpl) StartInterviewStream(ctx context.Context, req *interviewsapi.StartInterviewRequest, maxQuestions int) (<-chan *interviewsapi.InterviewEvent, error) {
-//	// 调用 chatApp 中的流式接口
-//	eventChan, err := ext.StartInterviewStream(ctx, req.Query, maxQuestions)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	// 转换事件类型：从 ext.InterviewEvent 转换为 interviewsapi.InterviewEvent
-//	apiEventChan := make(chan *interviewsapi.InterviewEvent, 10)
-//	go func() {
-//		defer close(apiEventChan)
-//		for event := range eventChan {
-//			apiEvent := convertToAPIEvent(event)
-//			select {
-//			case apiEventChan <- apiEvent:
-//			case <-ctx.Done():
-//				return
-//			}
-//		}
-//	}()
-//
-//	return apiEventChan, nil
-//}
-//
-//// ContinueInterview 继续面试流程（用于多轮对话）
-//func (s *InterviewServiceImpl) ContinueInterview(ctx context.Context, req *interviewsapi.ContinueInterviewRequest, maxQuestions int) (<-chan *interviewsapi.InterviewEvent, error) {
-//	// 调用 chatApp 中的继续面试接口
-//	eventChan, err := ext.ContinueInterview(ctx, req.Query, maxQuestions)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	// 转换事件类型：从 ext.InterviewEvent 转换为 interviewsapi.InterviewEvent
-//	apiEventChan := make(chan *interviewsapi.InterviewEvent, 10)
-//	go func() {
-//		defer close(apiEventChan)
-//		for event := range eventChan {
-//			apiEvent := convertToAPIEvent(event)
-//			select {
-//			case apiEventChan <- apiEvent:
-//			case <-ctx.Done():
-//		Query:          query,
-//		Status:         "pending",
-//		Messages:       "[]",
-//		LastModifiedAt: now,
-//	}
-//	err := model.InterviewRecordDao.CreateInterviewRecord(record)
-//	if err != nil {
-//		return 0, err
-//	}
-//	return record.ID, nil
-//}
-//
-//// UpdateInterviewRecord 更新面试记录（用于保存对话历史和状态）
-//func (s *InterviewServiceImpl) UpdateInterviewRecord(ctx context.Context, recordID uint64, messages string, status, currentAgent string) error {
-//	record := &model.InterviewRecord{
-//		ID:           recordID,
-//		Messages:     messages,
-//		Status:       status,
-//		CurrentAgent: currentAgent,
-//	}
-//	return model.InterviewRecordDao.UpdateInterviewRecord(record)
-//}
-//
-//// CompleteInterviewRecord 完成面试记录（保存最终报告和评分）
-//func (s *InterviewServiceImpl) CompleteInterviewRecord(ctx context.Context, recordID uint64, report string, duration int64, score *float64) error {
-//	return model.InterviewRecordDao.CompleteInterviewRecord(recordID, report, duration, score)
-//}
+// CreateInterviewRecord 创建面试记录，返回记录ID
+func (s *InterviewServiceImpl) CreateInterviewRecord(ctx context.Context, dto *interviewsapi.InterviewRecordDTO) (uint64, error) {
+	// 处理指针类型字段，提取值或使用默认值
+	companyName := ""
+	if dto.CompanyName != nil {
+		companyName = *dto.CompanyName
+	}
+
+	positionName := ""
+	if dto.PositionName != nil {
+		positionName = *dto.PositionName
+	}
+
+	interviewDuration := ""
+	if dto.InterviewDuration != nil {
+		interviewDuration = *dto.InterviewDuration
+	}
+
+	// 初始化状态为pending（如果未提供）
+	status := dto.Status
+	if status == "" {
+		status = "pending"
+	}
+
+	var duration int64 = 0
+	if dto.Duration != nil {
+		duration = *dto.Duration
+	}
+
+	record := &model.InterviewRecord{
+		UserID:            uint(dto.UserID),
+		Title:             dto.Title,
+		Type:              dto.Type,
+		Difficulty:        dto.Difficulty,
+		Domain:            dto.Domain,
+		CompanyName:       companyName,
+		PositionName:      positionName,
+		InterviewDuration: interviewDuration,
+		Status:            status,
+		Duration:          duration,
+	}
+
+	recordID, err := model.InterviewRecordDao.CreateInterviewRecord(record)
+	if err != nil {
+		log.Printf("[CreateInterviewRecord] 创建面试记录失败: %v", err)
+		return 0, err
+	}
+
+	log.Printf("[CreateInterviewRecord] 面试记录创建成功，ID: %d，用户ID: %d，标题: %s", recordID, dto.UserID, dto.Title)
+	return recordID, nil
+}
+
+// UpdateInterviewRecord 更新面试记录
+func (s *InterviewServiceImpl) UpdateInterviewRecord(ctx context.Context, dto *interviewsapi.InterviewRecordDTO) error {
+	// 处理指针类型字段，提取值或使用默认值
+	companyName := ""
+	if dto.CompanyName != nil {
+		companyName = *dto.CompanyName
+	}
+
+	positionName := ""
+	if dto.PositionName != nil {
+		positionName = *dto.PositionName
+	}
+
+	interviewDuration := ""
+	if dto.InterviewDuration != nil {
+		interviewDuration = *dto.InterviewDuration
+	}
+
+	var duration int64 = 0
+	if dto.Duration != nil {
+		duration = *dto.Duration
+	}
+
+	record := &model.InterviewRecord{
+		ID:                uint64(dto.ID),
+		UserID:            uint(dto.UserID),
+		Title:             dto.Title,
+		Type:              dto.Type,
+		Difficulty:        dto.Difficulty,
+		Domain:            dto.Domain,
+		CompanyName:       companyName,
+		PositionName:      positionName,
+		InterviewDuration: interviewDuration,
+		Status:            dto.Status,
+		Duration:          duration,
+	}
+
+	err := model.InterviewRecordDao.UpdateInterviewRecord(record)
+	if err != nil {
+		log.Printf("[UpdateInterviewRecord] 更新面试记录失败: %v", err)
+		return err
+	}
+
+	log.Printf("[UpdateInterviewRecord] 面试记录更新成功，ID: %d，用户ID: %d，标题: %s", dto.ID, dto.UserID, dto.Title)
+	return nil
+}
+
+// ListInterviewRecords 获取面试记录列表
+func (s *InterviewServiceImpl) ListInterviewRecords(ctx context.Context, userID uint, page, pageSize *int32) ([]*interviewsapi.InterviewRecordDTO, int64, error) {
+	// 设置默认分页参数
+	pageNum := int32(1)
+	pageSz := int32(10)
+
+	if page != nil && *page > 0 {
+		pageNum = *page
+	}
+	if pageSize != nil && *pageSize > 0 {
+		pageSz = *pageSize
+	}
+
+	// 调用 DAO 层获取数据
+	records, total, err := model.InterviewRecordDao.ListInterviewRecords(userID, &pageNum, &pageSz)
+	if err != nil {
+		log.Printf("[ListInterviewRecords] 查询面试记录失败: %v", err)
+		return nil, 0, err
+	}
+
+	// 转换为 DTO
+	dtoList := make([]*interviewsapi.InterviewRecordDTO, 0, len(records))
+	for _, record := range records {
+		dto := convertToInterviewRecordDTO(record)
+		dtoList = append(dtoList, dto)
+	}
+
+	log.Printf("[ListInterviewRecords] 查询成功，用户ID: %d，总数: %d，页码: %d，每页: %d", userID, total, pageNum, pageSz)
+	return dtoList, total, nil
+}
+
+// convertToInterviewRecordDTO 将 model.InterviewRecord 转换为 interviewsapi.InterviewRecordDTO
+func convertToInterviewRecordDTO(record *model.InterviewRecord) *interviewsapi.InterviewRecordDTO {
+	dto := interviewsapi.NewInterviewRecordDTO()
+	dto.ID = int64(record.ID)
+	dto.UserID = int32(record.UserID)
+	dto.Title = record.Title
+	dto.Type = record.Type
+	dto.Difficulty = record.Difficulty
+	dto.Domain = record.Domain
+	dto.Status = record.Status
+
+	if record.CompanyName != "" {
+		v := record.CompanyName
+		dto.CompanyName = &v
+	}
+	if record.PositionName != "" {
+		v := record.PositionName
+		dto.PositionName = &v
+	}
+	if record.InterviewDuration != "" {
+		v := record.InterviewDuration
+		dto.InterviewDuration = &v
+	}
+	if record.Duration != 0 {
+		v := record.Duration
+		dto.Duration = &v
+	}
+	if !record.CreatedAt.IsZero() {
+		ms := record.CreatedAt.UnixNano() / int64(1000000)
+		dto.CreatedAt = &ms
+	}
+	if !record.UpdatedAt.IsZero() {
+		ms := record.UpdatedAt.UnixNano() / int64(1000000)
+		dto.UpdatedAt = &ms
+	}
+
+	return dto
+}
 
 // SaveInterviewDialogues 保存面试对话和问题主题
 func (s *InterviewServiceImpl) SaveInterviewDialogues(ctx context.Context, userID uint, recordID uint64, questions []interface{}, dialogues []interface{}) error {
@@ -293,182 +389,6 @@ func toUint32(v interface{}) uint32 {
 	}
 	return 0
 }
-
-// 辅助函数：将 interface{} 转换为 float64
-func toFloat64(v interface{}) float64 {
-	if v == nil {
-		return 0
-	}
-	switch val := v.(type) {
-	case float64:
-		return val
-	case float32:
-		return float64(val)
-	case int:
-		return float64(val)
-	case int64:
-		return float64(val)
-	case uint:
-		return float64(val)
-	case uint32:
-		return float64(val)
-	case uint64:
-		return float64(val)
-	case string:
-		// 尝试解析字符串
-		if f, err := strconv.ParseFloat(val, 64); err == nil {
-			return f
-		}
-	}
-	return 0
-}
-
-func (s *InterviewServiceImpl) ListInterviewRecords(ctx context.Context, userID uint, page, pageSize *int32) ([]*interviewsapi.InterviewRecordDTO, int64, error) {
-	records, total, err := model.InterviewRecordDao.ListInterviewRecords(userID, page, pageSize)
-	if err != nil {
-		return nil, 0, err
-	}
-	result := make([]*interviewsapi.InterviewRecordDTO, 0, len(records))
-	for _, r := range records {
-		result = append(result, convertToInterviewRecordDTO(r))
-	}
-	return result, total, nil
-}
-
-func (s *InterviewServiceImpl) GetInterviewRecord(ctx context.Context, userID uint, recordID uint64) (*interviewsapi.InterviewRecordDTO, error) {
-	record, err := model.InterviewRecordDao.GetInterviewRecordByID(recordID)
-	if err != nil {
-		return nil, err
-	}
-	if record.UserID != userID {
-		return nil, nil
-	}
-	return convertToInterviewRecordDTO(record), nil
-}
-
-// convertToAPIEvent 将 ext.InterviewEvent 转换为 interviewsapi.InterviewEvent
-func convertToAPIEvent(event *ext.InterviewEvent) *interviewsapi.InterviewEvent {
-	apiEvent := interviewsapi.NewInterviewEvent()
-	apiEvent.Type = event.Type
-
-	if event.AgentName != "" {
-		apiEvent.AgentName = &event.AgentName
-	}
-	if event.Message != "" {
-		apiEvent.Message = &event.Message
-	}
-	if event.TransferTo != "" {
-		apiEvent.TransferTo = &event.TransferTo
-	}
-	if event.Error != "" {
-		apiEvent.Error = &event.Error
-	}
-	if event.Status != nil && *event.Status != "" {
-		apiEvent.Status = event.Status
-	}
-	if event.Report != "" {
-		apiEvent.Report = &event.Report
-	}
-	if event.Score != nil {
-		apiEvent.Score = event.Score
-	}
-	if event.Duration > 0 {
-		apiEvent.Duration = &event.Duration
-	}
-	if event.Feedback != "" {
-		apiEvent.Feedback = &event.Feedback
-	}
-	if event.Messages != "" {
-		apiEvent.Messages = &event.Messages
-	}
-
-	return apiEvent
-}
-
-func convertToInterviewRecordDTO(record *model.InterviewRecord) *interviewsapi.InterviewRecordDTO {
-	dto := interviewsapi.NewInterviewRecordDTO()
-	dto.ID = int64(record.ID)
-	dto.UserID = int32(record.UserID)
-	dto.Title = record.Title
-	dto.Query = record.Query
-	dto.Status = record.Status
-	if record.Messages != "" {
-		v := record.Messages
-		dto.Messages = &v
-	}
-	if record.Report != "" {
-		v := record.Report
-		dto.Report = &v
-	}
-	if record.CurrentAgent != "" {
-		v := record.CurrentAgent
-		dto.CurrentAgent = &v
-	}
-	if record.Duration != 0 {
-		v := record.Duration
-		dto.Duration = &v
-	}
-	if record.Score != nil {
-		v := *record.Score
-		dto.Score = &v
-	}
-	if record.Feedback != "" {
-		v := record.Feedback
-		dto.Feedback = &v
-	}
-	if !record.CreatedAt.IsZero() {
-		ms := record.CreatedAt.UnixNano() / int64(time.Millisecond)
-		dto.CreatedAt = &ms
-	}
-	if !record.UpdatedAt.IsZero() {
-		ms := record.UpdatedAt.UnixNano() / int64(time.Millisecond)
-		dto.UpdatedAt = &ms
-	}
-	if record.CompletedAt != nil {
-		ms := record.CompletedAt.UnixNano() / int64(time.Millisecond)
-		dto.CompletedAt = &ms
-	}
-	return dto
-}
-
-//// SaveInterviewEvaluation 保存面试评估数据
-//func (s *InterviewServiceImpl) SaveInterviewEvaluation(ctx context.Context, userID uint, reportID uint64, comment string, score float64, dimensions interface{}) error {
-//	// 将 dimensions 转换为 []*model.EvaluationDimension
-//	var dimensionList []*model.EvaluationDimension
-//
-//	// 如果 dimensions 是 []interface{}，则转换为 []*model.EvaluationDimension
-//	if dimSlice, ok := dimensions.([]interface{}); ok {
-//		for _, dim := range dimSlice {
-//			if dimMap, ok := dim.(map[string]interface{}); ok {
-//				evalDim := &model.EvaluationDimension{
-//					DimensionName: toString(dimMap["dimension_name"]),
-//					Evaluation:    toString(dimMap["evaluation"]),
-//					Score:         toFloat64(dimMap["score"]),
-//				}
-//				dimensionList = append(dimensionList, evalDim)
-//			}
-//		}
-//	}
-//
-//	// 创建评估记录
-//	evaluation := &model.InterviewEvaluation{
-//		UserID:     userID,
-//		ReportID:   reportID,
-//		Comment:    comment,
-//		Score:      score,
-//		Dimensions: dimensionList,
-//		Deleted:    0,
-//	}
-//
-//	// 保存到数据库
-//	err := model.InterviewEvaluationDao.CreateEvaluation(evaluation)
-//	if err != nil {
-//		log.Printf("Failed to save interview evaluation: %v", err)
-//		return err
-//	}
-//
-//	return nil
-//}
 
 // GetInterviewEvaluation 根据用户ID和报告ID获取面试评估报告
 func (s *InterviewServiceImpl) GetInterviewEvaluation(ctx context.Context, userID uint, reportID uint64) (interface{}, error) {
