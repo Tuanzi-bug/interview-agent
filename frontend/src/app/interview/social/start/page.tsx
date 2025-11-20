@@ -14,7 +14,7 @@ export default function SocialInterviewStartPage() {
   const [answeredCount, setAnsweredCount] = useState(0);
   const [answer, setAnswer] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const xhrRef = useRef<XMLHttpRequest | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [uploadPercent, setUploadPercent] = useState(0);
   const [starting, setStarting] = useState(false);
   useEffect(() => {
@@ -44,61 +44,145 @@ export default function SocialInterviewStartPage() {
     const fname = (resumeFile?.name || 'resume.pdf');
     formData.append('resume', f, fname);
 
-    const xhr = new XMLHttpRequest();
-    xhrRef.current = xhr;
-    xhr.open('POST', '/api/interview/start/stream', true);
-    xhr.responseType = 'text';
-    xhr.withCredentials = false;
-    xhr.setRequestHeader('Accept', 'text/event-stream');
-    try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-      }
-    } catch {}
-    xhr.upload.onprogress = (evt) => {
-      if (evt.lengthComputable) {
-        const percent = Math.round((evt.loaded / evt.total) * 100);
-        setUploadPercent(percent);
-      }
-    };
-    let lastIndex = 0;
-    xhr.onprogress = () => {
-      const text = xhr.responseText || '';
-      const chunk = text.substring(lastIndex);
-      lastIndex = text.length;
-      const parts = chunk.split('\n\n').filter(Boolean);
-      parts.forEach((p) => {
-        const line = p.trim();
-        if (line.startsWith('data:')) {
-          const json = line.replace(/^data:\s*/, '');
-          try {
-            const payload = JSON.parse(json);
-            if (payload?.type === 'session_id') {
-              setSessionId(payload.session_id || payload.data?.session_id || '');
-            } else if (payload?.type === 'question') {
-              const q = payload.data?.question_text || '';
-              setQuestionText(q);
-              setQuestionIndex(payload.index || 0);
-            }
-          } catch {}
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    const startInterview = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          message.error('请先登录后再开始面试');
+          setStarting(false);
+          return;
         }
-      });
-    };
-    xhr.onerror = () => {
-      message.error('面试启动失败：网络错误或CORS拦截');
-      setStarting(false);
-    };
-    xhr.onload = () => {
-      setStarting(false);
-      if (xhr.status !== 200) {
-        message.error(`面试启动失败：${xhr.status} ${xhr.statusText}`);
+
+        // 先测试后端服务是否可达
+        console.log('[检测] 测试后端服务连接...');
+        try {
+          const testResponse = await fetch('http://localhost:8888/api/user/login', {
+            method: 'OPTIONS',
+            mode: 'cors',
+          });
+          console.log('[检测] 后端服务连接正常');
+        } catch (e) {
+          message.error('无法连接到后端服务，请确认后端服务是否运行在 http://localhost:8888');
+          setStarting(false);
+          console.error('[检测] 后端服务连接失败:', e);
+          return;
+        }
+
+        // 尝试方案1: 使用Authorization header
+        let response;
+        console.log('[面试启动] 尝试方案1: 使用Authorization header');
+        try {
+          const headers: Record<string, string> = {};
+          headers['Authorization'] = `Bearer ${token}`;
+          
+          console.log('[面试启动] 请求URL:', 'http://localhost:8888/api/interview/start/stream');
+          
+          response = await fetch('http://localhost:8888/api/interview/start/stream', {
+            method: 'POST',
+            headers,
+            body: formData,
+            signal: abortController.signal,
+            mode: 'cors',
+            credentials: 'include',
+          });
+        } catch (headerError) {
+          // 如果Authorization header方式失败，尝试使用URL参数
+          console.log('[面试启动] 方案1失败，尝试方案2: 使用URL参数传递token');
+          const urlWithToken = `http://localhost:8888/api/interview/start/stream?token=${encodeURIComponent(token)}`;
+          console.log('[面试启动] 请求URL:', urlWithToken);
+          
+          response = await fetch(urlWithToken, {
+            method: 'POST',
+            body: formData,
+            signal: abortController.signal,
+            mode: 'cors',
+            credentials: 'include',
+          });
+        }
+
+        console.log('[面试启动] 收到响应:', response.status, response.statusText);
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            message.error('登录已过期，请重新登录');
+          } else if (response.status === 404) {
+            console.error('[面试启动] 404错误 - 接口不存在');
+            message.error({
+              content: '接口返回404，请在后端 middleware.go 中将 /api/interview/start/stream 添加到 jwtPublicRoutes',
+              duration: 10,
+            });
+          } else {
+            message.error(`面试启动失败：${response.status} ${response.statusText}`);
+          }
+          setStarting(false);
+          return;
+        }
+
+        if (!response.body) {
+          message.error('无法读取响应流');
+          setStarting(false);
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            setStarting(false);
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.trim().startsWith('data:')) {
+              const json = line.trim().replace(/^data:\s*/, '');
+              try {
+                const payload = JSON.parse(json);
+                console.log('[SSE数据]', payload);
+                if (payload?.type === 'session_id') {
+                  const sid = payload.session_id || payload.data?.session_id || '';
+                  console.log('[会话ID]', sid);
+                  setSessionId(sid);
+                  setStarting(false);
+                } else if (payload?.type === 'start') {
+                  const sid = payload.session_id || '';
+                  console.log('[面试开始] session_id:', sid);
+                  setSessionId(sid);
+                } else if (payload?.type === 'question') {
+                  const q = payload.data?.question_text || '';
+                  console.log('[问题]', q);
+                  setQuestionText(q);
+                  setQuestionIndex(payload.index || 0);
+                }
+              } catch (e) {
+                console.error('解析SSE数据失败:', json, e);
+              }
+            }
+          }
+        }
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          message.error('面试启动失败：网络错误');
+          console.error('启动面试错误:', error);
+        }
+        setStarting(false);
       }
     };
-    xhr.send(formData);
+
+    startInterview();
+
     return () => {
-      try { xhrRef.current?.abort(); } catch {}
-      xhrRef.current = null;
+      abortController.abort();
+      abortControllerRef.current = null;
     };
   }, []);
   const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
@@ -109,16 +193,23 @@ export default function SocialInterviewStartPage() {
     const action = act ? act : (answer.trim() === '结束面试' ? 'quit' : 'next');
     setSubmitting(true);
     try {
-      await fetch('/api/interview/submit/answer', {
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      await fetch('http://localhost:8888/api/interview/submit/answer', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, answer, action })
+        headers,
+        body: JSON.stringify({ session_id: sessionId, answer, action }),
+        mode: 'cors',
+        credentials: 'include',
       });
       if (action === 'next') {
         setAnsweredCount(prev => prev + 1);
         setAnswer('');
       } else {
-        try { xhrRef.current?.abort(); } catch {}
+        try { abortControllerRef.current?.abort(); } catch {}
       }
     } catch {
     } finally {

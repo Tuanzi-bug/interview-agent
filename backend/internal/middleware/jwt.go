@@ -160,6 +160,29 @@ func GetUserRole(ctx *app.RequestContext) string {
 	return role.(string)
 }
 
+// ParseAndSetUserFromToken 手动解析token并设置用户信息到上下文
+// 用于跳过JWT中间件的接口中手动验证token
+// 返回 userID，如果解析失败返回 0
+func ParseAndSetUserFromToken(ctx *app.RequestContext) uint {
+	tokenString, err := extractToken(ctx)
+	if err != nil {
+		return 0
+	}
+
+	claims, err := parseToken(tokenString)
+	if err != nil {
+		return 0
+	}
+
+	// 设置到上下文中
+	ctx.Set("jwt_claims", claims)
+	ctx.Set("user_id", claims.UserID)
+	ctx.Set("username", claims.Username)
+	ctx.Set("role", claims.Role)
+
+	return claims.UserID
+}
+
 func extractToken(ctx *app.RequestContext) (string, error) {
 	authHeader := strings.TrimSpace(string(ctx.GetHeader("Authorization")))
 	if authHeader != "" {

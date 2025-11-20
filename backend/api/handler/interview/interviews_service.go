@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -44,12 +45,16 @@ func (w *SSEWriter) Write(p []byte) (n int, err error) {
 // StartInterviewStream 启动交互式面试流程（SSE + 前端交互模式）
 // @router /api/interview/start/stream [POST]
 func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
+	log.Printf("[StartInterviewStream] Received request from %s, Method: %s, Path: %s", c.RemoteAddr(), c.Method(), c.Path())
+
 	// 1. 解析请求（必须在设置 SSE 响应头之前）
 	var req interviewsapi.StartInterviewRequest
 	if err := c.BindAndValidate(&req); err != nil {
+		log.Printf("[StartInterviewStream] Bind and validate error: %v", err)
 		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
+	log.Printf("[StartInterviewStream] Request validated successfully")
 
 	// 2. 处理文件上传（必须在设置 SSE 响应头之前）
 	resumeFilePath, err := handleResumeUpload(c)
@@ -62,17 +67,12 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 	// 由于跳过了 JWT 中间件，需要手动验证 token
 	userID := middleware.GetUserID(c)
 	if userID == 0 {
-		// 尝试从 Authorization header 中提取 token
-		authHeader := string(c.GetHeader("Authorization"))
-		if authHeader == "" {
-			response.Unauthorized(ctx, c, "Authorization token is required")
+		// 手动解析和验证 token
+		userID = middleware.ParseAndSetUserFromToken(c)
+		if userID == 0 {
+			response.Unauthorized(ctx, c, "Authorization token is required or invalid")
 			return
 		}
-
-		// 解析 token 获取 userID
-		// 这里应该调用 JWT 验证函数，但为了简化，我们先返回错误
-		response.Unauthorized(ctx, c, "Invalid or expired token")
-		return
 	}
 
 	// 4. 设置 SSE 响应
@@ -700,7 +700,16 @@ func SubmitInterviewAnswer(ctx context.Context, c *app.RequestContext) {
 
 	// 验证用户身份
 	userID := middleware.GetUserID(c)
-	if userID == 0 || session.UserID != userID {
+	if userID == 0 {
+		// 手动解析和验证 token
+		userID = middleware.ParseAndSetUserFromToken(c)
+		if userID == 0 {
+			response.Unauthorized(ctx, c, "Authorization token is required or invalid")
+			return
+		}
+	}
+
+	if session.UserID != userID {
 		response.Unauthorized(ctx, c, "Unauthorized")
 		return
 	}

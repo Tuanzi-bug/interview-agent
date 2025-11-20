@@ -1,10 +1,11 @@
 'use client';
 
-import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, Tag, Upload, message } from 'antd';
+import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, Tag, Upload, message, Modal } from 'antd';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { UploadFile } from 'antd/es/upload/interface';
-import { CheckCircleOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, VideoCameraOutlined, ToolOutlined } from '@ant-design/icons';
+import BackendHealthCheck from '@/components/BackendHealthCheck';
 
 const { Title, Paragraph } = Typography;
 
@@ -12,14 +13,33 @@ export default function SocialInterviewPage() {
   const [form] = Form.useForm();
   const [resumeFile, setResumeFile] = useState<UploadFile | null>(null);
   const [starting, setStarting] = useState(false);
+  const [diagnosisVisible, setDiagnosisVisible] = useState(false);
   const router = useRouter();
 
   return (
     <div className="container mx-auto px-4">
-      <Title level={2} className="mt-2">综合面试 · 社招简历面试</Title>
+      <div className="flex justify-between items-center mt-2 mb-2">
+        <Title level={2} style={{ margin: 0 }}>综合面试 · 社招简历面试</Title>
+        <Button 
+          icon={<ToolOutlined />} 
+          onClick={() => setDiagnosisVisible(true)}
+        >
+          后端服务诊断
+        </Button>
+      </div>
       <Paragraph className="text-gray-600 max-w-3xl">
         在综合面试模式中，系统会围绕你的简历、项目经历与岗位胜任力，从技术基础、项目落地、设计能力到沟通协作，构建环环追问的真实面试场景，帮助你快速查漏补缺与提升应对能力。
       </Paragraph>
+      
+      <Modal
+        title="后端服务诊断"
+        open={diagnosisVisible}
+        onCancel={() => setDiagnosisVisible(false)}
+        footer={null}
+        width={700}
+      >
+        <BackendHealthCheck />
+      </Modal>
 
       <Row gutter={[24, 24]} className="mt-2">
         <Col xs={24} md={16}>
