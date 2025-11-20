@@ -86,7 +86,6 @@ export default function SocialInterviewStartPage() {
             body: formData,
             signal: abortController.signal,
             mode: 'cors',
-            credentials: 'include',
           });
         } catch (headerError) {
           // 如果Authorization header方式失败，尝试使用URL参数
@@ -99,7 +98,6 @@ export default function SocialInterviewStartPage() {
             body: formData,
             signal: abortController.signal,
             mode: 'cors',
-            credentials: 'include',
           });
         }
 
@@ -157,11 +155,17 @@ export default function SocialInterviewStartPage() {
                   const sid = payload.session_id || '';
                   console.log('[面试开始] session_id:', sid);
                   setSessionId(sid);
+                  setStarting(false);
                 } else if (payload?.type === 'question') {
                   const q = payload.data?.question_text || '';
                   console.log('[问题]', q);
                   setQuestionText(q);
                   setQuestionIndex(payload.index || 0);
+                  setStarting(false);
+                } else if (payload?.type === 'end' || payload?.type === 'complete') {
+                  console.log('[面试结束]', payload);
+                  message.info('面试已结束');
+                  setStarting(false);
                 }
               } catch (e) {
                 console.error('解析SSE数据失败:', json, e);
@@ -203,7 +207,6 @@ export default function SocialInterviewStartPage() {
         headers,
         body: JSON.stringify({ session_id: sessionId, answer, action }),
         mode: 'cors',
-        credentials: 'include',
       });
       if (action === 'next') {
         setAnsweredCount(prev => prev + 1);
