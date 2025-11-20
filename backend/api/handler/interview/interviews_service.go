@@ -18,6 +18,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
+
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
@@ -844,5 +846,33 @@ func GetAnswerRecord(ctx context.Context, c *app.RequestContext) {
 		response.InternalServerError(ctx, c, "Failed to generate evaluation: "+err.Error())
 		return
 	}
+	response.Success(ctx, c, resp)
+}
+
+// GetInterviewRecords .
+// @router /api/interview/records [GET]
+func GetInterviewRecords(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req interviewsapi.ListInterviewRecordsRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+
+	records, total, err := interviewservice.NewInterviewService().ListInterviewRecords(ctx, userID, req.Page, req.PageSize)
+	if err != nil {
+		return
+	}
+
+	resp := new(interviewsapi.ListInterviewRecordsResponse)
+	resp.Records = records
+	resp.Total = total
+
 	response.Success(ctx, c, resp)
 }

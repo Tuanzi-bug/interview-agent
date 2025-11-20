@@ -203,7 +203,7 @@ func _getinterviewevaluationMw() []app.HandlerFunc {
 	return nil
 }
 
-func _getanswerrecordMw() []app.HandlerFunc {
+func _getinterviewrecordsMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
