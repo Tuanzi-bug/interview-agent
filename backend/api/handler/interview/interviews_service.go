@@ -11,12 +11,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
 	"github.com/cloudwego/hertz/pkg/app"
 )
@@ -816,8 +817,20 @@ func GetInterviewRecords(ctx context.Context, c *app.RequestContext) {
 		c.String(consts.StatusBadRequest, err.Error())
 		return
 	}
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+
+	records, total, err := interviewservice.NewInterviewService().ListInterviewRecords(ctx, userID, req.Page, req.PageSize)
+	if err != nil {
+		return
+	}
 
 	resp := new(interviewsapi.ListInterviewRecordsResponse)
+	resp.Records = records
+	resp.Total = total
 
-	c.JSON(consts.StatusOK, resp)
+	response.Success(ctx, c, resp)
 }

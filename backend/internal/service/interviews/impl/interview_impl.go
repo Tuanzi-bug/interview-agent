@@ -323,7 +323,7 @@ func toFloat64(v interface{}) float64 {
 	return 0
 }
 
-func (s *InterviewServiceImpl) ListInterviewRecords(ctx context.Context, userID uint, page, pageSize int) ([]*interviewsapi.InterviewRecordDTO, int64, error) {
+func (s *InterviewServiceImpl) ListInterviewRecords(ctx context.Context, userID uint, page, pageSize *int32) ([]*interviewsapi.InterviewRecordDTO, int64, error) {
 	records, total, err := model.InterviewRecordDao.ListInterviewRecords(userID, page, pageSize)
 	if err != nil {
 		return nil, 0, err

@@ -63,7 +63,7 @@ func (i *_InterviewRecord) GetInterviewRecordByID(id uint64) (*InterviewRecord, 
 }
 
 // ListInterviewRecords 查询用户的面试记录列表
-func (i *_InterviewRecord) ListInterviewRecords(userID uint, page, pageSize int) ([]*InterviewRecord, int64, error) {
+func (i *_InterviewRecord) ListInterviewRecords(userID uint, page, pageSize *int32) ([]*InterviewRecord, int64, error) {
 	if getDB == nil {
 		panic("getDB function not initialized, please call model.SetDBGetter first")
 	}
@@ -78,8 +78,8 @@ func (i *_InterviewRecord) ListInterviewRecords(userID uint, page, pageSize int)
 	}
 
 	// 分页查询
-	if err := query.Offset((page - 1) * pageSize).
-		Limit(pageSize).
+	if err := query.Offset(int((*page - 1) * *pageSize)).
+		Limit(int(*pageSize)).
 		Order("created_at DESC").
 		Find(&records).Error; err != nil {
 		return nil, 0, err
