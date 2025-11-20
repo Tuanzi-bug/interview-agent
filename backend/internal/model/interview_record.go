@@ -12,21 +12,27 @@ type (
 	_InterviewRecord struct {
 	}
 	InterviewRecord struct {
-		ID             uint64     `json:"id" gorm:"primaryKey;autoIncrement"`
-		UserID         uint       `json:"user_id" gorm:"index;not null;comment:用户ID"`
-		Title          string     `json:"title" gorm:"size:255;not null;comment:面试标题"`
-		Query          string     `json:"query" gorm:"type:text;not null;comment:初始查询/问题"`
-		Messages       string     `json:"messages" gorm:"type:json;comment:对话历史（JSON格式）"`
-		Report         string     `json:"report" gorm:"type:text;comment:最终报告"`
-		Status         string     `json:"status" gorm:"size:50;not null;default:'pending';comment:面试状态（pending/resume_analysis/question_generation/answer_evaluation/report_generation/completed）"`
-		CurrentAgent   string     `json:"current_agent" gorm:"size:100;comment:当前活跃的Agent名称"`
-		Duration       int64      `json:"duration" gorm:"comment:面试耗时（秒）"`
-		Score          *float64   `json:"score" gorm:"comment:面试评分"`
-		Feedback       string     `json:"feedback" gorm:"type:text;comment:反馈信息"`
-		LastModifiedAt time.Time  `json:"last_modified_at" gorm:"autoCreateTime:milli;comment:最后修改时间戳，用于并发控制"`
-		CreatedAt      time.Time  `json:"created_at" gorm:"autoCreateTime:milli"`
-		UpdatedAt      time.Time  `json:"updated_at" gorm:"autoUpdateTime:milli"`
-		CompletedAt    *time.Time `json:"completed_at" gorm:"comment:完成时间"`
+		ID                uint64     `json:"id" gorm:"primaryKey;autoIncrement;comment:面试主表"`
+		UserID            uint       `json:"user_id" gorm:"index;not null;comment:用户ID"`
+		Title             string     `json:"title" gorm:"size:255;not null;comment:面试标题"`
+		Type              string     `json:"type" gorm:"size:255;not null;comment:面试类型(综合面试、专项面试)"`
+		Domain            string     `json:"domain" gorm:"size:255;not null;comment:专项面试"`
+		Difficulty        string     `json:"difficulty" gorm:"size:128;not null;comment:难度级别（简单、中等、困难）"`
+		CompanyName       string     `json:"company_name" gorm:"size:128;comment:公司名称"`
+		PositionName      string     `json:"position_name" gorm:"size:128;comment:岗位名称"`
+		InterviewDuration string     `json:"interview_duration" gorm:"size:128;comment:面试时长"`
+		Query             string     `json:"query" gorm:"type:text;not null;comment:初始查询/问题"`
+		Messages          string     `json:"messages" gorm:"type:json;comment:对话历史（JSON格式）"`
+		Report            string     `json:"report" gorm:"type:text;comment:最终报告"`
+		Status            string     `json:"status" gorm:"size:50;not null;default:'pending';comment:面试状态（pending/resume_analysis/question_generation/answer_evaluation/report_generation/completed）"`
+		CurrentAgent      string     `json:"current_agent" gorm:"size:100;comment:当前活跃的Agent名称"`
+		Duration          int64      `json:"duration" gorm:"comment:面试耗时（秒）"`
+		Score             *float64   `json:"score" gorm:"comment:面试评分"`
+		Feedback          string     `json:"feedback" gorm:"type:text;comment:反馈信息"`
+		LastModifiedAt    time.Time  `json:"last_modified_at" gorm:"autoCreateTime:milli;comment:最后修改时间戳，用于并发控制"`
+		CreatedAt         time.Time  `json:"created_at" gorm:"autoCreateTime:milli"`
+		UpdatedAt         time.Time  `json:"updated_at" gorm:"autoUpdateTime:milli"`
+		CompletedAt       *time.Time `json:"completed_at" gorm:"comment:完成时间"`
 	}
 )
 
@@ -57,7 +63,7 @@ func (i *_InterviewRecord) GetInterviewRecordByID(id uint64) (*InterviewRecord, 
 }
 
 // ListInterviewRecords 查询用户的面试记录列表
-func (i *_InterviewRecord) ListInterviewRecords(userID uint, page, pageSize int) ([]*InterviewRecord, int64, error) {
+func (i *_InterviewRecord) ListInterviewRecords(userID uint, page, pageSize *int32) ([]*InterviewRecord, int64, error) {
 	if getDB == nil {
 		panic("getDB function not initialized, please call model.SetDBGetter first")
 	}
@@ -72,8 +78,8 @@ func (i *_InterviewRecord) ListInterviewRecords(userID uint, page, pageSize int)
 	}
 
 	// 分页查询
-	if err := query.Offset((page - 1) * pageSize).
-		Limit(pageSize).
+	if err := query.Offset(int((*page - 1) * *pageSize)).
+		Limit(int(*pageSize)).
 		Order("created_at DESC").
 		Find(&records).Error; err != nil {
 		return nil, 0, err

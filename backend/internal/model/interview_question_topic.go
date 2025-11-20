@@ -85,7 +85,7 @@ func (dao *_InterviewQuestionTopic) GetWithDialoguesByUserIDAndReportID(userID u
 		var dialogues []*DialogueWithoutTopic
 		err := getDB().
 			Table("interview_dialogues").
-			Where("topic_id = ?", topic.ID).
+			Where("topic_id = ? and report_id = ?", topic.ID, topic.ReportID).
 			Order("display_order ASC").
 			Scan(&dialogues).Error
 		if err != nil {

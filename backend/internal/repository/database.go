@@ -65,13 +65,13 @@ func migrateDatabase() error {
 		&model.User{},
 		&model.UserModel{},
 		&model.InterviewRecord{},
-		&model.InterviewTitle{},
 		&model.InterviewLabel{},
 		&model.InterviewParse{},
 		&model.UserTitleInteract{},
 		&model.InterviewDialogue{},
 		&model.InterviewQuestionTopic{},
 		&model.InterviewEvaluation{},
+		&model.AnswerReport{},
 	)
 }
 

@@ -205,6 +205,7 @@ func (s *InterviewServiceImpl) SaveInterviewDialogues(ctx context.Context, userI
 			dialogueMap[displayOrder] = &model.InterviewDialogue{
 				UserID:       userID,
 				TopicID:      topic.ID,
+				ReportID:     recordID,
 				Question:     "",
 				Answer:       "",
 				DisplayOrder: displayOrder,
@@ -322,7 +323,7 @@ func toFloat64(v interface{}) float64 {
 	return 0
 }
 
-func (s *InterviewServiceImpl) ListInterviewRecords(ctx context.Context, userID uint, page, pageSize int) ([]*interviewsapi.InterviewRecordDTO, int64, error) {
+func (s *InterviewServiceImpl) ListInterviewRecords(ctx context.Context, userID uint, page, pageSize *int32) ([]*interviewsapi.InterviewRecordDTO, int64, error) {
 	records, total, err := model.InterviewRecordDao.ListInterviewRecords(userID, page, pageSize)
 	if err != nil {
 		return nil, 0, err
@@ -487,5 +488,25 @@ func (s *InterviewServiceImpl) GetInterviewEvaluation(ctx context.Context, userI
 		"dimensions": evaluation.Dimensions,
 		"created_at": evaluation.CreatedAt,
 		"updated_at": evaluation.UpdatedAt,
+	}, nil
+}
+
+// GetAnswerReport 根据用户ID和报告ID获取答题报告
+func (s *InterviewServiceImpl) GetAnswerReport(ctx context.Context, userID uint, reportID uint64) (interface{}, error) {
+	report, err := model.AnswerReportDao.GetAnswerReportByUserIDAndReportID(userID, reportID)
+	if err != nil {
+		log.Printf("[GetAnswerReport] 获取答题报告失败: %v", err)
+		return nil, err
+	}
+
+	// 返回答题报告数据
+	return map[string]interface{}{
+		"id":         report.ID,
+		"user_id":    report.UserID,
+		"report_id":  report.ReportID,
+		"records":    report.Records,
+		"deleted":    report.Deleted,
+		"created_at": report.CreatedAt,
+		"updated_at": report.UpdatedAt,
 	}, nil
 }
