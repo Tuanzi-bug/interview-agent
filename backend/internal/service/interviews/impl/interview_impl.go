@@ -51,6 +51,7 @@ func (s *InterviewServiceImpl) CreateInterviewRecord(ctx context.Context, dto *i
 		Title:             dto.Title,
 		Type:              dto.Type,
 		Difficulty:        dto.Difficulty,
+		Domain:            dto.Domain,
 		CompanyName:       companyName,
 		PositionName:      positionName,
 		InterviewDuration: interviewDuration,
@@ -97,6 +98,7 @@ func (s *InterviewServiceImpl) UpdateInterviewRecord(ctx context.Context, dto *i
 		Title:             dto.Title,
 		Type:              dto.Type,
 		Difficulty:        dto.Difficulty,
+		Domain:            dto.Domain,
 		CompanyName:       companyName,
 		PositionName:      positionName,
 		InterviewDuration: interviewDuration,
@@ -153,6 +155,7 @@ func convertToInterviewRecordDTO(record *model.InterviewRecord) *interviewsapi.I
 	dto.Title = record.Title
 	dto.Type = record.Type
 	dto.Difficulty = record.Difficulty
+	dto.Domain = record.Domain
 	dto.Status = record.Status
 
 	if record.CompanyName != "" {

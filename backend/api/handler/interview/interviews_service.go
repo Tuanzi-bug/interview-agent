@@ -87,6 +87,7 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		Title:        req.Title,
 		Type:         req.Type,
 		Difficulty:   req.Difficulty,
+		Domain:       req.Domain,
 		PositionName: req.PositionName,
 		CompanyName:  req.CompanyName,
 		Status:       "pending",

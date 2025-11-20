@@ -39,13 +39,14 @@ struct InterviewRecordDTO {
     3: required string title                // 面试标题
     4: required string type                 // 面试类型(综合面试、专项面试)
     5: required string difficulty           // 面试难度(简单、中等、困难)
-    6: optional string company_name         // 公司名称
-    7: optional string position_name        // 岗位名称
-    8: optional string interview_duration   // 面试时长
-    9: required string status               // 面试状态(pending/completed)
-    10: optional i64   duration             // 面试耗时（秒）
-    11: optional i64   created_at           // 创建时间（毫秒时间戳）
-    12: optional i64   updated_at           // 更新时间（毫秒时间戳）
+    6: required string domain               // 面试领域(校招、社招；java、golang)
+    7: optional string company_name         // 公司名称
+    8: optional string position_name        // 岗位名称
+    9: optional string interview_duration   // 面试时长
+    10: required string status              // 面试状态(pending/completed)
+    11: optional i64   duration             // 面试耗时（秒）
+    12: optional i64   created_at           // 创建时间（毫秒时间戳）
+    13: optional i64   updated_at           // 更新时间（毫秒时间戳）
 }
 
 // ==================== 请求和响应结构 ====================
