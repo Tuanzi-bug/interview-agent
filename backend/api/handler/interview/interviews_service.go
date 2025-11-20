@@ -98,12 +98,12 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		response.InternalServerError(ctx, c, "Failed to create interview record: "+err.Error())
 		return
 	}
-
-	hasResume := req.Query != "" || resumeFilePath != ""
+	query := req.Type + req.Domain + req.Difficulty //todo 优化拼接
+	hasResume := query != "" || resumeFilePath != ""
 
 	// 6. 创建会话
 	sm := GetSessionManager()
-	session := sm.CreateSession(userID, recordID, resumeFilePath, hasResume, req.Query)
+	session := sm.CreateSession(userID, recordID, resumeFilePath, hasResume, query)
 
 	// 7. 使用 io.Pipe 创建流式响应
 	pipeReader, pipeWriter := io.Pipe()

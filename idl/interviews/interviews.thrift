@@ -54,7 +54,6 @@ struct InterviewRecordDTO {
 // 启动面试请求
 struct StartInterviewRequest {
     1: required string title (api.body="title")  // 面试标题
-    2: required string query (api.body="query")  // 用户输入的查询
     3: required string type (api.body="type")  // 面试类型(综合面试、专项面试)
     4: required string domain (api.body="domain")  // 面试领域（综合面试对应：校招、社招；专项面试对应java、golang等)
     5: required string difficulty (api.body="difficulty")  // 难度级别（简单、中等、困难）
