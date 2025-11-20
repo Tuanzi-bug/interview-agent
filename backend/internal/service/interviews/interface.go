@@ -14,6 +14,9 @@ func NewInterviewService() InterviewService {
 // InterviewService 面试服务接口
 type InterviewService interface {
 
+	// CreateInterviewRecord 创建面试记录，返回记录ID
+	CreateInterviewRecord(ctx context.Context, record *interviewsapi.InterviewRecordDTO) (uint64, error)
+
 	// SaveInterviewDialogues 保存面试对话和问题主题
 	SaveInterviewDialogues(ctx context.Context, userID uint, recordID uint64, questions []interface{}, dialogues []interface{}) error
 

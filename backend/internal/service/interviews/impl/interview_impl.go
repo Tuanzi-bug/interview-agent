@@ -19,6 +19,81 @@ func NewInterviewServiceImpl() *InterviewServiceImpl {
 	return &InterviewServiceImpl{}
 }
 
+// CreateInterviewRecord 创建面试记录，返回记录ID
+func (s *InterviewServiceImpl) CreateInterviewRecord(ctx context.Context, dto *interviewsapi.InterviewRecordDTO) (uint64, error) {
+	now := time.Now()
+
+	// 处理指针类型字段，提取值或使用默认值
+	companyName := ""
+	if dto.CompanyName != nil {
+		companyName = *dto.CompanyName
+	}
+
+	positionName := ""
+	if dto.PositionName != nil {
+		positionName = *dto.PositionName
+	}
+
+	interviewDuration := ""
+	if dto.InterviewDuration != nil {
+		interviewDuration = *dto.InterviewDuration
+	}
+
+	messages := "[]"
+	if dto.Messages != nil && *dto.Messages != "" {
+		messages = *dto.Messages
+	}
+
+	report := ""
+	if dto.Report != nil {
+		report = *dto.Report
+	}
+
+	currentAgent := ""
+	if dto.CurrentAgent != nil {
+		currentAgent = *dto.CurrentAgent
+	}
+
+	var duration int64 = 0
+	if dto.Duration != nil {
+		duration = *dto.Duration
+	}
+
+	feedback := ""
+	if dto.Feedback != nil {
+		feedback = *dto.Feedback
+	}
+
+	record := &model.InterviewRecord{
+		UserID:            uint(dto.UserID),
+		Title:             dto.Title,
+		Type:              dto.Type,
+		Domain:            dto.Domain,
+		Difficulty:        dto.Difficulty,
+		CompanyName:       companyName,
+		PositionName:      positionName,
+		InterviewDuration: interviewDuration,
+		Query:             dto.Query,
+		Messages:          messages,
+		Report:            report,
+		Status:            dto.Status,
+		CurrentAgent:      currentAgent,
+		Duration:          duration,
+		Score:             dto.Score,
+		Feedback:          feedback,
+		LastModifiedAt:    now,
+	}
+
+	recordID, err := model.InterviewRecordDao.CreateInterviewRecord(record)
+	if err != nil {
+		log.Printf("[CreateInterviewRecord] 创建面试记录失败: %v", err)
+		return 0, err
+	}
+
+	log.Printf("[CreateInterviewRecord] 面试记录创建成功，ID: %d，用户ID: %d，标题: %s", recordID, dto.UserID, dto.Title)
+	return recordID, nil
+}
+
 //
 //// StartInterviewStream 启动面试流程（流式）
 //func (s *InterviewServiceImpl) StartInterviewStream(ctx context.Context, req *interviewsapi.StartInterviewRequest, maxQuestions int) (<-chan *interviewsapi.InterviewEvent, error) {

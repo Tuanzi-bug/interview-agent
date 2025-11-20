@@ -41,12 +41,15 @@ func (i *InterviewRecord) TableName() string {
 	return "interview_record"
 }
 
-// CreateInterviewRecord 创建面试记录
-func (i *_InterviewRecord) CreateInterviewRecord(record *InterviewRecord) error {
+// CreateInterviewRecord 创建面试记录，返回记录ID
+func (i *_InterviewRecord) CreateInterviewRecord(record *InterviewRecord) (uint64, error) {
 	if getDB == nil {
 		panic("getDB function not initialized, please call model.SetDBGetter first")
 	}
-	return getDB().Create(record).Error
+	if err := getDB().Create(record).Error; err != nil {
+		return 0, err
+	}
+	return record.ID, nil
 }
 
 // GetInterviewRecordByID 根据ID查询面试记录
