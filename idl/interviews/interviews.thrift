@@ -123,6 +123,44 @@ struct GetInterviewEvaluationResponse {
     2: required list<EvaluationDimension> dimensions   // 各维度评估列表
 }
 
+// 答题记录中的单条对话
+struct AnswerRecordMessage {
+    1: required i32 order       // 对话顺序
+    2: required string question // 提问内容
+    3: required string answer   // 回答内容
+}
+
+// 答题记录中的评论信息
+struct AnswerRecordComment {
+    1: required i32 score           // 评分
+    2: required string key_points   // 关键点
+    3: required string difficulty   // 难度等级
+    4: required string strengths    // 优势
+    5: required string weaknesses   // 不足
+    6: required string suggestion   // 建议
+    7: required string know_points  // 知识点
+    8: required string thinking     // 思考过程
+    9: required string reference    // 参考答案
+}
+
+// 单个答题记录
+struct AnswerRecord {
+    1: required i32 order                           // 问题顺序
+    2: required string content                      // 问题内容
+    3: required AnswerRecordComment comment         // 评论信息
+    4: required list<AnswerRecordMessage> message   // 对话列表
+}
+
+// 获取答题记录请求
+struct GetAnswerRecordRequest {
+    1: required i64 report_id (api.query="report_id")  // 面试报告ID
+}
+
+// 获取答题记录响应
+struct GetAnswerRecordResponse {
+    1: required list<AnswerRecord> records  // 答题记录列表
+}
+
 
 
 // ==================== 服务定义 ====================
@@ -145,6 +183,13 @@ service InterviewsService {
     // 获取面试评估
     GetInterviewEvaluationResponse GetInterviewEvaluation(1: GetInterviewEvaluationRequest request) (
         api.get="/api/interview/evaluation",
+        api.category="interviews",
+        api.gen_path="interviews"
+    )
+
+    // 获取答题记录
+    GetAnswerRecordResponse GetAnswerRecord(1: GetAnswerRecordRequest request) (
+        api.get="/api/interview/answer-record",
         api.category="interviews",
         api.gen_path="interviews"
     )

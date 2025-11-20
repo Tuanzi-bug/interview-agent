@@ -72,6 +72,7 @@ func migrateDatabase() error {
 		&model.InterviewDialogue{},
 		&model.InterviewQuestionTopic{},
 		&model.InterviewEvaluation{},
+		&model.AnswerReport{},
 	)
 }
 

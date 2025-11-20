@@ -804,3 +804,33 @@ func GetMockInterviewRecords(ctx context.Context, c *app.RequestContext) {
 	// 直接返回mock数据
 	response.Success(ctx, c, mockRecords)
 }
+
+// GetAnswerRecord .
+// @router /api/interview/answer-record [GET]
+func GetAnswerRecord(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req interviewsapi.GetAnswerRecordRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
+		return
+	}
+	userId := middleware.GetUserID(c)
+	if userId == 0 {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+
+	reportID := uint64(req.ReportID)
+	interviewService := interviewservice.NewInterviewService()
+	res, err := interviewService.GetAnswerReport(ctx, userId, reportID)
+	if err == nil && res != nil {
+		response.Success(ctx, c, res)
+	}
+	resp, err := ext.GenerateInterviewTopicEvaluation(ctx, userId, reportID)
+	if err != nil {
+		response.InternalServerError(ctx, c, "Failed to generate evaluation: "+err.Error())
+		return
+	}
+	response.Success(ctx, c, resp)
+}

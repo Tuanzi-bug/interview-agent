@@ -23,4 +23,7 @@ type InterviewService interface {
 
 	// GetInterviewEvaluation 根据用户ID和报告ID获取面试评估报告
 	GetInterviewEvaluation(ctx context.Context, userID uint, reportID uint64) (interface{}, error)
+
+	// GetAnswerReport 根据用户ID和报告ID获取答题报告
+	GetAnswerReport(ctx context.Context, userID uint, reportID uint64) (interface{}, error)
 }

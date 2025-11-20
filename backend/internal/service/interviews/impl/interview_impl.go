@@ -490,3 +490,23 @@ func (s *InterviewServiceImpl) GetInterviewEvaluation(ctx context.Context, userI
 		"updated_at": evaluation.UpdatedAt,
 	}, nil
 }
+
+// GetAnswerReport 根据用户ID和报告ID获取答题报告
+func (s *InterviewServiceImpl) GetAnswerReport(ctx context.Context, userID uint, reportID uint64) (interface{}, error) {
+	report, err := model.AnswerReportDao.GetAnswerReportByUserIDAndReportID(userID, reportID)
+	if err != nil {
+		log.Printf("[GetAnswerReport] 获取答题报告失败: %v", err)
+		return nil, err
+	}
+
+	// 返回答题报告数据
+	return map[string]interface{}{
+		"id":         report.ID,
+		"user_id":    report.UserID,
+		"report_id":  report.ReportID,
+		"records":    report.Records,
+		"deleted":    report.Deleted,
+		"created_at": report.CreatedAt,
+		"updated_at": report.UpdatedAt,
+	}, nil
+}
