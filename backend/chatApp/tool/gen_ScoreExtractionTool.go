@@ -42,7 +42,8 @@ func ScoreExtraction(_ context.Context, req *ScoreExtractionRequest) (*ScoreExtr
 		}, errors.New("参数错误：请求体不能为空")
 	}
 
-	// 这里可以调用 LLM 或规则引擎提取分数
+	// todo 这里可以调用 LLM 或规则引擎提取分数
+
 	// 示例返回结构
 	return &ScoreExtractionResponse{
 		Success:      true,

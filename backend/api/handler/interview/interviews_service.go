@@ -227,7 +227,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 	const answerTimeout = 30 * time.Minute     // 等待答案的超时时间
 	const heartbeatInterval = 30 * time.Second // 心跳间隔
 
-	// 6 个评估维度
+	// 6 个评估维度 todo 综合面试和专项面试考察的维度是不一样的
 	dimensions := []string{
 		"professional_field",
 		"project_experience",
@@ -267,9 +267,9 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 
 			// 保存用户答案（与提问使用相同的 displayOrder）
 			session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
-				"speaker_type":  "candidate",
+				"speaker_type":  "candidate", //应聘者
 				"content":       answer,
-				"display_order": uint32(questionIndex)*100 + uint32(followUpCount),
+				"display_order": uint32(questionIndex)*100 + uint32(followUpCount), //排序
 			})
 
 			// 检查是否需要追问
@@ -290,7 +290,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 			}
 		}
 
-		// 如果是第一个问题或继续追问，不递增 questionIndex（在切换维度时已经递增）
+		// 如果是第一个问题或继续追问，不递增；    questionIndex（在切换维度时已经递增）
 		if questionIndex == 0 {
 			questionIndex++
 		}
@@ -386,6 +386,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 	}
 
 	// 保存数据到数据库
+	//todo 保存到主库中的逻辑和下面已有的逻辑分开实现
 	if err := interviewService.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, session.AllQuestions, session.AllDialogues); err != nil {
 		_ = err
 	}
@@ -650,7 +651,7 @@ func sendReadyEventWithSession(writer io.Writer, questionIndex int, sessionID st
 	})
 }
 
-// sendTopicCompleteEvent 发送主题完成事件
+// sendTopicCompleteEvent 发送主题完成事件（主题就是维度）
 func sendTopicCompleteEvent(writer io.Writer) {
 	sendSSEEvent(writer, map[string]interface{}{
 		"type":    "topic_complete",

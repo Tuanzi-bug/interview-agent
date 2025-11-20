@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ai-eino-interview-agent/api/handler/interview"
 	"ai-eino-interview-agent/api/router"
 	interviewRouter "ai-eino-interview-agent/api/router/interview"
 	"ai-eino-interview-agent/internal/config"
