@@ -91,14 +91,6 @@ func (dao *_AnswerReport) GetAnswerReportByUserIDAndReportID(userID uint, report
 	return report, err
 }
 
-// UpdateAnswerReport 更新答题报告
-func (dao *_AnswerReport) UpdateAnswerReport(report *AnswerReport) error {
-	if getDB == nil {
-		panic("getDB function not initialized, please call model.SetDBGetter first")
-	}
-	return getDB().Model(report).Updates(report).Error
-}
-
 // DeleteAnswerReport 软删除答题报告
 func (dao *_AnswerReport) DeleteAnswerReport(id uint64) error {
 	if getDB == nil {

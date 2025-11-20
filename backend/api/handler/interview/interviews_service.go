@@ -7,6 +7,7 @@ import (
 	"ai-eino-interview-agent/api/response"
 	"ai-eino-interview-agent/chatApp/agent/ext"
 	"ai-eino-interview-agent/internal/middleware"
+	"ai-eino-interview-agent/internal/model"
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
 	"context"
 	"encoding/json"
@@ -824,9 +825,20 @@ func GetAnswerRecord(ctx context.Context, c *app.RequestContext) {
 	reportID := uint64(req.ReportID)
 	interviewService := interviewservice.NewInterviewService()
 	res, err := interviewService.GetAnswerReport(ctx, userId, reportID)
+
+	// 如果数据库中已有数据且 records 不为空，直接返回
 	if err == nil && res != nil {
-		response.Success(ctx, c, res)
+		resMap, ok := res.(map[string]interface{})
+		if ok {
+			records, ok := resMap["records"].([]*model.AnswerRecordItem)
+			if ok && len(records) > 0 {
+				response.Success(ctx, c, res)
+				return
+			}
+		}
 	}
+
+	// 调用智能体生成评估
 	resp, err := ext.GenerateInterviewTopicEvaluation(ctx, userId, reportID)
 	if err != nil {
 		response.InternalServerError(ctx, c, "Failed to generate evaluation: "+err.Error())

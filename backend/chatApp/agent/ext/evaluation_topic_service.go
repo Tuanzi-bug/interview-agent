@@ -16,8 +16,8 @@ import (
 // GenerateInterviewTopicEvaluation 调用主题评估智能体生成答题记录评估
 // 返回答题记录响应数据，并将评估结果保存到数据库
 func GenerateInterviewTopicEvaluation(ctx context.Context, userId uint, reportId uint64) (*model.AnswerReport, error) {
-	// 添加 120 秒超时
-	timeoutCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	// 添加 300 秒超时（5分钟）- 评估需要调用工具和生成详细内容
+	timeoutCtx, cancel := context.WithTimeout(ctx, 300*time.Second)
 	defer cancel()
 
 	// 创建主题评估智能体
@@ -67,8 +67,8 @@ func GenerateInterviewTopicEvaluation(ctx context.Context, userId uint, reportId
 	for {
 		select {
 		case <-timeoutCtx.Done():
-			log.Printf("[GenerateInterviewTopicEvaluation] 超时：等待智能体响应超过 120 秒")
-			return nil, fmt.Errorf("timeout waiting for topic evaluation (120s)")
+			log.Printf("[GenerateInterviewTopicEvaluation] 超时：等待智能体响应超过 300 秒")
+			return nil, fmt.Errorf("timeout waiting for topic evaluation (300s)")
 		default:
 		}
 
