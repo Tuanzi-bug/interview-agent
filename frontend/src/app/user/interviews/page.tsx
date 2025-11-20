@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Typography, Row, Col, Card as AntCard, Slider, DatePicker, Select, Empty, Button, Table, Tag, Space, message } from 'antd';
+import { Typography, Row, Col, Card as AntCard, Slider, DatePicker, Select, Empty, Button, Tag, Space, message, Avatar } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import apiClient from '@/services/api/client';
@@ -17,6 +17,7 @@ export default function InterviewRecordsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
+  const [mockList, setMockList] = useState<any[]>([]);
 
   const fetchList = async (p = page, s = pageSize) => {
     setLoading(true);
@@ -40,26 +41,41 @@ export default function InterviewRecordsPage() {
     }
   };
 
+  const fetchMockList = async () => {
+    setLoading(true);
+    try {
+      const res: any = await apiClient.get('/interview/records/mock');
+      const data = res?.data || res;
+      const arr = Array.isArray(data) ? data : (data?.data || []);
+      setMockList(arr);
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || '加载面试记录失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchList(page, pageSize);
+    fetchMockList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize]);
 
-  const completedCount = useMemo(() => list.filter(i => (i.status || '').toLowerCase() === 'completed').length, [list]);
+  const completedCount = useMemo(() => mockList.length, [mockList]);
   const averageScore = useMemo(() => {
-    const scores = list.map(i => Number(i.score)).filter(s => !isNaN(s));
+    const scores = mockList.map(i => Number(i.score)).filter(s => !isNaN(s));
     if (scores.length === 0) return 0;
     return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10;
-  }, [list]);
-  const filteredList = useMemo(() => {
+  }, [mockList]);
+  const filteredMockList = useMemo(() => {
     const min = scoreRange?.[0] ?? 0;
     const max = scoreRange?.[1] ?? 100;
-    return list.filter(it => {
-      const s = Number(it.score);
+    return mockList.filter(it => {
+      const s = Number(it?.score);
       if (isNaN(s)) return true;
       return s >= min && s <= max;
     });
-  }, [list, scoreRange]);
+  }, [mockList, scoreRange]);
 
   return (
     <div className="container mx-auto px-4">
@@ -110,7 +126,7 @@ export default function InterviewRecordsPage() {
         </div>
 
         <div className="mt-8">
-          {list.length === 0 ? (
+          {filteredMockList.length === 0 ? (
             <Empty
               imageStyle={{ height: 120 }}
               description={
@@ -123,22 +139,34 @@ export default function InterviewRecordsPage() {
               }
             />
           ) : (
-            <AntCard className="rounded-2xl">
-              <Table
-                rowKey="id"
-                loading={loading}
-                dataSource={filteredList}
-                pagination={{ current: page, pageSize, total, onChange: setPage, showSizeChanger: true, onShowSizeChange: (_c, s) => setPageSize(s) }}
-                columns={[
-                  { title: '标题', dataIndex: 'title' },
-                  { title: '状态', dataIndex: 'status', render: (v: string) => <Tag color={String(v).toLowerCase() === 'completed' ? 'green' : 'blue'}>{v || '-'}</Tag> },
-                  { title: '分数', dataIndex: 'score', render: (v: any) => (v !== undefined && v !== null ? v : '-') },
-                  { title: '耗时(秒)', dataIndex: 'duration', render: (v: any) => (v !== undefined && v !== null ? v : '-') },
-                  { title: '创建时间', dataIndex: 'createdAt', render: (ts: any) => (ts ? (typeof ts === 'number' ? new Date(ts).toLocaleString() : String(ts)) : '-') },
-                  { title: '操作', render: (_: any, row: any) => <Space><Link href={`/user/interviews/${row.id}`}>查看详情</Link></Space> },
-                ]}
-              />
-            </AntCard>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredMockList.map((it: any, idx: number) => {
+                const avatar = String(it?.avatar_url || '').replace(/[`\s]/g, '');
+                return (
+                  <AntCard key={idx} className="rounded-2xl" styles={{ body: { padding: 16 } }} style={{ minWidth: 300, minHeight: 300 }}>
+                    <div className="flex items-start gap-3">
+                      <Avatar src={avatar} size={56} />
+                      <div className="flex-1">
+                        <div className="text-xl font-semibold">{it?.interview_type || '-'}</div>
+                      </div>
+                      <div className="text-base font-medium text-green-700">{`测试分数：${it?.score ?? '-'}`}</div>
+                    </div>
+                    <div className="mt-4 space-y-2 text-sm">
+                      <div>公司名称：{it?.company_name || '-'}</div>
+                      <div>岗位名称：{it?.position_name || '-'}</div>
+                      <div>难度等级：{it?.difficulty || '-'}</div>
+                      <div>简历名称：{it?.resume_name || '-'}</div>
+                      <div>测试时间：{it?.interview_time || '-'}</div>
+                    </div>
+                    <div className="mt-4">
+                      <Link href={`/user/interviews/results/${idx + 1}`} className="inline-block">
+                        <Button type="primary">查看面试结果</Button>
+                      </Link>
+                    </div>
+                  </AntCard>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
