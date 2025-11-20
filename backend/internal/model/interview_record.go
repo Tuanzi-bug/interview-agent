@@ -16,7 +16,7 @@ type (
 		UserID            uint       `json:"user_id" gorm:"index;not null;comment:用户ID"`
 		Title             string     `json:"title" gorm:"size:255;not null;comment:面试标题"`
 		Type              string     `json:"type" gorm:"size:255;not null;comment:面试类型(综合面试、专项面试)"`
-		Domain            string     `json:"domain" gorm:"size:255;not null;comment:面试领域(校招、社招；java、golang)"`
+		Domain            string     `json:"domain" gorm:"size:255;not null;comment:专项面试"`
 		Difficulty        string     `json:"difficulty" gorm:"size:128;not null;comment:难度级别（简单、中等、困难）"`
 		CompanyName       string     `json:"company_name" gorm:"size:128;comment:公司名称"`
 		PositionName      string     `json:"position_name" gorm:"size:128;comment:岗位名称"`
