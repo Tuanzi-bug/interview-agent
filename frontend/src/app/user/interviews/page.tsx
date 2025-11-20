@@ -156,7 +156,6 @@ export default function InterviewRecordsPage() {
                       <div>岗位名称：{it?.position_name || '-'}</div>
                       <div>难度等级：{it?.difficulty || '-'}</div>
                       <div>简历名称：{it?.resume_name || '-'}</div>
-                      <div>测试时间：{it?.interview_time || '-'}</div>
                     </div>
                     <div className="mt-4">
                       <Link href={`/user/interviews/results/${idx + 1}`} className="inline-block">
