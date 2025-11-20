@@ -1353,20 +1353,22 @@ type InterviewRecordDTO struct {
 	Type string `thrift:"type,4,required" form:"type,required" json:"type,required" query:"type,required"`
 	// 面试难度(简单、中等、困难)
 	Difficulty string `thrift:"difficulty,5,required" form:"difficulty,required" json:"difficulty,required" query:"difficulty,required"`
+	// 面试领域(校招、社招；java、golang)
+	Domain string `thrift:"domain,6,required" form:"domain,required" json:"domain,required" query:"domain,required"`
 	// 公司名称
-	CompanyName *string `thrift:"company_name,6,optional" form:"company_name" json:"company_name,omitempty" query:"company_name"`
+	CompanyName *string `thrift:"company_name,7,optional" form:"company_name" json:"company_name,omitempty" query:"company_name"`
 	// 岗位名称
-	PositionName *string `thrift:"position_name,7,optional" form:"position_name" json:"position_name,omitempty" query:"position_name"`
+	PositionName *string `thrift:"position_name,8,optional" form:"position_name" json:"position_name,omitempty" query:"position_name"`
 	// 面试时长
-	InterviewDuration *string `thrift:"interview_duration,8,optional" form:"interview_duration" json:"interview_duration,omitempty" query:"interview_duration"`
+	InterviewDuration *string `thrift:"interview_duration,9,optional" form:"interview_duration" json:"interview_duration,omitempty" query:"interview_duration"`
 	// 面试状态(pending/completed)
-	Status string `thrift:"status,9,required" form:"status,required" json:"status,required" query:"status,required"`
+	Status string `thrift:"status,10,required" form:"status,required" json:"status,required" query:"status,required"`
 	// 面试耗时（秒）
-	Duration *int64 `thrift:"duration,10,optional" form:"duration" json:"duration,omitempty" query:"duration"`
+	Duration *int64 `thrift:"duration,11,optional" form:"duration" json:"duration,omitempty" query:"duration"`
 	// 创建时间（毫秒时间戳）
-	CreatedAt *int64 `thrift:"created_at,11,optional" form:"created_at" json:"created_at,omitempty" query:"created_at"`
+	CreatedAt *int64 `thrift:"created_at,12,optional" form:"created_at" json:"created_at,omitempty" query:"created_at"`
 	// 更新时间（毫秒时间戳）
-	UpdatedAt *int64 `thrift:"updated_at,12,optional" form:"updated_at" json:"updated_at,omitempty" query:"updated_at"`
+	UpdatedAt *int64 `thrift:"updated_at,13,optional" form:"updated_at" json:"updated_at,omitempty" query:"updated_at"`
 }
 
 func NewInterviewRecordDTO() *InterviewRecordDTO {
@@ -1394,6 +1396,10 @@ func (p *InterviewRecordDTO) GetType() (v string) {
 
 func (p *InterviewRecordDTO) GetDifficulty() (v string) {
 	return p.Difficulty
+}
+
+func (p *InterviewRecordDTO) GetDomain() (v string) {
+	return p.Domain
 }
 
 var InterviewRecordDTO_CompanyName_DEFAULT string
@@ -1460,13 +1466,14 @@ var fieldIDToName_InterviewRecordDTO = map[int16]string{
 	3:  "title",
 	4:  "type",
 	5:  "difficulty",
-	6:  "company_name",
-	7:  "position_name",
-	8:  "interview_duration",
-	9:  "status",
-	10: "duration",
-	11: "created_at",
-	12: "updated_at",
+	6:  "domain",
+	7:  "company_name",
+	8:  "position_name",
+	9:  "interview_duration",
+	10: "status",
+	11: "duration",
+	12: "created_at",
+	13: "updated_at",
 }
 
 func (p *InterviewRecordDTO) IsSetCompanyName() bool {
@@ -1502,6 +1509,7 @@ func (p *InterviewRecordDTO) Read(iprot thrift.TProtocol) (err error) {
 	var issetTitle bool = false
 	var issetType bool = false
 	var issetDifficulty bool = false
+	var issetDomain bool = false
 	var issetStatus bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
@@ -1568,6 +1576,7 @@ func (p *InterviewRecordDTO) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
+				issetDomain = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -1592,15 +1601,15 @@ func (p *InterviewRecordDTO) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetStatus = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
 		case 10:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
+				issetStatus = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -1615,6 +1624,14 @@ func (p *InterviewRecordDTO) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1658,8 +1675,13 @@ func (p *InterviewRecordDTO) Read(iprot thrift.TProtocol) (err error) {
 		goto RequiredFieldNotSetError
 	}
 
+	if !issetDomain {
+		fieldId = 6
+		goto RequiredFieldNotSetError
+	}
+
 	if !issetStatus {
-		fieldId = 9
+		fieldId = 10
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -1737,13 +1759,13 @@ func (p *InterviewRecordDTO) ReadField5(iprot thrift.TProtocol) error {
 }
 func (p *InterviewRecordDTO) ReadField6(iprot thrift.TProtocol) error {
 
-	var _field *string
+	var _field string
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		_field = &v
+		_field = v
 	}
-	p.CompanyName = _field
+	p.Domain = _field
 	return nil
 }
 func (p *InterviewRecordDTO) ReadField7(iprot thrift.TProtocol) error {
@@ -1754,7 +1776,7 @@ func (p *InterviewRecordDTO) ReadField7(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.PositionName = _field
+	p.CompanyName = _field
 	return nil
 }
 func (p *InterviewRecordDTO) ReadField8(iprot thrift.TProtocol) error {
@@ -1765,10 +1787,21 @@ func (p *InterviewRecordDTO) ReadField8(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.InterviewDuration = _field
+	p.PositionName = _field
 	return nil
 }
 func (p *InterviewRecordDTO) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.InterviewDuration = _field
+	return nil
+}
+func (p *InterviewRecordDTO) ReadField10(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -1779,7 +1812,7 @@ func (p *InterviewRecordDTO) ReadField9(iprot thrift.TProtocol) error {
 	p.Status = _field
 	return nil
 }
-func (p *InterviewRecordDTO) ReadField10(iprot thrift.TProtocol) error {
+func (p *InterviewRecordDTO) ReadField11(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -1790,7 +1823,7 @@ func (p *InterviewRecordDTO) ReadField10(iprot thrift.TProtocol) error {
 	p.Duration = _field
 	return nil
 }
-func (p *InterviewRecordDTO) ReadField11(iprot thrift.TProtocol) error {
+func (p *InterviewRecordDTO) ReadField12(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -1801,7 +1834,7 @@ func (p *InterviewRecordDTO) ReadField11(iprot thrift.TProtocol) error {
 	p.CreatedAt = _field
 	return nil
 }
-func (p *InterviewRecordDTO) ReadField12(iprot thrift.TProtocol) error {
+func (p *InterviewRecordDTO) ReadField13(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -1865,6 +1898,10 @@ func (p *InterviewRecordDTO) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -1971,16 +2008,14 @@ WriteFieldEndError:
 }
 
 func (p *InterviewRecordDTO) writeField6(oprot thrift.TProtocol) (err error) {
-	if p.IsSetCompanyName() {
-		if err = oprot.WriteFieldBegin("company_name", thrift.STRING, 6); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.CompanyName); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
+	if err = oprot.WriteFieldBegin("domain", thrift.STRING, 6); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Domain); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
 	}
 	return nil
 WriteFieldBeginError:
@@ -1990,11 +2025,11 @@ WriteFieldEndError:
 }
 
 func (p *InterviewRecordDTO) writeField7(oprot thrift.TProtocol) (err error) {
-	if p.IsSetPositionName() {
-		if err = oprot.WriteFieldBegin("position_name", thrift.STRING, 7); err != nil {
+	if p.IsSetCompanyName() {
+		if err = oprot.WriteFieldBegin("company_name", thrift.STRING, 7); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.PositionName); err != nil {
+		if err := oprot.WriteString(*p.CompanyName); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2009,11 +2044,11 @@ WriteFieldEndError:
 }
 
 func (p *InterviewRecordDTO) writeField8(oprot thrift.TProtocol) (err error) {
-	if p.IsSetInterviewDuration() {
-		if err = oprot.WriteFieldBegin("interview_duration", thrift.STRING, 8); err != nil {
+	if p.IsSetPositionName() {
+		if err = oprot.WriteFieldBegin("position_name", thrift.STRING, 8); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.InterviewDuration); err != nil {
+		if err := oprot.WriteString(*p.PositionName); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2028,7 +2063,26 @@ WriteFieldEndError:
 }
 
 func (p *InterviewRecordDTO) writeField9(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("status", thrift.STRING, 9); err != nil {
+	if p.IsSetInterviewDuration() {
+		if err = oprot.WriteFieldBegin("interview_duration", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.InterviewDuration); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
+func (p *InterviewRecordDTO) writeField10(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("status", thrift.STRING, 10); err != nil {
 		goto WriteFieldBeginError
 	}
 	if err := oprot.WriteString(p.Status); err != nil {
@@ -2039,36 +2093,17 @@ func (p *InterviewRecordDTO) writeField9(oprot thrift.TProtocol) (err error) {
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
-}
-
-func (p *InterviewRecordDTO) writeField10(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDuration() {
-		if err = oprot.WriteFieldBegin("duration", thrift.I64, 10); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.Duration); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 
 func (p *InterviewRecordDTO) writeField11(oprot thrift.TProtocol) (err error) {
-	if p.IsSetCreatedAt() {
-		if err = oprot.WriteFieldBegin("created_at", thrift.I64, 11); err != nil {
+	if p.IsSetDuration() {
+		if err = oprot.WriteFieldBegin("duration", thrift.I64, 11); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.CreatedAt); err != nil {
+		if err := oprot.WriteI64(*p.Duration); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2083,11 +2118,11 @@ WriteFieldEndError:
 }
 
 func (p *InterviewRecordDTO) writeField12(oprot thrift.TProtocol) (err error) {
-	if p.IsSetUpdatedAt() {
-		if err = oprot.WriteFieldBegin("updated_at", thrift.I64, 12); err != nil {
+	if p.IsSetCreatedAt() {
+		if err = oprot.WriteFieldBegin("created_at", thrift.I64, 12); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.UpdatedAt); err != nil {
+		if err := oprot.WriteI64(*p.CreatedAt); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2099,6 +2134,25 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+
+func (p *InterviewRecordDTO) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUpdatedAt() {
+		if err = oprot.WriteFieldBegin("updated_at", thrift.I64, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.UpdatedAt); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 
 func (p *InterviewRecordDTO) String() string {
