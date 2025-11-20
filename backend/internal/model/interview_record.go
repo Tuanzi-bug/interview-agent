@@ -16,6 +16,7 @@ type (
 		Title             string    `json:"title" gorm:"size:255;not null;comment:面试标题"`
 		Type              string    `json:"type" gorm:"size:255;not null;comment:面试类型(综合面试、专项面试)"`
 		Difficulty        string    `json:"difficulty" gorm:"size:128;not null;comment:难度级别（简单、中等、困难）"`
+		Domain            string    `json:" " gorm:"size:255;not null;comment:面试领域(校招、社招；java、golang)"`
 		CompanyName       string    `json:"company_name" gorm:"size:128;comment:公司名称"`
 		PositionName      string    `json:"position_name" gorm:"size:128;comment:岗位名称"`
 		InterviewDuration string    `json:"interview_duration" gorm:"size:128;comment:面试时长"`
@@ -97,6 +98,9 @@ func (i *_InterviewRecord) UpdateInterviewRecord(record *InterviewRecord) error 
 	}
 	if record.Difficulty != "" {
 		updates["difficulty"] = record.Difficulty
+	}
+	if record.Domain != "" {
+		updates["domain"] = record.Domain
 	}
 	if record.CompanyName != "" {
 		updates["company_name"] = record.CompanyName
