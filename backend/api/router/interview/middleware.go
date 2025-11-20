@@ -207,3 +207,8 @@ func _getinterviewrecordsMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _getanswerrecordMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
