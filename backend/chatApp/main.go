@@ -3,10 +3,11 @@ package main
 import (
 	"ai-eino-interview-agent/chatApp/agent"
 	"fmt"
+	"log"
+
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
 	"golang.org/x/net/context"
-	"log"
 )
 
 func main() {
