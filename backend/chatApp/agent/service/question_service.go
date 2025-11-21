@@ -33,16 +33,49 @@ type QuestionGeneratorResult struct {
 }
 
 // BuildInterviewPrompt 构建面试问题生成的提示词
-func BuildInterviewPrompt(questionIndex int, query string, resumeFilePath string, hasResume bool, dimension string, followUpCount int) string {
-	dimensionMap := map[string]string{
-		"professional_field":         "专业领域",
-		"project_experience":         "项目经历",
-		"technical_depth":            "技术深度",
-		"technical_foundation":       "技术基础",
-		"team_collaboration":         "团队协作",
-		"system_architecture_design": "系统架构设计",
+// interviewType: "综合面试" 或 "专项面试"
+// domain: 面试领域（综合面试：校招/社招；专项面试：java/golang等）
+// difficulty: 难度级别（简单/中等/困难）
+func BuildInterviewPrompt(questionIndex int, query string, resumeFilePath string, hasResume bool, dimension string, followUpCount int, interviewType string, domain string, difficulty string) string {
+	// 根据面试类型选择维度
+	var dimensionMap map[string]string
+	if interviewType == "综合面试" {
+		dimensionMap = map[string]string{
+			"professional_field":         "专业领域",
+			"project_experience":         "项目经历",
+			"technical_depth":            "技术深度",
+			"technical_foundation":       "技术基础",
+			"team_collaboration":         "团队协作",
+			"system_architecture_design": "系统架构设计",
+		}
+	} else {
+		// 专项面试
+		dimensionMap = map[string]string{
+			"basic_knowledge_mastery":                "基础知识掌握",
+			"working_principle_practical_experience": "工作原理与实践经验",
+			"advanced_features_application":          "高级特性应用",
+			"problem_troubleshooting_skills":         "问题排查能力",
+			"architecture_design_thinking":           "架构设计思维",
+			"performance_optimization_ability":       "性能优化能力",
+		}
 	}
 	dimensionCN := dimensionMap[dimension]
+
+	// 构建面试类型和难度的描述
+	difficultyDesc := ""
+	switch difficulty {
+	case "简单":
+		difficultyDesc = "初级难度"
+	case "中等":
+		difficultyDesc = "中级难度"
+	case "困难":
+		difficultyDesc = "高级难度"
+	default:
+		difficultyDesc = "中级难度"
+	}
+
+	interviewTypeDesc := interviewType
+	domainDesc := domain
 
 	if followUpCount == 0 {
 		// 主问题
@@ -50,6 +83,11 @@ func BuildInterviewPrompt(questionIndex int, query string, resumeFilePath string
 			// 第一个问题
 			if hasResume && resumeFilePath != "" {
 				return fmt.Sprintf(`请使用 pdf_to_text 工具解析以下简历文件，然后根据简历内容生成一个面试问题。
+
+面试类型：%s
+面试领域：%s
+难度级别：%s
+评估维度：%s
 
 简历文件路径：%s
 
@@ -59,17 +97,22 @@ func BuildInterviewPrompt(questionIndex int, query string, resumeFilePath string
 1. 只返回JSON格式
 2. 只生成面试官的提问，不要生成用户回答
 3. dialogues数组中只包含speaker_type为"interviewer"的提问
-4. 问题围绕评估维度"%s"进行
+4. 问题围绕评估维度"%s"进行，难度为%s
 5. 生成一个主问题（不是追问）
 
 JSON格式：
 {
   "questions": [{"question_text": "问题内容", "eval_dimension": "%s", "order": 1}],
   "dialogues": [{"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}]
-}`, resumeFilePath, query, dimensionCN, dimension)
+}`, interviewTypeDesc, domainDesc, difficultyDesc, dimensionCN, resumeFilePath, query, dimensionCN, difficultyDesc, dimension)
 			}
 			if hasResume {
 				return fmt.Sprintf(`根据以下信息生成一个面试问题。
+
+面试类型：%s
+面试领域：%s
+难度级别：%s
+评估维度：%s
 
 %s
 
@@ -77,52 +120,67 @@ JSON格式：
 1. 只返回JSON格式
 2. 只生成面试官的提问，不要生成用户回答
 3. dialogues数组中只包含speaker_type为"interviewer"的提问
-4. 问题围绕评估维度"%s"进行
+4. 问题围绕评估维度"%s"进行，难度为%s
 5. 生成一个主问题（不是追问）
 
 JSON格式：
 {
   "questions": [{"question_text": "问题内容", "eval_dimension": "%s", "order": 1}],
   "dialogues": [{"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}]
-}`, query, dimensionCN, dimension)
+}`, interviewTypeDesc, domainDesc, difficultyDesc, dimensionCN, query, dimensionCN, difficultyDesc, dimension)
 			}
 			return fmt.Sprintf(`生成一个面试问题。
+
+面试类型：%s
+面试领域：%s
+难度级别：%s
+评估维度：%s
 
 要求：
 1. 只返回JSON格式
 2. 只生成面试官的提问，不要生成用户回答
 3. dialogues数组中只包含speaker_type为"interviewer"的提问
-4. 问题围绕评估维度"%s"进行
+4. 问题围绕评估维度"%s"进行，难度为%s
 5. 生成一个主问题（不是追问）
 
 JSON格式：
 {
   "questions": [{"question_text": "问题内容", "eval_dimension": "%s", "order": 1}],
   "dialogues": [{"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}]
-}`, dimensionCN, dimension)
+}`, interviewTypeDesc, domainDesc, difficultyDesc, dimensionCN, dimensionCN, difficultyDesc, dimension)
 		}
 
 		// 后续主问题
 		return fmt.Sprintf(`根据以下简历和用户的回答，生成下一个面试问题。
 
+面试类型：%s
+面试领域：%s
+难度级别：%s
+评估维度：%s
+
 %s
 
 要求：
 1. 只返回JSON格式
 2. 只生成面试官的提问，不要生成用户回答
 3. dialogues数组中只包含speaker_type为"interviewer"的提问
-4. 问题围绕评估维度"%s"进行，且与之前的问题不同
+4. 问题围绕评估维度"%s"进行，难度为%s，且与之前的问题不同
 5. 生成一个主问题（不是追问）
 
 JSON格式：
 {
   "questions": [{"question_text": "问题内容", "eval_dimension": "%s", "order": %d}],
   "dialogues": [{"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}]
-}`, query, dimensionCN, dimension, questionIndex)
+}`, interviewTypeDesc, domainDesc, difficultyDesc, dimensionCN, query, dimensionCN, difficultyDesc, dimension, questionIndex)
 	}
 
 	// 追问
 	return fmt.Sprintf(`根据用户对上一个问题的回答，生成一个追问问题。
+
+面试类型：%s
+面试领域：%s
+难度级别：%s
+评估维度：%s
 
 用户的回答：
 %s
@@ -131,7 +189,7 @@ JSON格式：
 1. 只返回JSON格式
 2. 只生成面试官的追问，不要生成用户回答
 3. dialogues数组中只包含speaker_type为"interviewer"的追问
-4. 追问围绕评估维度"%s"进行
+4. 追问围绕评估维度"%s"进行，难度为%s
 5. 追问基于用户回答内容，深入探讨相关话题
 6. 这是第%d个追问
 
@@ -139,7 +197,7 @@ JSON格式：
 {
   "questions": [{"question_text": "追问内容", "eval_dimension": "%s", "order": %d}],
   "dialogues": [{"speaker_type": "interviewer", "content": "追问内容", "display_order": 1}]
-}`, query, dimensionCN, followUpCount, dimension, questionIndex)
+}`, interviewTypeDesc, domainDesc, difficultyDesc, dimensionCN, query, dimensionCN, difficultyDesc, followUpCount, dimension, questionIndex)
 }
 
 // GenerateInterviewQuestions 调用智能体生成面试问题

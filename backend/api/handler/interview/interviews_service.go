@@ -80,12 +80,10 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		response.InternalServerError(ctx, c, "Failed to create interview record: "+err.Error())
 		return
 	}
-
-	query := req.Type + req.Domain + req.Difficulty
 	hasResume := resumeFilePath != ""
 
 	sm := GetSessionManager()
-	session := sm.CreateSession(userID, recordID, resumeFilePath, hasResume, query)
+	session := sm.CreateSession(userID, recordID, resumeFilePath, hasResume, "", req.Type, req.Domain, req.Difficulty)
 
 	pipeReader, pipeWriter := io.Pipe()
 	c.SetBodyStream(pipeReader, -1)
@@ -199,13 +197,27 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 	const answerTimeout = 30 * time.Minute
 	const heartbeatInterval = 30 * time.Second
 
-	dimensions := []string{
-		"professional_field",
-		"project_experience",
-		"technical_depth",
-		"technical_foundation",
-		"team_collaboration",
-		"system_architecture_design",
+	// 根据面试类型选择维度
+	var dimensions []string
+	if session.Type == "综合面试" {
+		dimensions = []string{
+			"professional_field",
+			"project_experience",
+			"technical_depth",
+			"technical_foundation",
+			"team_collaboration",
+			"system_architecture_design",
+		}
+	} else {
+		// 专项面试
+		dimensions = []string{
+			"basic_knowledge_mastery",
+			"working_principle_practical_experience",
+			"advanced_features_application",
+			"problem_troubleshooting_skills",
+			"architecture_design_thinking",
+			"performance_optimization_ability",
+		}
 	}
 	dimensionIndex := 0
 	followUpCount := 0
@@ -257,7 +269,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 
 		var prompt string
 		if questionIndex == 1 {
-			prompt = buildPrompt(questionIndex, session.Query, session.ResumeFilePath, session.HasResume, dimensions[dimensionIndex], 0)
+			prompt = buildPrompt(questionIndex, session.Query, session.ResumeFilePath, session.HasResume, dimensions[dimensionIndex], 0, session.Type, session.Domain, session.Difficulty)
 		} else if followUpCount > 0 {
 			lastAnswer := ""
 			displayOrder := uint32(questionIndex)*100 + uint32(followUpCount-1)
@@ -268,7 +280,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 					break
 				}
 			}
-			prompt = buildPrompt(questionIndex, lastAnswer, "", false, dimensions[dimensionIndex], followUpCount)
+			prompt = buildPrompt(questionIndex, lastAnswer, "", false, dimensions[dimensionIndex], followUpCount, session.Type, session.Domain, session.Difficulty)
 		} else {
 			userAnswers := ""
 			for i := 1; i < questionIndex; i++ {
@@ -281,7 +293,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 					}
 				}
 			}
-			prompt = buildPrompt(questionIndex, resumeContent+"\n\n用户已回答的问题：\n"+userAnswers, "", false, dimensions[dimensionIndex], 0)
+			prompt = buildPrompt(questionIndex, resumeContent+"\n\n用户已回答的问题：\n"+userAnswers, "", false, dimensions[dimensionIndex], 0, session.Type, session.Domain, session.Difficulty)
 		}
 
 		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId)
@@ -395,8 +407,8 @@ func toString(v interface{}) string {
 }
 
 // buildPrompt 构建面试问题生成的提示词
-func buildPrompt(questionIndex int, query string, resumeFilePath string, hasResume bool, dimension string, followUpCount int) string {
-	return service.BuildInterviewPrompt(questionIndex, query, resumeFilePath, hasResume, dimension, followUpCount)
+func buildPrompt(questionIndex int, query string, resumeFilePath string, hasResume bool, dimension string, followUpCount int, interviewType string, domain string, difficulty string) string {
+	return service.BuildInterviewPrompt(questionIndex, query, resumeFilePath, hasResume, dimension, followUpCount, interviewType, domain, difficulty)
 }
 
 // sendSSEEvent 发送 SSE 事件
