@@ -88,7 +88,7 @@ export default function UserModelsPage() {
         scope: 7,
         status: v.status !== undefined && v.status !== null ? Number(v.status) : 1,
       };
-      await apiClient.post('/create/user-models', payload);
+      await apiClient.post('http://localhost:8888/api/user/create/model', payload);
       message.success('创建成功');
       setOpenCreate(false);
       form.resetFields();
