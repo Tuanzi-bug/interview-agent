@@ -8,8 +8,8 @@ import (
 
 	"github.com/cloudwego/eino-ext/components/document/transformer/splitter/recursive"
 	"github.com/cloudwego/eino-ext/components/embedding/ark"
-	milvusIndexer "github.com/cloudwego/eino-service/components/indexer/milvus"
-	milvusRetriever "github.com/cloudwego/eino-service/components/retriever/milvus"
+	milvusIndexer "github.com/cloudwego/eino-ext/components/indexer/milvus"
+	milvusRetriever "github.com/cloudwego/eino-ext/components/retriever/milvus"
 	"github.com/milvus-io/milvus-sdk-go/v2/client"
 	"github.com/milvus-io/milvus-sdk-go/v2/entity"
 
