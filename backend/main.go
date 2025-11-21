@@ -90,7 +90,7 @@ func main() {
 		// 设置CORS头
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Cache-Control")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Cache-Control, X-Auth-Token")
 		c.Header("Access-Control-Max-Age", "86400")
 
 		// 如果是OPTIONS请求，直接返回204
