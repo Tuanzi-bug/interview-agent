@@ -9,10 +9,7 @@ import (
 	"log"
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
-	"github.com/cloudwego/eino/compose"
 )
-
-var GlobalToolsNode *compose.ToolsNode
 
 func CreatOpenAiChatModel(ctx context.Context, userId uint) model.ToolCallingChatModel {
 	result, err := usermodel.UserModelDao.GetDefaultUserModel(int64(userId))
