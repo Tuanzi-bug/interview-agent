@@ -20,6 +20,8 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/joho/godotenv"
+
+	"github.com/cloudwego/hertz/pkg/app" // 新增这行
 )
 
 func main() {
@@ -82,6 +84,25 @@ func main() {
 
 	// 初始化Hertz服务器
 	s := server.Default(server.WithHostPorts(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)))
+
+	// 添加全局CORS中间件，处理OPTIONS预检请求
+	s.Use(func(ctx context.Context, c *app.RequestContext) {
+		// 设置CORS头
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Cache-Control")
+		c.Header("Access-Control-Max-Age", "86400")
+
+		// 如果是OPTIONS请求，直接返回204
+		if string(c.Method()) == "OPTIONS" {
+			log.Printf("[CORS] OPTIONS request: %s", c.Path())
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next(ctx)
+	})
+
 	s.Use(appMiddleware.JWTMiddlewareWithSkipper(interviewRouter.AuthSkipper()))
 	router.GeneratedRegister(s)
 

@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+
 	"net/http"
 	"os"
 	"path/filepath"
@@ -44,6 +45,7 @@ func (w *SSEWriter) Write(p []byte) (n int, err error) {
 // StartInterviewStream 启动交互式面试流程（SSE + 前端交互模式）
 // @router /api/interview/start/stream [POST]
 func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
+	// 1. 解析请求（必须在设置 SSE 响应头之前）
 	var req interviewsapi.StartInterviewRequest
 	if err := c.BindAndValidate(&req); err != nil {
 		response.BadRequest(ctx, c, "Invalid request: "+err.Error())

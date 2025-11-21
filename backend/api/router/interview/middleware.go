@@ -19,6 +19,8 @@ var jwtPublicRoutes = map[string]struct{}{
 	"/api/interview/records/mock":  {},
 	"/api/interview/titleBank":     {},
 	"/api/interview/titleBank/:id": {},
+	"/api/interview/start/stream":  {},
+	"/api/interview/submit/answer": {},
 }
 
 func AuthSkipper() serviceMiddleware.JWTSkipper {
