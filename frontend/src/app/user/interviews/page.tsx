@@ -1,39 +1,39 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Typography, Row, Col, Card as AntCard, Slider, DatePicker, Select, Empty, Button, Tag, Space, message, Avatar } from 'antd';
+import { Typography, Row, Col, Card as AntCard, Select, Empty, Button, Tag, message, Pagination, Spin } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import apiClient from '@/services/api/client';
 
 const { Title } = Typography;
-const { RangePicker } = DatePicker;
 
 export default function InterviewRecordsPage() {
-  const [scoreRange, setScoreRange] = useState<[number, number]>([0, 100]);
   const [filter, setFilter] = useState('全部');
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [total, setTotal] = useState(0);
-  const [mockList, setMockList] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1); // 前端分页当前页
+  const pageSize = 6; // 前端分页：每页显示6条
 
-  const fetchList = async (p = page, s = pageSize) => {
+  const fetchList = async () => {
     setLoading(true);
     try {
-      const res: any = await apiClient.get('/interview/records', { params: { page: p, page_size: s } });
+      // 一次性获取所有数据，然后在前端分页
+      const res: any = await apiClient.get('http://localhost:8888/api/interview/records', { params: { page: 1, page_size: 1000 } });
       const data = res?.data || res;
-      const items = (data?.records || data?.list || []).map((it: any) => ({
-        id: it.id ?? it.ID,
-        title: it.title ?? it.Title,
-        status: it.status ?? it.Status,
-        score: it.score ?? it.Score,
-        duration: it.duration ?? it.Duration,
-        createdAt: it.created_at ?? it.createdAt ?? it.CreatedAt,
+      const items = (data?.records || []).map((it: any) => ({
+        id: it.id,
+        userId: it.user_id,
+        title: it.title,
+        type: it.type,
+        difficulty: it.difficulty,
+        domain: it.domain,
+        companyName: it.company_name,
+        status: it.status,
+        createdAt: it.created_at,
+        updatedAt: it.updated_at,
       }));
       setList(items);
-      setTotal(data?.total ?? data?.Total ?? items.length);
     } catch (e: any) {
       message.error(e?.response?.data?.message || '加载失败');
     } finally {
@@ -41,41 +41,48 @@ export default function InterviewRecordsPage() {
     }
   };
 
-  const fetchMockList = async () => {
-    setLoading(true);
-    try {
-      const res: any = await apiClient.get('/interview/records/mock');
-      const data = res?.data || res;
-      const arr = Array.isArray(data) ? data : (data?.data || []);
-      setMockList(arr);
-    } catch (e: any) {
-      message.error(e?.response?.data?.message || '加载面试记录失败');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 移除 mock 接口调用，改用真实接口
 
   useEffect(() => {
-    fetchList(page, pageSize);
-    fetchMockList();
+    fetchList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize]);
+  }, []);
 
-  const completedCount = useMemo(() => mockList.length, [mockList]);
-  const averageScore = useMemo(() => {
-    const scores = mockList.map(i => Number(i.score)).filter(s => !isNaN(s));
-    if (scores.length === 0) return 0;
-    return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10;
-  }, [mockList]);
-  const filteredMockList = useMemo(() => {
-    const min = scoreRange?.[0] ?? 0;
-    const max = scoreRange?.[1] ?? 100;
-    return mockList.filter(it => {
-      const s = Number(it?.score);
-      if (isNaN(s)) return true;
-      return s >= min && s <= max;
-    });
-  }, [mockList, scoreRange]);
+  const completedCount = useMemo(() => list.filter(it => it.status === 'completed').length, [list]);
+  const totalCount = useMemo(() => list.length, [list]);
+  
+  const filteredList = useMemo(() => {
+    let filtered = list;
+    
+    // 根据类型筛选
+    if (filter !== '全部') {
+      if (filter === '综合面试') {
+        filtered = filtered.filter(it => it.type === '综合面试');
+      } else if (filter === '社招' || filter === '校招') {
+        filtered = filtered.filter(it => it.domain === filter);
+      }
+    }
+    
+    return filtered;
+  }, [list, filter]);
+
+  // 前端分页展示的数据
+  const paginatedList = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredList.slice(startIndex, endIndex);
+  }, [filteredList, currentPage, pageSize]);
+
+  // 处理筛选变化时重置页码
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
+
+  // 处理分页变化
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="container mx-auto px-4">
@@ -86,12 +93,12 @@ export default function InterviewRecordsPage() {
           <Col xs={24} md={12}>
             <div className="grid grid-cols-2 gap-6 items-center">
               <div className="text-center">
-                <div className="text-3xl font-semibold">{completedCount}</div>
-                <div className="text-gray-500">已完成面试(次)</div>
+                <div className="text-3xl font-semibold">{totalCount}</div>
+                <div className="text-gray-500">面试总数(次)</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-semibold">{averageScore}</div>
-                <div className="text-gray-500">平均得分(分)</div>
+                <div className="text-3xl font-semibold">{completedCount}</div>
+                <div className="text-gray-500">已完成面试(次)</div>
               </div>
             </div>
           </Col>
@@ -115,18 +122,13 @@ export default function InterviewRecordsPage() {
 
       <div className="mt-6">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span>分数筛选</span>
-            <div className="w-64">
-              <Slider range value={scoreRange} onChange={(v) => setScoreRange(v as [number, number])} />
-            </div>
-          </div>
-          <RangePicker />
-          <Select value={filter} onChange={setFilter} options={[{ value: '全部', label: '全部' }, { value: '综合面试', label: '综合面试' }, { value: '社招', label: '社招' }, { value: '校招', label: '校招' }]} />
+          <span>类型筛选：</span>
+          <Select value={filter} onChange={setFilter} style={{ width: 200 }} options={[{ value: '全部', label: '全部' }, { value: '综合面试', label: '综合面试' }, { value: '社招', label: '社招' }, { value: '校招', label: '校招' }]} />
         </div>
 
         <div className="mt-8">
-          {filteredMockList.length === 0 ? (
+          <Spin spinning={loading}>
+          {filteredList.length === 0 ? (
             <Empty
               imageStyle={{ height: 120 }}
               description={
@@ -139,34 +141,58 @@ export default function InterviewRecordsPage() {
               }
             />
           ) : (
+            <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredMockList.map((it: any, idx: number) => {
-                const avatar = String(it?.avatar_url || '').replace(/[`\s]/g, '');
+              {paginatedList.map((it: any) => {
+                const statusMap: Record<string, { text: string; color: string }> = {
+                  pending: { text: '待面试', color: 'blue' },
+                  in_progress: { text: '进行中', color: 'orange' },
+                  completed: { text: '已完成', color: 'green' },
+                };
+                const statusInfo = statusMap[it.status] || { text: it.status, color: 'default' };
+                const createdTime = it.createdAt ? new Date(it.createdAt).toLocaleString('zh-CN') : '-';
+                
                 return (
-                  <AntCard key={idx} className="rounded-2xl" styles={{ body: { padding: 16 } }} style={{ minWidth: 300, minHeight: 300 }}>
-                    <div className="flex items-start gap-3">
-                      <Avatar src={avatar} size={56} />
+                  <AntCard key={it.id} className="rounded-2xl" styles={{ body: { padding: 16 } }} style={{ minWidth: 300 }}>
+                    <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="text-xl font-semibold">{it?.interview_type || '-'}</div>
+                        <div className="text-xl font-semibold mb-2">{it.title || '未命名面试'}</div>
+                        <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
                       </div>
-                      <div className="text-base font-medium text-green-700">{`测试分数：${it?.score ?? '-'}`}</div>
                     </div>
                     <div className="mt-4 space-y-2 text-sm">
-                      <div>公司名称：{it?.company_name || '-'}</div>
-                      <div>岗位名称：{it?.position_name || '-'}</div>
-                      <div>难度等级：{it?.difficulty || '-'}</div>
-                      <div>简历名称：{it?.resume_name || '-'}</div>
+                      <div>面试类型：{it.type || '-'}</div>
+                      <div>公司名称：{it.companyName || '-'}</div>
+                      <div>难度等级：{it.difficulty || '-'}</div>
+                      <div>领域：{it.domain || '-'}</div>
+                      <div>创建时间：{createdTime}</div>
                     </div>
                     <div className="mt-4">
-                      <Link href={`/user/interviews/results/${idx + 1}`} className="inline-block">
-                        <Button type="primary">查看面试结果</Button>
+                      <Link href={`/user/interviews/results/${it.id}`} className="inline-block">
+                        <Button type="primary">查看面试详情</Button>
                       </Link>
                     </div>
                   </AntCard>
                 );
               })}
             </div>
+            
+            {/* 分页组件 */}
+            {filteredList.length > pageSize && (
+              <div className="flex justify-center mt-8">
+                <Pagination
+                  current={currentPage}
+                  total={filteredList.length}
+                  pageSize={pageSize}
+                  onChange={handlePageChange}
+                  showSizeChanger={false}
+                  showTotal={(total) => `共 ${total} 条记录`}
+                />
+              </div>
+            )}
+            </>
           )}
+          </Spin>
         </div>
       </div>
     </div>
