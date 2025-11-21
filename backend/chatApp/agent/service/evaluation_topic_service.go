@@ -1,4 +1,4 @@
-package ext
+package service
 
 import (
 	"ai-eino-interview-agent/chatApp/agent/evaluation"

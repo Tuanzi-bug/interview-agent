@@ -61,14 +61,6 @@ func main() {
 	// }
 	// log.Println("Redis initialized successfully")
 
-	//// 6. 初始化Eino框架
-	//log.Println("Initializing Eino framework...")
-	//err = eino.InitEino(cfg.Eino)
-	//if err != nil {
-	//	log.Fatalf("Failed to initialize Eino: %v", err)
-	//}
-	//log.Println("Eino initialized successfully")
-
 	// 7. 初始化 Milvus Manager（向量数据库、Embedding、检索等服务）
 	//log.Println("Initializing Milvus Manager...")
 	//ctx := context.Background()

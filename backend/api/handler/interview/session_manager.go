@@ -33,6 +33,9 @@ type InterviewSession struct {
 	Query           string        // 用户查询
 	AnswerChan      chan string   // 答案通道
 	Done            bool          // 面试是否完成
+	Type            string        // 面试类型（综合面试/专项面试）
+	Domain          string        // 面试领域
+	Difficulty      string        // 难度级别
 	mu              sync.Mutex    // 锁
 }
 
@@ -59,7 +62,7 @@ func init() {
 }
 
 // CreateSession 创建新会话
-func (sm *SessionManager) CreateSession(userID uint, recordID uint64, resumeFilePath string, hasResume bool, query string) *InterviewSession {
+func (sm *SessionManager) CreateSession(userID uint, recordID uint64, resumeFilePath string, hasResume bool, query string, interviewType string, domain string, difficulty string) *InterviewSession {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -78,6 +81,9 @@ func (sm *SessionManager) CreateSession(userID uint, recordID uint64, resumeFile
 		ResumeFilePath:  resumeFilePath,
 		HasResume:       hasResume,
 		Query:           query,
+		Type:            interviewType,
+		Domain:          domain,
+		Difficulty:      difficulty,
 		AnswerChan:      make(chan string, 1),
 		Done:            false,
 	}
