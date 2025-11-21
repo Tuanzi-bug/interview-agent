@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/bytedance/sonic"
-	milvusRetriever "github.com/cloudwego/eino-ext/components/retriever/milvus"
+	milvusRetriever "github.com/cloudwego/eino-service/components/retriever/milvus"
 	"github.com/cloudwego/eino/schema"
 	milvusClient "github.com/milvus-io/milvus-sdk-go/v2/client"
 	"github.com/milvus-io/milvus-sdk-go/v2/entity"

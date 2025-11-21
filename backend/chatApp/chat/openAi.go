@@ -15,11 +15,10 @@ import (
 var GlobalToolsNode *compose.ToolsNode
 
 func CreatOpenAiChatModel(ctx context.Context, userId uint) model.ToolCallingChatModel {
-	res, _, err := usermodel.UserModelDao.ListUserModels(int64(userId), 1, 1)
+	result, err := usermodel.UserModelDao.GetDefaultUserModel(int64(userId))
 	if err != nil {
 		log.Println(err)
 	}
-	result := res[0]
 	apiKey, err := common.DecryptAPIKey(result.APIKeyEncrypted)
 	if err != nil {
 		log.Println(err)

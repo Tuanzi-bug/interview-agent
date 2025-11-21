@@ -15,6 +15,7 @@ struct CreateUserModelRequest {
     9: optional string config_json (api.form="config_json")        // JSON string
     10: optional i32 scope (api.form="scope")                      // 默认 7
     11: optional i32 status (api.form="status")                    // 默认 1
+    12: optional i32 is_default (api.form="is_default")            // 是否为默认（0=不是, 1=是）
 }
 
 // 创建用户模型响应
@@ -52,6 +53,7 @@ struct UserModelItem {
     13: required i64 updated_at
     14: required bool has_secret
     15: optional string secret_hint
+    16: required i32 is_default
 }
 
 // 获取用户模型列表响应
@@ -86,6 +88,7 @@ struct UserModelDetail {
     13: required i64 updated_at
     14: required bool has_secret          // 是否已配置密钥
     15: optional string secret_hint       // 密钥脱敏提示
+    16: required i32 is_default           // 是否为默认（0=不是, 1=是）
 }
 
 // 获取用户模型详情响应
@@ -109,6 +112,7 @@ struct UpdateUserModelRequest {
     10: optional string config_json (api.form="config_json")        // JSON string
     11: optional i32 scope (api.form="scope")
     12: optional i32 status (api.form="status")
+    13: optional i32 is_default (api.form="is_default")            // 是否为默认（0=不是, 1=是）
 }
 
 

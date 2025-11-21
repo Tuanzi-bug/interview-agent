@@ -32,6 +32,7 @@ type (
 		DefaultParams   string `json:"default_params" gorm:"type:json;comment:默认参数（如 temperature、max_tokens）"`
 		Scope           int    `json:"scope" gorm:"not null;default:7;comment:使用范围（位掩码：1=智能体, 2=应用, 4=工作流）"`
 		Status          int    `json:"status" gorm:"not null;default:1;comment:状态（0=禁用, 1=启用）"`
+		IsDefault       int    `json:"is_default" gorm:"not null;default:0;comment:是否为默认（0=不是, 1=是）"`
 		CreatedAt       int64  `json:"created_at" gorm:"not null;default:0;comment:创建时间（毫秒时间戳）"`
 		UpdatedAt       int64  `json:"updated_at" gorm:"not null;default:0;comment:更新时间（毫秒时间戳）"`
 		Deleted         int    `json:"deleted" gorm:"not null;default:0;comment:删除状态（0=未删除, 1=已删除）"`
@@ -119,6 +120,62 @@ func (u *_UserModel) DeleteUserModel(userID int64, modelID int64) error {
 	err := getDB().Model(&UserModel{}).
 		Where("id = ? AND user_id = ? AND deleted = ?", modelID, userID, 0).
 		Update("deleted", 1).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// SetDefaultUserModel 设置用户的默认模型（同时取消其他模型的默认状态）
+func (u *_UserModel) SetDefaultUserModel(userID int64, modelID int64) error {
+	if getDB == nil {
+		panic("getDB function not initialized, please call model.SetDBGetter first")
+	}
+
+	tx := getDB().Begin()
+
+	// 1. 先将该用户的所有模型的 is_default 设置为 0
+	if err := tx.Model(&UserModel{}).
+		Where("user_id = ? AND deleted = ?", userID, 0).
+		Update("is_default", 0).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 2. 再将指定模型的 is_default 设置为 1
+	if err := tx.Model(&UserModel{}).
+		Where("id = ? AND user_id = ? AND deleted = ?", modelID, userID, 0).
+		Update("is_default", 1).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}
+
+// GetDefaultUserModel 获取用户的默认模型
+func (u *_UserModel) GetDefaultUserModel(userID int64) (*UserModel, error) {
+	if getDB == nil {
+		panic("getDB function not initialized, please call model.SetDBGetter first")
+	}
+	var userModel UserModel
+	err := getDB().Model(&UserModel{}).
+		Where("user_id = ? AND is_default = ? AND deleted = ?", userID, 1, 0).
+		First(&userModel).Error
+	if err != nil {
+		return nil, err
+	}
+	return &userModel, nil
+}
+
+// CancelDefaultUserModel 取消用户模型的默认状态
+func (u *_UserModel) CancelDefaultUserModel(userID int64, modelID int64) error {
+	if getDB == nil {
+		panic("getDB function not initialized, please call model.SetDBGetter first")
+	}
+	err := getDB().Model(&UserModel{}).
+		Where("id = ? AND user_id = ? AND deleted = ?", modelID, userID, 0).
+		Update("is_default", 0).Error
 	if err != nil {
 		return err
 	}

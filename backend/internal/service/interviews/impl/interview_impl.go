@@ -30,11 +30,6 @@ func (s *InterviewServiceImpl) CreateInterviewRecord(ctx context.Context, dto *i
 		positionName = *dto.PositionName
 	}
 
-	interviewDuration := ""
-	if dto.InterviewDuration != nil {
-		interviewDuration = *dto.InterviewDuration
-	}
-
 	// 初始化状态为pending（如果未提供）
 	status := dto.Status
 	if status == "" {
@@ -47,16 +42,14 @@ func (s *InterviewServiceImpl) CreateInterviewRecord(ctx context.Context, dto *i
 	}
 
 	record := &model.InterviewRecord{
-		UserID:            uint(dto.UserID),
-		Title:             dto.Title,
-		Type:              dto.Type,
-		Difficulty:        dto.Difficulty,
-		Domain:            dto.Domain,
-		CompanyName:       companyName,
-		PositionName:      positionName,
-		InterviewDuration: interviewDuration,
-		Status:            status,
-		Duration:          duration,
+		UserID:       uint(dto.UserID),
+		Type:         dto.Type,
+		Difficulty:   dto.Difficulty,
+		Domain:       dto.Domain,
+		CompanyName:  companyName,
+		PositionName: positionName,
+		Status:       status,
+		Duration:     duration,
 	}
 
 	recordID, err := model.InterviewRecordDao.CreateInterviewRecord(record)
@@ -65,7 +58,7 @@ func (s *InterviewServiceImpl) CreateInterviewRecord(ctx context.Context, dto *i
 		return 0, err
 	}
 
-	log.Printf("[CreateInterviewRecord] 面试记录创建成功，ID: %d，用户ID: %d，标题: %s", recordID, dto.UserID, dto.Title)
+	log.Printf("[CreateInterviewRecord] 面试记录创建成功，ID: %d，用户ID: %d", recordID, dto.UserID)
 	return recordID, nil
 }
 
@@ -82,28 +75,21 @@ func (s *InterviewServiceImpl) UpdateInterviewRecord(ctx context.Context, dto *i
 		positionName = *dto.PositionName
 	}
 
-	interviewDuration := ""
-	if dto.InterviewDuration != nil {
-		interviewDuration = *dto.InterviewDuration
-	}
-
 	var duration int64 = 0
 	if dto.Duration != nil {
 		duration = *dto.Duration
 	}
 
 	record := &model.InterviewRecord{
-		ID:                uint64(dto.ID),
-		UserID:            uint(dto.UserID),
-		Title:             dto.Title,
-		Type:              dto.Type,
-		Difficulty:        dto.Difficulty,
-		Domain:            dto.Domain,
-		CompanyName:       companyName,
-		PositionName:      positionName,
-		InterviewDuration: interviewDuration,
-		Status:            dto.Status,
-		Duration:          duration,
+		ID:           uint64(dto.ID),
+		UserID:       uint(dto.UserID),
+		Type:         dto.Type,
+		Difficulty:   dto.Difficulty,
+		Domain:       dto.Domain,
+		CompanyName:  companyName,
+		PositionName: positionName,
+		Status:       dto.Status,
+		Duration:     duration,
 	}
 
 	err := model.InterviewRecordDao.UpdateInterviewRecord(record)
@@ -112,7 +98,7 @@ func (s *InterviewServiceImpl) UpdateInterviewRecord(ctx context.Context, dto *i
 		return err
 	}
 
-	log.Printf("[UpdateInterviewRecord] 面试记录更新成功，ID: %d，用户ID: %d，标题: %s", dto.ID, dto.UserID, dto.Title)
+	log.Printf("[UpdateInterviewRecord] 面试记录更新成功，ID: %d，用户ID: %d", dto.ID, dto.UserID)
 	return nil
 }
 
@@ -152,7 +138,6 @@ func convertToInterviewRecordDTO(record *model.InterviewRecord) *interviewsapi.I
 	dto := interviewsapi.NewInterviewRecordDTO()
 	dto.ID = int64(record.ID)
 	dto.UserID = int32(record.UserID)
-	dto.Title = record.Title
 	dto.Type = record.Type
 	dto.Difficulty = record.Difficulty
 	dto.Domain = record.Domain
@@ -165,10 +150,6 @@ func convertToInterviewRecordDTO(record *model.InterviewRecord) *interviewsapi.I
 	if record.PositionName != "" {
 		v := record.PositionName
 		dto.PositionName = &v
-	}
-	if record.InterviewDuration != "" {
-		v := record.InterviewDuration
-		dto.InterviewDuration = &v
 	}
 	if record.Duration != 0 {
 		v := record.Duration

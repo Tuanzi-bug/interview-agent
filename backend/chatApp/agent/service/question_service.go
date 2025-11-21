@@ -1,11 +1,10 @@
-package ext
+package service
 
 import (
 	"ai-eino-interview-agent/chatApp/agent/question"
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -33,14 +32,122 @@ type QuestionGeneratorResult struct {
 	Dialogues []DialogueData `json:"dialogues"`
 }
 
+// BuildInterviewPrompt 构建面试问题生成的提示词
+func BuildInterviewPrompt(questionIndex int, query string, resumeFilePath string, hasResume bool, dimension string, followUpCount int) string {
+	dimensionMap := map[string]string{
+		"professional_field":         "专业领域",
+		"project_experience":         "项目经历",
+		"technical_depth":            "技术深度",
+		"technical_foundation":       "技术基础",
+		"team_collaboration":         "团队协作",
+		"system_architecture_design": "系统架构设计",
+	}
+	dimensionCN := dimensionMap[dimension]
+
+	if followUpCount == 0 {
+		// 主问题
+		if questionIndex == 1 {
+			// 第一个问题
+			if hasResume && resumeFilePath != "" {
+				return fmt.Sprintf(`请使用 pdf_to_text 工具解析以下简历文件，然后根据简历内容生成一个面试问题。
+
+简历文件路径：%s
+
+用户补充信息：%s
+
+要求：
+1. 只返回JSON格式
+2. 只生成面试官的提问，不要生成用户回答
+3. dialogues数组中只包含speaker_type为"interviewer"的提问
+4. 问题围绕评估维度"%s"进行
+5. 生成一个主问题（不是追问）
+
+JSON格式：
+{
+  "questions": [{"question_text": "问题内容", "eval_dimension": "%s", "order": 1}],
+  "dialogues": [{"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}]
+}`, resumeFilePath, query, dimensionCN, dimension)
+			}
+			if hasResume {
+				return fmt.Sprintf(`根据以下信息生成一个面试问题。
+
+%s
+
+要求：
+1. 只返回JSON格式
+2. 只生成面试官的提问，不要生成用户回答
+3. dialogues数组中只包含speaker_type为"interviewer"的提问
+4. 问题围绕评估维度"%s"进行
+5. 生成一个主问题（不是追问）
+
+JSON格式：
+{
+  "questions": [{"question_text": "问题内容", "eval_dimension": "%s", "order": 1}],
+  "dialogues": [{"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}]
+}`, query, dimensionCN, dimension)
+			}
+			return fmt.Sprintf(`生成一个面试问题。
+
+要求：
+1. 只返回JSON格式
+2. 只生成面试官的提问，不要生成用户回答
+3. dialogues数组中只包含speaker_type为"interviewer"的提问
+4. 问题围绕评估维度"%s"进行
+5. 生成一个主问题（不是追问）
+
+JSON格式：
+{
+  "questions": [{"question_text": "问题内容", "eval_dimension": "%s", "order": 1}],
+  "dialogues": [{"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}]
+}`, dimensionCN, dimension)
+		}
+
+		// 后续主问题
+		return fmt.Sprintf(`根据以下简历和用户的回答，生成下一个面试问题。
+
+%s
+
+要求：
+1. 只返回JSON格式
+2. 只生成面试官的提问，不要生成用户回答
+3. dialogues数组中只包含speaker_type为"interviewer"的提问
+4. 问题围绕评估维度"%s"进行，且与之前的问题不同
+5. 生成一个主问题（不是追问）
+
+JSON格式：
+{
+  "questions": [{"question_text": "问题内容", "eval_dimension": "%s", "order": %d}],
+  "dialogues": [{"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}]
+}`, query, dimensionCN, dimension, questionIndex)
+	}
+
+	// 追问
+	return fmt.Sprintf(`根据用户对上一个问题的回答，生成一个追问问题。
+
+用户的回答：
+%s
+
+要求：
+1. 只返回JSON格式
+2. 只生成面试官的追问，不要生成用户回答
+3. dialogues数组中只包含speaker_type为"interviewer"的追问
+4. 追问围绕评估维度"%s"进行
+5. 追问基于用户回答内容，深入探讨相关话题
+6. 这是第%d个追问
+
+JSON格式：
+{
+  "questions": [{"question_text": "追问内容", "eval_dimension": "%s", "order": %d}],
+  "dialogues": [{"speaker_type": "interviewer", "content": "追问内容", "display_order": 1}]
+}`, query, dimensionCN, followUpCount, dimension, questionIndex)
+}
+
 // GenerateInterviewQuestions 调用智能体生成面试问题
 // 返回生成的问题列表和对话列表
-func GenerateInterviewQuestions(ctx context.Context, resumeContent string, userId uint) (*QuestionGeneratorResult, error) {
+func GenerateInterviewQuestions(ctx context.Context, prompt string, userId uint) (*QuestionGeneratorResult, error) {
 	// 添加 120 秒超时，防止无限等待（API 响应可能需要较长时间）
 	timeoutCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
-
-	fmt.Println("[GenerateInterviewQuestions] 开始生成问题...")
 
 	// 创建问题生成智能体
 	agent := question.NewQuestionAgent(userId)
@@ -51,29 +158,21 @@ func GenerateInterviewQuestions(ctx context.Context, resumeContent string, userI
 	})
 
 	// 构建查询消息
-	query := fmt.Sprintf(`根据以下简历内容生成面试问题。
+	query := fmt.Sprintf(`根据以下提示词内容生成面试问题。
 
-简历内容：
+提示词内容：
 %s
 
-重要提示：
-1. 只返回JSON格式，不返回其他文本
-2. 只生成面试官的提问，不要生成用户的回答
+要求：
+1. 只返回JSON格式
+2. 只生成面试官的提问，不要生成用户回答
 3. dialogues数组中只包含speaker_type为"interviewer"的提问
 
-必须返回的JSON格式：
+JSON格式：
 {
-  "questions": [
-    {
-      "question_text": "问题内容",
-      "eval_dimension": "professional_field|project_experience|technical_depth|technical_foundation|team_collaboration|system_architecture_design",
-      "order": 1
-    }
-  ],
-  "dialogues": [
-    {"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}
-  ]
-}`, resumeContent)
+  "questions": [{"question_text": "问题内容", "eval_dimension": "professional_field|project_experience|technical_depth|technical_foundation|team_collaboration|system_architecture_design", "order": 1}],
+  "dialogues": [{"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}]
+}`, prompt)
 
 	// 创建用户消息
 	userMsg := &schema.Message{
@@ -86,58 +185,40 @@ func GenerateInterviewQuestions(ctx context.Context, resumeContent string, userI
 	}
 
 	// 运行智能体
-	fmt.Println("[GenerateInterviewQuestions] 调用智能体...")
 	iter := runner.Run(timeoutCtx, messages)
 
 	var lastMessage string
-	eventCount := 0
 	for {
 		select {
 		case <-timeoutCtx.Done():
-			fmt.Println("[GenerateInterviewQuestions] 超时：等待智能体响应超过 30 秒")
-			return nil, fmt.Errorf("timeout waiting for question generation (30s)")
+			return nil, fmt.Errorf("timeout waiting for question generation")
 		default:
 		}
 
 		event, ok := iter.Next()
 		if !ok {
-			fmt.Printf("[GenerateInterviewQuestions] 迭代器结束，共收到 %d 个事件\n", eventCount)
 			break
 		}
 
-		eventCount++
-		fmt.Printf("[GenerateInterviewQuestions] 事件 %d: ", eventCount)
-
 		if event.Err != nil {
-			fmt.Printf("错误 - %v\n", event.Err)
 			return nil, fmt.Errorf("error during question generation: %w", event.Err)
 		}
 
 		// 收集最后一条消息
 		if event.Output != nil && event.Output.MessageOutput != nil {
 			lastMessage = event.Output.MessageOutput.Message.Content
-			fmt.Printf("收到消息，长度=%d\n", len(lastMessage))
-		} else {
-			fmt.Println("其他事件类型")
 		}
 	}
 
 	// 解析 JSON 结果
 	result := &QuestionGeneratorResult{}
-	fmt.Printf("[GenerateInterviewQuestions] 原始消息长度: %d\n", len(lastMessage))
-	fmt.Printf("[GenerateInterviewQuestions] 原始消息前 200 字符: %s\n", truncateString(lastMessage, 200))
 
 	if err := json.Unmarshal([]byte(lastMessage), result); err != nil {
-		fmt.Printf("[GenerateInterviewQuestions] 直接解析失败: %v\n", err)
 		// 尝试从文本中提取 JSON
 		jsonStr := extractJSON(lastMessage)
 		if jsonStr == "" {
-			fmt.Printf("[GenerateInterviewQuestions] 无法提取 JSON\n")
 			return nil, fmt.Errorf("failed to parse question generation result: %w", err)
 		}
-
-		fmt.Printf("[GenerateInterviewQuestions] 提取的 JSON 长度: %d\n", len(jsonStr))
-		fmt.Printf("[GenerateInterviewQuestions] 提取的 JSON 前 200 字符: %s\n", truncateString(jsonStr, 200))
 
 		// 清理 JSON 字符串中的非法字符
 		jsonStr = cleanJSON(jsonStr)
@@ -145,49 +226,37 @@ func GenerateInterviewQuestions(ctx context.Context, resumeContent string, userI
 		// 如果提取的是数组格式，需要包装成对象
 		trimmedJSON := strings.TrimSpace(jsonStr)
 		if len(trimmedJSON) > 0 && trimmedJSON[0] == '[' {
-			fmt.Println("[GenerateInterviewQuestions] 检测到数组格式")
 			// 尝试解析为问题数组
 			var questions []QuestionData
 			if err := json.Unmarshal([]byte(jsonStr), &questions); err == nil {
-				fmt.Printf("[GenerateInterviewQuestions] 解析为问题数组成功，共 %d 个问题\n", len(questions))
 				result.Questions = questions
 				return result, nil
 			}
 			// 尝试解析为对话数组
 			var dialogues []DialogueData
 			if err := json.Unmarshal([]byte(jsonStr), &dialogues); err == nil {
-				fmt.Printf("[GenerateInterviewQuestions] 解析为对话数组成功，共 %d 条对话\n", len(dialogues))
 				result.Dialogues = dialogues
 				// 从对话中提取问题：找到第一个 speaker_type="interviewer" 的对话作为问题
-				for i, d := range dialogues {
-					fmt.Printf("[GenerateInterviewQuestions] 对话 %d: speaker_type='%s', content='%.50s'\n", i, d.SpeakerType, d.Content)
+				for _, d := range dialogues {
 					if d.SpeakerType == "interviewer" {
 						result.Questions = append(result.Questions, QuestionData{
 							QuestionText:  d.Content,
-							EvalDimension: "professional_field", // 默认维度
+							EvalDimension: "professional_field",
 							Order:         1,
 						})
-						fmt.Println("[GenerateInterviewQuestions] 从对话中提取问题成功")
-						break // 只取第一个问题
+						break
 					}
-				}
-				if len(result.Questions) == 0 {
-					fmt.Println("[GenerateInterviewQuestions] 警告：从对话数组中未找到 interviewer 类型的对话")
 				}
 				return result, nil
 			}
 		}
 
 		// 尝试解析为对象
-		fmt.Println("[GenerateInterviewQuestions] 尝试解析为对象")
 		if err := json.Unmarshal([]byte(jsonStr), result); err != nil {
-			fmt.Printf("[GenerateInterviewQuestions] 解析为对象失败: %v\n", err)
-			fmt.Printf("[GenerateInterviewQuestions] JSON 字符串: %s\n", jsonStr)
 			return nil, fmt.Errorf("failed to parse extracted JSON: %w", err)
 		}
 	}
 
-	fmt.Printf("[GenerateInterviewQuestions] 最终结果: 问题数=%d, 对话数=%d\n", len(result.Questions), len(result.Dialogues))
 	return result, nil
 }
 
@@ -274,31 +343,4 @@ func cleanJSON(jsonStr string) string {
 	}
 
 	return builder.String()
-}
-
-// truncateString 截断字符串到指定长度
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
-}
-
-// ParseQuestionResponse 解析问题生成响应中的 JSON
-// 这是一个辅助函数，用于从智能体的文本响应中提取结构化数据
-func ParseQuestionResponse(responseText string) (*QuestionGeneratorResult, error) {
-	// 尝试直接解析
-	result := &QuestionGeneratorResult{}
-	if err := json.Unmarshal([]byte(responseText), result); err != nil {
-		// 尝试从文本中提取 JSON
-		jsonStr := extractJSON(responseText)
-		if jsonStr == "" {
-			log.Printf("Failed to extract JSON from response: %s", responseText)
-			return nil, fmt.Errorf("no JSON found in response")
-		}
-		if err := json.Unmarshal([]byte(jsonStr), result); err != nil {
-			return nil, fmt.Errorf("failed to parse extracted JSON: %w", err)
-		}
-	}
-	return result, nil
 }

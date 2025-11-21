@@ -11,19 +11,17 @@ type (
 	_InterviewRecord struct {
 	}
 	InterviewRecord struct {
-		ID                uint64    `json:"id" gorm:"primaryKey;autoIncrement;comment:面试主表"`
-		UserID            uint      `json:"user_id" gorm:"index;not null;comment:用户ID"`
-		Title             string    `json:"title" gorm:"size:255;not null;comment:面试标题"`
-		Type              string    `json:"type" gorm:"size:255;not null;comment:面试类型(综合面试、专项面试)"`
-		Difficulty        string    `json:"difficulty" gorm:"size:128;not null;comment:难度级别（简单、中等、困难）"`
-		Domain            string    `json:"domain" gorm:"size:255;not null;comment:面试领域(校招、社招；java、golang)"`
-		CompanyName       string    `json:"company_name" gorm:"size:128;comment:公司名称"`
-		PositionName      string    `json:"position_name" gorm:"size:128;comment:岗位名称"`
-		InterviewDuration string    `json:"interview_duration" gorm:"size:128;comment:面试时长"`
-		Status            string    `json:"status" gorm:"size:50;not null;default:'pending';comment:面试状态（pending/completed）"`
-		Duration          int64     `json:"duration" gorm:"comment:面试耗时（秒）"`
-		CreatedAt         time.Time `json:"created_at" gorm:"autoCreateTime:milli"`
-		UpdatedAt         time.Time `json:"updated_at" gorm:"autoUpdateTime:milli"`
+		ID           uint64    `json:"id" gorm:"primaryKey;autoIncrement;comment:面试主表"`
+		UserID       uint      `json:"user_id" gorm:"index;not null;comment:用户ID"`
+		Type         string    `json:"type" gorm:"size:255;not null;comment:面试类型(综合面试、专项面试)"`
+		Difficulty   string    `json:"difficulty" gorm:"size:128;not null;comment:难度级别（简单、中等、困难）"`
+		Domain       string    `json:"domain" gorm:"size:255;not null;comment:面试领域(校招、社招；java、golang)"`
+		CompanyName  string    `json:"company_name" gorm:"size:128;comment:公司名称"`
+		PositionName string    `json:"position_name" gorm:"size:128;comment:岗位名称"`
+		Status       string    `json:"status" gorm:"size:50;not null;default:'pending';comment:面试状态（pending/completed）"`
+		Duration     int64     `json:"duration" gorm:"comment:面试耗时（秒）"`
+		CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime:milli"`
+		UpdatedAt    time.Time `json:"updated_at" gorm:"autoUpdateTime:milli"`
 	}
 )
 
@@ -90,9 +88,6 @@ func (i *_InterviewRecord) UpdateInterviewRecord(record *InterviewRecord) error 
 	// 使用 map 方式更新，只更新非零值字段，避免覆盖原有数据
 	updates := make(map[string]interface{})
 
-	if record.Title != "" {
-		updates["title"] = record.Title
-	}
 	if record.Type != "" {
 		updates["type"] = record.Type
 	}
@@ -107,9 +102,6 @@ func (i *_InterviewRecord) UpdateInterviewRecord(record *InterviewRecord) error 
 	}
 	if record.PositionName != "" {
 		updates["position_name"] = record.PositionName
-	}
-	if record.InterviewDuration != "" {
-		updates["interview_duration"] = record.InterviewDuration
 	}
 	if record.Status != "" {
 		updates["status"] = record.Status

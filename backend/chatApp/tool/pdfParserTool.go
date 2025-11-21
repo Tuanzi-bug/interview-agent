@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	pdfParser "github.com/cloudwego/eino-ext/components/document/parser/pdf"
+	pdfParser "github.com/cloudwego/eino-service/components/document/parser/pdf"
 	"github.com/cloudwego/eino/components/document/parser"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"

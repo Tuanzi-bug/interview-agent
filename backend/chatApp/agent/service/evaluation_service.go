@@ -1,4 +1,4 @@
-package ext
+package service
 
 import (
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
