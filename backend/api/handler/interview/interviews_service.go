@@ -584,10 +584,21 @@ func GetAnswerRecord(ctx context.Context, c *app.RequestContext) {
 	if err == nil && res != nil {
 		resMap, ok := res.(map[string]interface{})
 		if ok {
-			records, ok := resMap["records"].([]*model.AnswerRecordItem)
-			if ok && len(records) > 0 {
-				response.Success(ctx, c, res)
-				return
+			// 检查 records 字段是否存在且不为空
+			if recordsData, exists := resMap["records"]; exists {
+				// 尝试多种类型的断言
+				switch v := recordsData.(type) {
+				case []*model.AnswerRecordItem:
+					if len(v) > 0 {
+						response.Success(ctx, c, res)
+						return
+					}
+				case []interface{}:
+					if len(v) > 0 {
+						response.Success(ctx, c, res)
+						return
+					}
+				}
 			}
 		}
 	}
