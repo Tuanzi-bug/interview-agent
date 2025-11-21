@@ -169,13 +169,22 @@ func (u *_UserModel) GetDefaultUserModel(userID int64) (*UserModel, error) {
 }
 
 // CancelDefaultUserModel 取消用户模型的默认状态
+// 如果 modelID = 0，则取消该用户所有模型的默认状态
+// 如果 modelID > 0，则只取消指定模型的默认状态
 func (u *_UserModel) CancelDefaultUserModel(userID int64, modelID int64) error {
 	if getDB == nil {
 		panic("getDB function not initialized, please call model.SetDBGetter first")
 	}
-	err := getDB().Model(&UserModel{}).
-		Where("id = ? AND user_id = ? AND deleted = ?", modelID, userID, 0).
-		Update("is_default", 0).Error
+
+	query := getDB().Model(&UserModel{}).
+		Where("user_id = ? AND deleted = ?", userID, 0)
+
+	// 如果 modelID > 0，则只更新指定模型
+	if modelID > 0 {
+		query = query.Where("id = ?", modelID)
+	}
+
+	err := query.Update("is_default", 0).Error
 	if err != nil {
 		return err
 	}
