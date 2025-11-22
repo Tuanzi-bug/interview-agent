@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"ai-eino-interview-agent/internal/eino/milvus/retrieval"
+
 	"github.com/cloudwego/eino/schema"
 )
 
