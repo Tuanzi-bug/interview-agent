@@ -34,27 +34,28 @@ struct InterviewEvent {
 
 // 面试记录 DTO（对应 interview_record 表）
 struct InterviewRecordDTO {
-    1: required i64   id              // 记录ID
-    2: required i32   user_id         // 用户ID
-    3: required string title          // 面试标题
-    4: required string query          // 初始查询/问题
-    5: optional string messages       // 对话历史（JSON格式）
-    6: optional string report         // 最终报告
-    7: required string status         // 面试状态
-    8: optional string current_agent  // 当前活跃的Agent名称
-    9: optional i64   duration        // 面试耗时（秒）
-    10: optional double score         // 面试评分
-    11: optional string feedback      // 反馈信息
-    12: optional i64   created_at     // 创建时间（毫秒时间戳）
-    13: optional i64   updated_at     // 更新时间（毫秒时间戳）
-    14: optional i64   completed_at   // 完成时间（毫秒时间戳）
+    1: required i64   id                    // 记录ID
+    2: required i32   user_id               // 用户ID
+    3: required string type                 // 面试类型(综合面试、专项面试)
+    4: required string difficulty           // 面试难度(简单、中等、困难)
+    5: required string domain               // 面试领域(校招、社招；java、golang)
+    6: optional string company_name         // 公司名称
+    7: optional string position_name        // 岗位名称
+    8: required string status              // 面试状态(pending/completed)
+    9: optional i64   duration             // 面试耗时（秒）
+    10: optional i64   created_at           // 创建时间（毫秒时间戳）
+    11: optional i64   updated_at           // 更新时间（毫秒时间戳）
 }
 
 // ==================== 请求和响应结构 ====================
 
 // 启动面试请求
 struct StartInterviewRequest {
-    1: required string query (api.body="query")  // 用户输入的查询
+    1: required string type (api.body="type")  // 面试类型(综合面试、专项面试)
+    2: required string domain (api.body="domain")  // 面试领域（综合面试对应：校招、社招；专项面试对应java、golang等)
+    3: required string difficulty (api.body="difficulty")  // 难度级别（简单、中等、困难）
+    4: optional string company_name (api.body="company_name")  // 公司名称（专项面试不用填写）
+    5: optional string position_name (api.body="position_name")  // 岗位名称（专项面试不用填写）
 }
 
 // 启动面试响应
@@ -123,6 +124,44 @@ struct GetInterviewEvaluationResponse {
     2: required list<EvaluationDimension> dimensions   // 各维度评估列表
 }
 
+// 答题记录中的单条对话
+struct AnswerRecordMessage {
+    1: required i32 order       // 对话顺序
+    2: required string question // 提问内容
+    3: required string answer   // 回答内容
+}
+
+// 答题记录中的评论信息
+struct AnswerRecordComment {
+    1: required i32 score           // 评分
+    2: required string key_points   // 关键点
+    3: required string difficulty   // 难度等级
+    4: required string strengths    // 优势
+    5: required string weaknesses   // 不足
+    6: required string suggestion   // 建议
+    7: required string know_points  // 知识点
+    8: required string thinking     // 思考过程
+    9: required string reference    // 参考答案
+}
+
+// 单个答题记录
+struct AnswerRecord {
+    1: required i32 order                           // 问题顺序
+    2: required string content                      // 问题内容
+    3: required AnswerRecordComment comment         // 评论信息
+    4: required list<AnswerRecordMessage> message   // 对话列表
+}
+
+// 获取答题记录请求
+struct GetAnswerRecordRequest {
+    1: required i64 report_id (api.query="report_id")  // 面试报告ID
+}
+
+// 获取答题记录响应
+struct GetAnswerRecordResponse {
+    1: required list<AnswerRecord> records  // 答题记录列表
+}
+
 
 
 // ==================== 服务定义 ====================
@@ -145,6 +184,20 @@ service InterviewsService {
     // 获取面试评估
     GetInterviewEvaluationResponse GetInterviewEvaluation(1: GetInterviewEvaluationRequest request) (
         api.get="/api/interview/evaluation",
+        api.category="interviews",
+        api.gen_path="interviews"
+    )
+
+    // 获取答题记录
+    GetAnswerRecordResponse GetAnswerRecord(1: GetAnswerRecordRequest request) (
+        api.get="/api/interview/answer-record",
+        api.category="interviews",
+        api.gen_path="interviews"
+    )
+
+    // 获取面试记录列表
+    ListInterviewRecordsResponse GetInterviewRecords(1: ListInterviewRecordsRequest request) (
+        api.get="/api/interview/records",
         api.category="interviews",
         api.gen_path="interviews"
     )

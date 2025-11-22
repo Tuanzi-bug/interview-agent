@@ -51,6 +51,17 @@ func (s *UserModelServer) CreateUserModel(ctx context.Context,
 		status = int(*req.Status)
 	}
 
+	// 检查是否需要设置为默认模型
+	isDefault := 0
+	if req.IsSetIsDefault() {
+		isDefault = int(req.GetIsDefault())
+	}
+
+	// 如果设置为默认，先取消其他模型的默认状态
+	if isDefault == 1 {
+		_ = model.UserModelDao.CancelDefaultUserModel(userID, 0) // 0 表示取消所有
+	}
+
 	err = model.UserModelDao.CreateUserModel(&model.UserModel{
 		UserID:          userID,
 		Name:            req.GetName(),
@@ -63,6 +74,7 @@ func (s *UserModelServer) CreateUserModel(ctx context.Context,
 		DefaultParams:   defaultParams,
 		Scope:           scope,
 		Status:          status,
+		IsDefault:       isDefault,
 		ProviderName:    req.GetProviderName(),
 	})
 	if err != nil {
@@ -146,6 +158,16 @@ func (s *UserModelServer) UpdateUserModel(ctx context.Context,
 	// 处理可选字段 - Status
 	if req.IsSetStatus() {
 		existingModel.Status = int(req.GetStatus())
+	}
+
+	// 处理可选字段 - IsDefault
+	if req.IsSetIsDefault() {
+		isDefault := int(req.GetIsDefault())
+		// 如果设置为默认，先取消其他模型的默认状态
+		if isDefault == 1 {
+			_ = model.UserModelDao.CancelDefaultUserModel(userID, 0) // 0 表示取消所有
+		}
+		existingModel.IsDefault = isDefault
 	}
 
 	existingModel.UpdatedAt = time.Now().UnixMilli()

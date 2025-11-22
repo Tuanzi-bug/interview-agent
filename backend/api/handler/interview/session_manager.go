@@ -26,12 +26,16 @@ type InterviewSession struct {
 	UserAnswer      string        // 用户的答案
 	AnswerReceived  bool          // 是否收到答案
 	CreatedAt       time.Time     // 创建时间
+	StartTime       time.Time     // 面试开始时间
 	LastActivity    time.Time     // 最后活动时间
 	ResumeFilePath  string        // 简历文件路径
 	HasResume       bool          // 是否有简历
 	Query           string        // 用户查询
 	AnswerChan      chan string   // 答案通道
 	Done            bool          // 面试是否完成
+	Type            string        // 面试类型（综合面试/专项面试）
+	Domain          string        // 面试领域
+	Difficulty      string        // 难度级别
 	mu              sync.Mutex    // 锁
 }
 
@@ -58,11 +62,12 @@ func init() {
 }
 
 // CreateSession 创建新会话
-func (sm *SessionManager) CreateSession(userID uint, recordID uint64, resumeFilePath string, hasResume bool, query string) *InterviewSession {
+func (sm *SessionManager) CreateSession(userID uint, recordID uint64, resumeFilePath string, hasResume bool, query string, interviewType string, domain string, difficulty string) *InterviewSession {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
 	sessionID := generateSessionID()
+	now := time.Now()
 	session := &InterviewSession{
 		SessionID:       sessionID,
 		UserID:          userID,
@@ -70,11 +75,15 @@ func (sm *SessionManager) CreateSession(userID uint, recordID uint64, resumeFile
 		CurrentQuestion: 0,
 		AllQuestions:    []interface{}{},
 		AllDialogues:    []interface{}{},
-		CreatedAt:       time.Now(),
-		LastActivity:    time.Now(),
+		CreatedAt:       now,
+		StartTime:       now,
+		LastActivity:    now,
 		ResumeFilePath:  resumeFilePath,
 		HasResume:       hasResume,
 		Query:           query,
+		Type:            interviewType,
+		Domain:          domain,
+		Difficulty:      difficulty,
 		AnswerChan:      make(chan string, 1),
 		Done:            false,
 	}
@@ -195,7 +204,7 @@ func (sm *SessionManager) cleanupExpiredSessions() {
 
 	now := time.Now()
 	for sessionID, session := range sm.sessions {
-		if now.Sub(session.LastActivity) > 30*time.Minute {
+		if now.Sub(session.LastActivity) > 120*time.Minute {
 			close(session.AnswerChan)
 			delete(sm.sessions, sessionID)
 		}

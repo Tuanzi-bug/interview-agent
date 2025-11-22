@@ -15,6 +15,7 @@ type (
 		ID           uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
 		UserID       uint      `json:"user_id" gorm:"not null;index:idx_user_id;comment:用户ID"`
 		TopicID      uint64    `json:"topic_id" gorm:"not null;index:idx_topic_id_order;comment:关联的问题主题ID"`
+		ReportID     uint64    `json:"report_id" gorm:"not null;index:idx_report_id;comment:关联的面试报告ID"`
 		Question     string    `json:"question" gorm:"type:text;comment:智能体的提问内容"`
 		Answer       string    `json:"answer" gorm:"type:text;comment:用户的回答内容"`
 		DisplayOrder uint32    `json:"display_order" gorm:"not null;default:0;index:idx_topic_id_order;comment:在主题内的显示顺序"`

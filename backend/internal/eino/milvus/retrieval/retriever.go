@@ -45,9 +45,9 @@ func NewRetrieverService(ctx context.Context, config *milvus.RetrieverConfig) (*
 	}
 	// 构建检索器配置
 	// 注意：需要显式设置 Sp（搜索参数）和 VectorConverter
-	// 1. eino-ext 的 defaultSearchParam 函数错误地将维度值作为 radius 参数传递
+	// 1. eino-service 的 defaultSearchParam 函数错误地将维度值作为 radius 参数传递
 	//    参考：https://github.com/cloudwego/eino-ext/blob/main/components/retriever/milvus/utils.go#L40
-	// 2. eino-ext 的 defaultVectorConverter 返回 BinaryVector，但我们使用 FloatVector
+	// 2. eino-service 的 defaultVectorConverter 返回 BinaryVector，但我们使用 FloatVector
 	//    参考：https://github.com/cloudwego/eino-ext/blob/main/components/retriever/milvus/utils.go#L97
 	retrieverConfig := &milvus.RetrieverConfig{
 		Client:            config.Client,

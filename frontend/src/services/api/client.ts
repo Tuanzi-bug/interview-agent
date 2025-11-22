@@ -2,7 +2,7 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 
 
 // 创建axios实例
 const apiClient: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api',
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || '/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -12,11 +12,13 @@ const apiClient: AxiosInstance = axios.create({
 // 请求拦截器
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // 这里可以添加token等认证信息
+    const url = config.url || '';
+    const isAuthFree = url.includes('/user/register') || url.includes('/user/login') || url.includes('/user/logout');
     const token = localStorage.getItem('token');
-    if (token) {
+    if (token && !isAuthFree) {
       config.headers = (config.headers || {}) as any;
       (config.headers as any).Authorization = `Bearer ${token}`;
+      (config.headers as any)['X-Auth-Token'] = token;
     }
     return config;
   },
@@ -28,15 +30,25 @@ apiClient.interceptors.request.use(
 // 响应拦截器
 apiClient.interceptors.response.use(
   (response: AxiosResponse<any>) => {
-    // 对响应数据做点什么
-    return response.data;
+    const payload = response?.data;
+    if (payload && typeof payload === 'object' && 'code' in payload) {
+      if (payload.code === 200) {
+        let data = payload.data;
+        if (data && typeof data === 'object' && 'data' in data && Object.keys(data).length === 1) {
+          data = (data as any).data;
+        }
+        return data;
+      }
+      if (payload.code === 401) {
+        localStorage.removeItem('token');
+      }
+      return Promise.reject({ response, message: payload.message, code: payload.code });
+    }
+    return payload;
   },
   (error) => {
-    // 对响应错误做点什么
     if (error.response?.status === 401) {
-      // 处理未授权错误
       localStorage.removeItem('token');
-      // 可以重定向到登录页
     }
     return Promise.reject(error);
   }

@@ -11,14 +11,11 @@ import (
 )
 
 var jwtPublicRoutes = map[string]struct{}{
-	"/api/user/login":              {},
-	"/api/user/register":           {},
-	"/api/user/logout":             {},
-	"/api/user/wechat/login":       {},
-	"/api/user/wechat/callback":    {},
-	"/api/interview/records/mock":  {},
-	"/api/interview/titleBank":     {},
-	"/api/interview/titleBank/:id": {},
+	"/api/user/login":           {},
+	"/api/user/register":        {},
+	"/api/user/logout":          {},
+	"/api/user/wechat/login":    {},
+	"/api/user/wechat/callback": {},
 }
 
 func AuthSkipper() serviceMiddleware.JWTSkipper {
@@ -199,6 +196,16 @@ func _submitinterviewanswerMw() []app.HandlerFunc {
 }
 
 func _getinterviewevaluationMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getinterviewrecordsMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getanswerrecordMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
