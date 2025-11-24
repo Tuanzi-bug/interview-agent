@@ -43,15 +43,12 @@ export default function SocialInterviewStartPage() {
     setStarting(true);
     const formData = new FormData();
     const sanitize = (s: string) => s.replace(/[<>&"'`]/g, '');
-    formData.append('title', String(params.title || '综合面试'));
     formData.append('type', String(params.type || '综合面试'));
     formData.append('domain', String(params.domain || '社招'));
     formData.append('difficulty', String(params.difficulty || 'easy'));
     formData.append('position_name', String(params.position_name || ''));
     formData.append('company_name', sanitize(String(params.company_name || '')));
-    if (params.query) {
-      formData.append('query', String(params.query));
-    }
+    
     const f = (resumeFile?.originFileObj || resumeFile) as Blob;
     const fname = (resumeFile?.name || 'resume.pdf');
     formData.append('resume', f, fname);

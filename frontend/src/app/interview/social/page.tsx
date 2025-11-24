@@ -61,20 +61,8 @@ export default function SocialInterviewPage() {
             <Form
               form={form}
               layout="vertical"
-              initialValues={{ title: '综合面试', job: 'Java后端开发', level: '入门', query: '' }}
+              initialValues={{ job: 'Java后端开发', level: '入门' }}
             >
-              <Row gutter={16}>
-                <Col xs={24} md={12}>
-                  <Form.Item label="面试标题" name="title" rules={[{ required: true, message: '请填写面试标题' }]}> 
-                    <Input placeholder="如：综合面试" />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item label="测试 query（可选）" name="query"> 
-                    <Input placeholder="用于测试的query字符串" />
-                  </Form.Item>
-                </Col>
-              </Row>
               <Form.Item
                 label="上传简历"
                 name="resume"
@@ -158,13 +146,11 @@ export default function SocialInterviewPage() {
                     }
                     const values = form.getFieldsValue();
                     const params = {
-                      title: values.title || '综合面试',
                       type: '综合面试',
                       domain: '社招',
                       difficulty: values.level,
                       position_name: values.job || '',
                       company_name: String(values.company_name || ''),
-                      query: String(values.query || ''),
                     };
                     (window as any).__interviewParams = { ...params };
                     (window as any).__interviewResume = resumeFile;
