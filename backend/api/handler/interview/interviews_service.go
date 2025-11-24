@@ -3,264 +3,639 @@
 package interview
 
 import (
+	interviewsapi "ai-eino-interview-agent/api/model/interviews"
+	"ai-eino-interview-agent/api/response"
+	"ai-eino-interview-agent/chatApp/agent/service"
 	"ai-eino-interview-agent/internal/middleware"
+	"ai-eino-interview-agent/internal/model"
+	interviewservice "ai-eino-interview-agent/internal/service/interviews"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
-	interviewsapi "ai-eino-interview-agent/api/model/interviews"
-	interviewservice "ai-eino-interview-agent/internal/service/interviews"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
 
-// StartInterviewStream 启动面试流程（流式）
+// SSEWriter 包装 Hertz RequestContext 用于 SSE 写入
+type SSEWriter struct {
+	ctx     *app.RequestContext
+	writer  io.Writer
+	flusher http.Flusher
+}
+
+// Write 实现 io.Writer 接口
+func (w *SSEWriter) Write(p []byte) (n int, err error) {
+	if w.writer != nil {
+		// 直接写入 io.PipeWriter，数据会立即流向客户端
+		return w.writer.Write(p)
+	}
+	n, err = w.ctx.WriteString(string(p))
+	w.ctx.Flush()
+	return
+}
+
+// StartInterviewStream 启动交互式面试流程（SSE + 前端交互模式）
 // @router /api/interview/start/stream [POST]
 func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
-	var err error
+	// 1. 解析请求（必须在设置 SSE 响应头之前）
 	var req interviewsapi.StartInterviewRequest
-
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	if err := c.BindAndValidate(&req); err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
-	// 处理文件上传（如果存在）
-	var resumeFilePath string
-	fileHeader, err := c.FormFile("resume")
-	if err == nil && fileHeader != nil {
-		// 验证文件类型
-		if filepath.Ext(fileHeader.Filename) != ".pdf" {
-			c.String(consts.StatusBadRequest, "只支持 PDF 格式的简历文件")
-			return
-		}
-		// 验证文件大小（限制为 10MB）
-		if fileHeader.Size > 10*1024*1024 {
-			c.String(consts.StatusBadRequest, "文件大小不能超过 10MB")
-			return
-		}
-		// 打开上传的文件
-		file, err := fileHeader.Open()
-		if err != nil {
-			c.String(consts.StatusInternalServerError, "无法打开上传的文件: "+err.Error())
-			return
-		}
-		defer file.Close()
-		// 创建临时目录
-		tempDir := filepath.Join(os.TempDir(), "interview_resumes")
-		err = os.MkdirAll(tempDir, 0755)
-		if err != nil {
-			c.String(consts.StatusInternalServerError, "无法创建临时目录: "+err.Error())
-			return
-		}
-		// 生成唯一的文件名
-		timestamp := time.Now().UnixNano()
-		fileName := fmt.Sprintf("resume_%d_%s", timestamp, fileHeader.Filename)
-		resumeFilePath = filepath.Join(tempDir, fileName)
-		// 创建临时文件
-		tempFile, err := os.Create(resumeFilePath)
-		if err != nil {
-			c.String(consts.StatusInternalServerError, "无法创建临时文件: "+err.Error())
-			return
-		}
-		defer tempFile.Close()
-		// 将上传的文件内容复制到临时文件
-		_, err = io.Copy(tempFile, file)
-		if err != nil {
-			os.Remove(resumeFilePath) // 清理失败的文件
-			c.String(consts.StatusInternalServerError, "无法保存文件: "+err.Error())
-			return
-		}
-		// 确保文件已写入磁盘
-		tempFile.Sync()
+	resumeFilePath, err := handleResumeUpload(c)
+	if err != nil {
+		response.InternalServerError(ctx, c, err.Error())
+		return
 	}
 
-	// 设置 SSE 响应头
-	c.Header("Content-Type", "text/event-stream")
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Authorization token is required")
+		return
+	}
+
+	setupSSEResponse(c)
+
+	interviewService := interviewservice.NewInterviewService()
+	recordDTO := &interviewsapi.InterviewRecordDTO{
+		UserID:       int32(userID),
+		Type:         req.Type,
+		Difficulty:   req.Difficulty,
+		Domain:       req.Domain,
+		PositionName: req.PositionName,
+		CompanyName:  req.CompanyName,
+		Status:       "pending",
+	}
+
+	recordID, err := interviewService.CreateInterviewRecord(ctx, recordDTO)
+	if err != nil {
+		response.InternalServerError(ctx, c, "Failed to create interview record: "+err.Error())
+		return
+	}
+	hasResume := resumeFilePath != ""
+
+	sm := GetSessionManager()
+	session := sm.CreateSession(userID, recordID, resumeFilePath, hasResume, "", req.Type, req.Domain, req.Difficulty)
+
+	pipeReader, pipeWriter := io.Pipe()
+	c.SetBodyStream(pipeReader, -1)
+
+	go func() {
+		defer pipeWriter.Close()
+
+		sendSSEEvent(pipeWriter, map[string]interface{}{
+			"type":       "session_id",
+			"session_id": session.SessionID,
+			"message":    "Session created successfully",
+		})
+
+		sendSSEEvent(pipeWriter, map[string]interface{}{
+			"type":       "start",
+			"message":    "面试已开始，正在生成第一个问题...",
+			"session_id": session.SessionID,
+		})
+
+		writer := &SSEWriter{ctx: c, writer: pipeWriter}
+		runInterviewLoopAsync(ctx, userID, writer, session, interviewService)
+	}()
+}
+
+// handleResumeUpload 处理简历文件上传
+func handleResumeUpload(c *app.RequestContext) (string, error) {
+	fileHeader, err := c.FormFile("resume")
+	if err != nil || fileHeader == nil {
+		return "", nil // 没有上传文件不是错误
+	}
+
+	// 验证文件类型
+	if filepath.Ext(fileHeader.Filename) != ".pdf" {
+		return "", fmt.Errorf("只支持 PDF 格式的简历文件")
+	}
+
+	// 验证文件大小
+	if fileHeader.Size > 10*1024*1024 {
+		return "", fmt.Errorf("文件大小不能超过 10MB")
+	}
+
+	// 打开上传的文件
+	file, err := fileHeader.Open()
+	if err != nil {
+		return "", fmt.Errorf("无法打开上传的文件: %v", err)
+	}
+	defer file.Close()
+
+	// 创建项目内的文件夹
+	projectRoot := filepath.Join(os.Getenv("PWD"), "uploads", "resumes")
+	if err := os.MkdirAll(projectRoot, 0755); err != nil {
+		return "", fmt.Errorf("无法创建上传目录: %v", err)
+	}
+
+	// 生成唯一的文件名
+	timestamp := time.Now().UnixNano()
+	fileName := fmt.Sprintf("resume_%d_%s", timestamp, fileHeader.Filename)
+	resumeFilePath := filepath.Join(projectRoot, fileName)
+
+	// 创建文件
+	tempFile, err := os.Create(resumeFilePath)
+	if err != nil {
+		return "", fmt.Errorf("无法创建文件: %v", err)
+	}
+	defer tempFile.Close()
+
+	// 复制文件内容
+	if _, err := io.Copy(tempFile, file); err != nil {
+		os.Remove(resumeFilePath)
+		return "", fmt.Errorf("无法保存文件: %v", err)
+	}
+
+	// 确保文件已写入磁盘
+	tempFile.Sync()
+
+	return resumeFilePath, nil
+}
+
+// setupSSEResponse 设置 SSE 响应头
+func setupSSEResponse(c *app.RequestContext) {
+	c.SetStatusCode(http.StatusOK)
+	c.Header("Content-Type", "text/event-stream; charset=utf-8")
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
 	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Headers", "Cache-Control")
+	c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, Cache-Control")
+	c.Header("Transfer-Encoding", "chunked")
+	c.Header("X-Accel-Buffering", "no")
+	c.Header("X-Content-Type-Options", "nosniff")
+}
 
-	// 获取面试服务实例
-	interviewService := interviewservice.NewInterviewService()
-
-	// 如果有上传的简历文件，将文件路径添加到请求中
-	if resumeFilePath != "" {
-		// 将文件路径信息添加到 query 中，让智能体知道有简历文件
-		// Supervisor 会根据指令将简历分析任务转让给 ResumeAnalysisAgent
-		if req.Query == "" {
-			req.Query = fmt.Sprintf("请分析我的简历PDF文件，文件路径：%s", resumeFilePath)
-		} else {
-			req.Query = fmt.Sprintf("%s\n\n我上传了简历PDF文件，文件路径：%s，请先分析简历", req.Query, resumeFilePath)
-		}
-	}
-	// 保存面试记录（
-	userID := middleware.GetUserID(c)
-	recordTitle := fmt.Sprintf("Interview - %s", time.Now().Format("2006-01-02 15:04:05"))
-	recordID, err := interviewService.SaveInterviewRecord(ctx, userID, recordTitle, req.Query)
-	if err != nil {
-		// 记录错误但不中断流程
-		fmt.Fprintf(os.Stderr, "Failed to save interview record: %v\n", err)
-	}
-
-	// 启动流式面试
-	eventChan, err := interviewService.StartInterviewStream(ctx, &req, 1)
-	if err != nil {
-		// 如果出错，清理上传的文件
-		if resumeFilePath != "" {
-			os.Remove(resumeFilePath)
-		}
-		c.String(consts.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// 在流式响应结束后清理临时文件
+// runInterviewLoopAsync 异步运行面试循环
+func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, session *InterviewSession, interviewService interviewservice.InterviewService) {
 	defer func() {
-		if resumeFilePath != "" {
-			// 延迟删除，给智能体一些时间处理文件
-			go func() {
-				time.Sleep(5 * time.Minute) // 5分钟后删除
-				os.Remove(resumeFilePath)
-			}()
+		if r := recover(); r != nil {
+			sendErrorEvent(writer, fmt.Sprintf("面试异常: %v", r))
 		}
+		cleanupResumeFile(session.ResumeFilePath)
+		// 延迟删除会话，给前端充足时间来获取最后的数据
+		go func() {
+			time.Sleep(10 * time.Second)
+			GetSessionManager().DeleteSession(session.SessionID)
+		}()
 	}()
 
-	// 流式输出事件
-	writer := c.Response.BodyWriter()
-	startTime := time.Now()
-	for event := range eventChan {
-		// 将事件序列化为 JSON
-		eventJSON, err := json.Marshal(event)
-		if err != nil {
-			// 发送错误事件
-			errorEvent := map[string]string{
-				"type":  "error",
-				"error": "序列化事件失败: " + err.Error(),
-			}
-			errorJSON, _ := json.Marshal(errorEvent)
-			fmt.Fprintf(writer, "data: %s\n\n", string(errorJSON))
-			return
+	questionIndex := 0
+	sm := GetSessionManager()
+	var resumeContent string
+	const maxFollowUps = 2
+	const answerTimeout = 30 * time.Minute
+	const heartbeatInterval = 30 * time.Second
+
+	// 根据面试类型选择维度
+	var dimensions []string
+	if session.Type == "综合面试" {
+		dimensions = []string{
+			"professional_field",
+			"project_experience",
+			"technical_depth",
+			"technical_foundation",
+			"team_collaboration",
+			"system_architecture_design",
 		}
-
-		// 使用 SSE 格式发送事件
-		fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-
-		// 如果是完成事件，结束流并更新面试记录为已完成
-		if event.Type == "done" {
-			if recordID > 0 {
-				// 异步更新面试记录状态为已完成
-				go func() {
-					duration := int64(time.Since(startTime).Seconds())
-					report := ""
-					if event.Report != nil {
-						report = *event.Report
-					}
-					_ = interviewService.CompleteInterviewRecord(ctx, recordID, report, duration, event.Score)
-				}()
-
-			}
-			break
+	} else {
+		// 专项面试
+		dimensions = []string{
+			"basic_knowledge_mastery",
+			"working_principle_practical_experience",
+			"advanced_features_application",
+			"problem_troubleshooting_skills",
+			"architecture_design_thinking",
+			"performance_optimization_ability",
 		}
+	}
+	dimensionIndex := 0
+	followUpCount := 0
 
-		// 保存消息事件中的对话历史
-		if recordID > 0 && event.Type == "message" && event.Messages != nil {
-			go func(messages *string) {
-				messagesStr := ""
-				if messages != nil {
-					messagesStr = *messages
-				}
-				_ = interviewService.UpdateInterviewRecord(ctx, recordID, messagesStr, "", "")
-			}(event.Messages)
-		}
+	for {
 
-		// 更新面试记录的状态和当前Agent
-		if recordID > 0 && event.Status != nil && *event.Status != "" {
-			go func(status string, agentName *string, messages *string) {
-				agent := ""
-				if agentName != nil {
-					agent = *agentName
-				}
-				messagesStr := ""
-				if messages != nil {
-					messagesStr = *messages
-				}
-				_ = interviewService.UpdateInterviewRecord(ctx, recordID, messagesStr, status, agent)
-			}(*event.Status, event.AgentName, event.Messages)
-		}
-
-		// 检查上下文是否已取消
 		select {
 		case <-ctx.Done():
 			return
 		default:
+		}
+
+		if questionIndex > 0 {
+			answer, received := waitForAnswerWithHeartbeat(sm, session.SessionID, answerTimeout, heartbeatInterval, writer)
+			if !received {
+				sendErrorEvent(writer, "等待答案超时，面试已结束")
+				sendCompleteEvent(writer)
+				break
+			}
+
+			if answer == "quit" {
+				sendCompleteEvent(writer)
+				break
+			}
+
+			session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
+				"speaker_type":  "candidate",
+				"content":       answer,
+				"display_order": uint32(questionIndex)*100 + uint32(followUpCount),
+			})
+
+			if followUpCount < maxFollowUps {
+				followUpCount++
+			} else {
+				dimensionIndex++
+				followUpCount = 0
+				questionIndex++
+				if dimensionIndex >= len(dimensions) {
+					sendTopicCompleteEvent(writer)
+					sendCompleteEvent(writer)
+					break
+				}
+			}
+		}
+
+		if questionIndex == 0 {
+			questionIndex++
+		}
+
+		var prompt string
+		if questionIndex == 1 {
+			prompt = buildPrompt(questionIndex, session.Query, session.ResumeFilePath, session.HasResume, dimensions[dimensionIndex], 0, session.Type, session.Domain, session.Difficulty)
+		} else if followUpCount > 0 {
+			lastAnswer := ""
+			displayOrder := uint32(questionIndex)*100 + uint32(followUpCount-1)
+			for _, dialogue := range session.AllDialogues {
+				d := dialogue.(map[string]interface{})
+				if d["speaker_type"] == "candidate" && d["display_order"] == displayOrder {
+					lastAnswer = toString(d["content"])
+					break
+				}
+			}
+			prompt = buildPrompt(questionIndex, lastAnswer, "", false, dimensions[dimensionIndex], followUpCount, session.Type, session.Domain, session.Difficulty)
+		} else {
+			userAnswers := ""
+			for i := 1; i < questionIndex; i++ {
+				displayOrder := uint32(i) * 100
+				for _, dialogue := range session.AllDialogues {
+					d := dialogue.(map[string]interface{})
+					if d["speaker_type"] == "candidate" && d["display_order"] == displayOrder {
+						userAnswers += fmt.Sprintf("问题 %d 的回答：%s\n", i, d["content"])
+						break
+					}
+				}
+			}
+			prompt = buildPrompt(questionIndex, resumeContent+"\n\n用户已回答的问题：\n"+userAnswers, "", false, dimensions[dimensionIndex], 0, session.Type, session.Domain, session.Difficulty)
+		}
+
+		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId)
+		if err != nil {
+			sendErrorEvent(writer, "Failed to generate question: "+err.Error())
+			sendCompleteEvent(writer)
+			break
+		}
+
+		if len(result.Questions) == 0 {
+			sendTopicCompleteEvent(writer)
+			sendCompleteEvent(writer)
+			break
+		}
+
+		if questionIndex == 1 {
+			resumeContent = session.Query
+		}
+
+		q := result.Questions[0]
+		sendQuestionEvent(writer, questionIndex, q)
+
+		session.AllQuestions = append(session.AllQuestions, map[string]interface{}{
+			"question_text":  q.QuestionText,
+			"eval_dimension": q.EvalDimension,
+			"order":          q.Order,
+		})
+
+		if len(result.Dialogues) > 0 {
+			for _, d := range result.Dialogues {
+				if d.SpeakerType == "interviewer" {
+					session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
+						"speaker_type":  "interviewer",
+						"content":       d.Content,
+						"display_order": uint32(questionIndex)*100 + uint32(followUpCount),
+					})
+					break
+				}
+			}
+		}
+
+		sendReadyEventWithSession(writer, questionIndex, session.SessionID)
+		sm.ClearAnswer(session.SessionID)
+	}
+
+	if err := interviewService.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, session.AllQuestions, session.AllDialogues); err != nil {
+		_ = err
+	}
+
+	duration := int64(time.Since(session.StartTime).Seconds())
+
+	updateDTO := &interviewsapi.InterviewRecordDTO{
+		ID:       int64(session.RecordID),
+		UserID:   int32(session.UserID),
+		Status:   "completed",
+		Duration: &duration,
+	}
+
+	if err := interviewService.UpdateInterviewRecord(ctx, updateDTO); err != nil {
+		// 记录更新失败，但不中断流程
+		_ = err
+	}
+}
+
+// waitForAnswerWithHeartbeat 等待用户答案，并定期发送心跳保活
+func waitForAnswerWithHeartbeat(sm *SessionManager, sessionID string, timeout time.Duration, heartbeatInterval time.Duration, writer io.Writer) (string, bool) {
+	deadline := time.Now().Add(timeout)
+	ticker := time.NewTicker(heartbeatInterval)
+	defer ticker.Stop()
+
+	for {
+		// 计算剩余等待时间
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return "", false // 超时
+		}
+
+		// 尝试获取答案（使用较短的等待时间）
+		answer, received := sm.GetAnswer(sessionID, heartbeatInterval)
+		if received {
+			return answer, true // 获取到答案
+		}
+
+		// 发送心跳保活
+		sendHeartbeatEvent(writer)
+
+		// 检查是否超时
+		if time.Now().After(deadline) {
+			return "", false // 超时
 		}
 	}
 }
 
-// ContinueInterview 继续面试流程（用于多轮对话）
-// @router /api/interview/continue [POST]
-func ContinueInterview(ctx context.Context, c *app.RequestContext) {
+// sendHeartbeatEvent 发送心跳事件保活连接
+func sendHeartbeatEvent(writer io.Writer) {
+	sendSSEEvent(writer, map[string]interface{}{
+		"type":    "heartbeat",
+		"message": "连接保活",
+	})
+}
+
+// toString 将 interface{} 转换为 string
+func toString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
+// buildPrompt 构建面试问题生成的提示词
+func buildPrompt(questionIndex int, query string, resumeFilePath string, hasResume bool, dimension string, followUpCount int, interviewType string, domain string, difficulty string) string {
+	return service.BuildInterviewPrompt(questionIndex, query, resumeFilePath, hasResume, dimension, followUpCount, interviewType, domain, difficulty)
+}
+
+// sendSSEEvent 发送 SSE 事件
+func sendSSEEvent(writer io.Writer, event map[string]interface{}) {
+	eventJSON, _ := json.Marshal(event)
+	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
+	if flusher, ok := writer.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
+func sendErrorEvent(writer io.Writer, message string) {
+	sendSSEEvent(writer, map[string]interface{}{"type": "error", "message": message})
+}
+
+func sendCompleteEvent(writer io.Writer) {
+	sendSSEEvent(writer, map[string]interface{}{"type": "complete", "message": "面试已结束"})
+}
+func sendQuestionEvent(writer io.Writer, questionIndex int, q service.QuestionData) {
+	sendSSEEvent(writer, map[string]interface{}{
+		"type":  "question",
+		"index": questionIndex,
+		"data": map[string]interface{}{
+			"question_text":  q.QuestionText,
+			"eval_dimension": q.EvalDimension,
+			"order":          q.Order,
+		},
+	})
+}
+
+// sendReadyEventWithSession 发送就绪事件
+func sendReadyEventWithSession(writer io.Writer, questionIndex int, sessionID string) {
+	sendSSEEvent(writer, map[string]interface{}{
+		"type":           "ready_for_answer",
+		"message":        "请回答上述问题",
+		"question_index": questionIndex,
+		"session_id":     sessionID,
+	})
+}
+
+// sendTopicCompleteEvent 发送主题完成事件
+func sendTopicCompleteEvent(writer io.Writer) {
+	sendSSEEvent(writer, map[string]interface{}{
+		"type":    "topic_complete",
+		"message": "当前主题的面试已完成。输入 'continue' 继续下一个主题，或输入 'quit' 结束面试。",
+	})
+}
+
+// cleanupResumeFile 删除简历文件
+func cleanupResumeFile(resumeFilePath string) {
+	if resumeFilePath != "" {
+		_ = os.Remove(resumeFilePath)
+	}
+}
+
+// SubmitInterviewAnswer 提交面试回答
+// @router /api/interview/submit/answer [POST]
+func SubmitInterviewAnswer(ctx context.Context, c *app.RequestContext) {
 	var err error
-	var req interviewsapi.ContinueInterviewRequest
+	var req interviewsapi.SubmitInterviewAnswerRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
+		return
+	}
+
+	// 验证必填字段
+	if req.SessionID == "" {
+		response.BadRequest(ctx, c, "session_id is required")
+		return
+	}
+
+	// 如果 action 是 answer，则 answer 必填；如果是 quit 或 continue，answer 可以为空
+	if req.Action != nil && *req.Action == "answer" && req.Answer == "" {
+		response.BadRequest(ctx, c, "answer is required when action is 'answer'")
+		return
+	}
+
+	// 获取会话
+	sm := GetSessionManager()
+	session := sm.GetSession(req.SessionID)
+	if session == nil {
+		response.NotFound(ctx, c, "Session not found")
+		return
+	}
+
+	// 验证用户身份
+	userID := middleware.GetUserID(c)
+	if userID == 0 || session.UserID != userID {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+
+	// 提交答案或操作
+	// 如果 action 是 quit 或 continue，提交对应的 action；否则提交 answer
+	answerToSubmit := req.Answer
+	if req.Action != nil && (*req.Action == "quit" || *req.Action == "continue") {
+		answerToSubmit = *req.Action
+	}
+
+	if err := sm.SubmitAnswer(req.SessionID, answerToSubmit); err != nil {
+		response.InternalServerError(ctx, c, err.Error())
+		return
+	}
+
+	// 返回成功响应
+	msg := "Answer received successfully"
+	resp := &interviewsapi.SubmitInterviewAnswerResponse{
+		Status:    "received",
+		Message:   &msg,
+		SessionID: &req.SessionID,
+	}
+
+	response.Success(ctx, c, resp)
+}
+
+// GetInterviewEvaluation 获取面试评估报告
+// @router /api/interview/evaluation [GET]
+func GetInterviewEvaluation(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req interviewsapi.GetInterviewEvaluationRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
+		return
+	}
+	userId := middleware.GetUserID(c)
+	if userId == 0 {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+
+	reportID := uint64(req.ReportID)
+
+	interviewService := interviewservice.NewInterviewService()
+	existingEvaluation, err := interviewService.GetInterviewEvaluation(ctx, userId, reportID)
+	if err == nil && existingEvaluation != nil {
+		response.Success(ctx, c, existingEvaluation)
+		return
+	}
+	resp, err := service.GenerateInterviewEvaluation(ctx, userId, reportID)
+	if err != nil {
+		response.InternalServerError(ctx, c, "Failed to generate evaluation: "+err.Error())
+		return
+	}
+
+	response.Success(ctx, c, resp)
+}
+
+// GetAnswerRecord .
+// @router /api/interview/answer-record [GET]
+func GetAnswerRecord(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req interviewsapi.GetAnswerRecordRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
+		return
+	}
+	userId := middleware.GetUserID(c)
+	if userId == 0 {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+
+	reportID := uint64(req.ReportID)
+	interviewService := interviewservice.NewInterviewService()
+	res, err := interviewService.GetAnswerReport(ctx, userId, reportID)
+
+	// 如果数据库中已有数据且 records 不为空，直接返回
+	if err == nil && res != nil {
+		resMap, ok := res.(map[string]interface{})
+		if ok {
+			// 检查 records 字段是否存在且不为空
+			if recordsData, exists := resMap["records"]; exists {
+				// 尝试多种类型的断言
+				switch v := recordsData.(type) {
+				case []*model.AnswerRecordItem:
+					if len(v) > 0 {
+						response.Success(ctx, c, res)
+						return
+					}
+				case []interface{}:
+					if len(v) > 0 {
+						response.Success(ctx, c, res)
+						return
+					}
+				}
+			}
+		}
+	}
+
+	// 调用智能体生成评估
+	resp, err := service.GenerateInterviewTopicEvaluation(ctx, userId, reportID)
+	if err != nil {
+		response.InternalServerError(ctx, c, "Failed to generate evaluation: "+err.Error())
+		return
+	}
+	response.Success(ctx, c, resp)
+}
+
+// GetInterviewRecords .
+// @router /api/interview/records [GET]
+func GetInterviewRecords(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req interviewsapi.ListInterviewRecordsRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
 		c.String(consts.StatusBadRequest, err.Error())
 		return
 	}
-
-	// 设置 SSE 响应头
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Headers", "Cache-Control")
-
-	// 获取面试服务实例
-	interviewService := interviewservice.NewInterviewService()
-
-	// 继续面试流程
-	eventChan, err := interviewService.ContinueInterview(ctx, &req, 2)
-	if err != nil {
-		c.String(consts.StatusInternalServerError, err.Error())
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Unauthorized")
 		return
 	}
 
-	// 流式输出事件
-	writer := c.Response.BodyWriter()
-	for event := range eventChan {
-		// 将事件序列化为 JSON
-		eventJSON, err := json.Marshal(event)
-		if err != nil {
-			// 发送错误事件
-			errorEvent := map[string]string{
-				"type":  "error",
-				"error": "序列化事件失败: " + err.Error(),
-			}
-			errorJSON, _ := json.Marshal(errorEvent)
-			fmt.Fprintf(writer, "data: %s\n\n", string(errorJSON))
-			return
-		}
-
-		// 使用 SSE 格式发送事件
-		fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
-
-		// 如果是完成事件，结束流
-		if event.Type == "done" {
-			break
-		}
-
-		// 检查上下文是否已取消
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
+	records, total, err := interviewservice.NewInterviewService().ListInterviewRecords(ctx, userID, req.Page, req.PageSize)
+	if err != nil {
+		return
 	}
+
+	resp := new(interviewsapi.ListInterviewRecordsResponse)
+	resp.Records = records
+	resp.Total = total
+
+	response.Success(ctx, c, resp)
 }

@@ -26,6 +26,8 @@ type CreateUserModelRequest struct {
 	Scope *int32 `thrift:"scope,10,optional" form:"scope" json:"scope,omitempty"`
 	// 默认 1
 	Status *int32 `thrift:"status,11,optional" form:"status" json:"status,omitempty"`
+	// 是否为默认（0=不是, 1=是）
+	IsDefault *int32 `thrift:"is_default,12,optional" form:"is_default" json:"is_default,omitempty"`
 }
 
 func NewCreateUserModelRequest() *CreateUserModelRequest {
@@ -104,6 +106,15 @@ func (p *CreateUserModelRequest) GetStatus() (v int32) {
 	return *p.Status
 }
 
+var CreateUserModelRequest_IsDefault_DEFAULT int32
+
+func (p *CreateUserModelRequest) GetIsDefault() (v int32) {
+	if !p.IsSetIsDefault() {
+		return CreateUserModelRequest_IsDefault_DEFAULT
+	}
+	return *p.IsDefault
+}
+
 var fieldIDToName_CreateUserModelRequest = map[int16]string{
 	1:  "name",
 	2:  "model_key",
@@ -116,6 +127,7 @@ var fieldIDToName_CreateUserModelRequest = map[int16]string{
 	9:  "config_json",
 	10: "scope",
 	11: "status",
+	12: "is_default",
 }
 
 func (p *CreateUserModelRequest) IsSetMetaID() bool {
@@ -136,6 +148,10 @@ func (p *CreateUserModelRequest) IsSetScope() bool {
 
 func (p *CreateUserModelRequest) IsSetStatus() bool {
 	return p.Status != nil
+}
+
+func (p *CreateUserModelRequest) IsSetIsDefault() bool {
+	return p.IsDefault != nil
 }
 
 func (p *CreateUserModelRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -252,6 +268,14 @@ func (p *CreateUserModelRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -438,6 +462,17 @@ func (p *CreateUserModelRequest) ReadField11(iprot thrift.TProtocol) error {
 	p.Status = _field
 	return nil
 }
+func (p *CreateUserModelRequest) ReadField12(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsDefault = _field
+	return nil
+}
 
 func (p *CreateUserModelRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -487,6 +522,10 @@ func (p *CreateUserModelRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 	}
@@ -702,6 +741,25 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
+func (p *CreateUserModelRequest) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsDefault() {
+		if err = oprot.WriteFieldBegin("is_default", thrift.I32, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.IsDefault); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
 
 func (p *CreateUserModelRequest) String() string {
@@ -1380,6 +1438,7 @@ type UserModelItem struct {
 	UpdatedAt     int64   `thrift:"updated_at,13,required" form:"updated_at,required" json:"updated_at,required" query:"updated_at,required"`
 	HasSecret     bool    `thrift:"has_secret,14,required" form:"has_secret,required" json:"has_secret,required" query:"has_secret,required"`
 	SecretHint    *string `thrift:"secret_hint,15,optional" form:"secret_hint" json:"secret_hint,omitempty" query:"secret_hint"`
+	IsDefault     int32   `thrift:"is_default,16,required" form:"is_default,required" json:"is_default,required" query:"is_default,required"`
 }
 
 func NewUserModelItem() *UserModelItem {
@@ -1469,6 +1528,10 @@ func (p *UserModelItem) GetSecretHint() (v string) {
 	return *p.SecretHint
 }
 
+func (p *UserModelItem) GetIsDefault() (v int32) {
+	return p.IsDefault
+}
+
 var fieldIDToName_UserModelItem = map[int16]string{
 	1:  "id",
 	2:  "name",
@@ -1485,6 +1548,7 @@ var fieldIDToName_UserModelItem = map[int16]string{
 	13: "updated_at",
 	14: "has_secret",
 	15: "secret_hint",
+	16: "is_default",
 }
 
 func (p *UserModelItem) IsSetMetaID() bool {
@@ -1518,6 +1582,7 @@ func (p *UserModelItem) Read(iprot thrift.TProtocol) (err error) {
 	var issetCreatedAt bool = false
 	var issetUpdatedAt bool = false
 	var issetHasSecret bool = false
+	var issetIsDefault bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -1664,6 +1729,15 @@ func (p *UserModelItem) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
+		case 16:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetIsDefault = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		default:
 			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
@@ -1729,6 +1803,11 @@ func (p *UserModelItem) Read(iprot thrift.TProtocol) (err error) {
 
 	if !issetHasSecret {
 		fieldId = 14
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetIsDefault {
+		fieldId = 16
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -1914,6 +1993,17 @@ func (p *UserModelItem) ReadField15(iprot thrift.TProtocol) error {
 	p.SecretHint = _field
 	return nil
 }
+func (p *UserModelItem) ReadField16(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.IsDefault = _field
+	return nil
+}
 
 func (p *UserModelItem) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1979,6 +2069,10 @@ func (p *UserModelItem) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField15(oprot); err != nil {
 			fieldId = 15
+			goto WriteFieldError
+		}
+		if err = p.writeField16(oprot); err != nil {
+			fieldId = 16
 			goto WriteFieldError
 		}
 	}
@@ -2260,6 +2354,23 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+
+func (p *UserModelItem) writeField16(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("is_default", thrift.I32, 16); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.IsDefault); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
 
 func (p *UserModelItem) String() string {
@@ -2769,6 +2880,8 @@ type UserModelDetail struct {
 	HasSecret bool `thrift:"has_secret,14,required" form:"has_secret,required" json:"has_secret,required" query:"has_secret,required"`
 	// 密钥脱敏提示
 	SecretHint *string `thrift:"secret_hint,15,optional" form:"secret_hint" json:"secret_hint,omitempty" query:"secret_hint"`
+	// 是否为默认（0=不是, 1=是）
+	IsDefault int32 `thrift:"is_default,16,required" form:"is_default,required" json:"is_default,required" query:"is_default,required"`
 }
 
 func NewUserModelDetail() *UserModelDetail {
@@ -2858,6 +2971,10 @@ func (p *UserModelDetail) GetSecretHint() (v string) {
 	return *p.SecretHint
 }
 
+func (p *UserModelDetail) GetIsDefault() (v int32) {
+	return p.IsDefault
+}
+
 var fieldIDToName_UserModelDetail = map[int16]string{
 	1:  "id",
 	2:  "name",
@@ -2874,6 +2991,7 @@ var fieldIDToName_UserModelDetail = map[int16]string{
 	13: "updated_at",
 	14: "has_secret",
 	15: "secret_hint",
+	16: "is_default",
 }
 
 func (p *UserModelDetail) IsSetMetaID() bool {
@@ -2907,6 +3025,7 @@ func (p *UserModelDetail) Read(iprot thrift.TProtocol) (err error) {
 	var issetCreatedAt bool = false
 	var issetUpdatedAt bool = false
 	var issetHasSecret bool = false
+	var issetIsDefault bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -3053,6 +3172,15 @@ func (p *UserModelDetail) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
+		case 16:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetIsDefault = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		default:
 			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
@@ -3118,6 +3246,11 @@ func (p *UserModelDetail) Read(iprot thrift.TProtocol) (err error) {
 
 	if !issetHasSecret {
 		fieldId = 14
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetIsDefault {
+		fieldId = 16
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -3303,6 +3436,17 @@ func (p *UserModelDetail) ReadField15(iprot thrift.TProtocol) error {
 	p.SecretHint = _field
 	return nil
 }
+func (p *UserModelDetail) ReadField16(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.IsDefault = _field
+	return nil
+}
 
 func (p *UserModelDetail) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3368,6 +3512,10 @@ func (p *UserModelDetail) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField15(oprot); err != nil {
 			fieldId = 15
+			goto WriteFieldError
+		}
+		if err = p.writeField16(oprot); err != nil {
+			fieldId = 16
 			goto WriteFieldError
 		}
 	}
@@ -3651,6 +3799,23 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
 }
 
+func (p *UserModelDetail) writeField16(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("is_default", thrift.I32, 16); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.IsDefault); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
+}
+
 func (p *UserModelDetail) String() string {
 	if p == nil {
 		return "<nil>"
@@ -3833,6 +3998,8 @@ type UpdateUserModelRequest struct {
 	ConfigJSON *string `thrift:"config_json,10,optional" form:"config_json" json:"config_json,omitempty"`
 	Scope      *int32  `thrift:"scope,11,optional" form:"scope" json:"scope,omitempty"`
 	Status     *int32  `thrift:"status,12,optional" form:"status" json:"status,omitempty"`
+	// 是否为默认（0=不是, 1=是）
+	IsDefault *int32 `thrift:"is_default,13,optional" form:"is_default" json:"is_default,omitempty"`
 }
 
 func NewUpdateUserModelRequest() *UpdateUserModelRequest {
@@ -3920,6 +4087,15 @@ func (p *UpdateUserModelRequest) GetStatus() (v int32) {
 	return *p.Status
 }
 
+var UpdateUserModelRequest_IsDefault_DEFAULT int32
+
+func (p *UpdateUserModelRequest) GetIsDefault() (v int32) {
+	if !p.IsSetIsDefault() {
+		return UpdateUserModelRequest_IsDefault_DEFAULT
+	}
+	return *p.IsDefault
+}
+
 var fieldIDToName_UpdateUserModelRequest = map[int16]string{
 	1:  "id",
 	2:  "name",
@@ -3933,6 +4109,7 @@ var fieldIDToName_UpdateUserModelRequest = map[int16]string{
 	10: "config_json",
 	11: "scope",
 	12: "status",
+	13: "is_default",
 }
 
 func (p *UpdateUserModelRequest) IsSetAPIKey() bool {
@@ -3957,6 +4134,10 @@ func (p *UpdateUserModelRequest) IsSetScope() bool {
 
 func (p *UpdateUserModelRequest) IsSetStatus() bool {
 	return p.Status != nil
+}
+
+func (p *UpdateUserModelRequest) IsSetIsDefault() bool {
+	return p.IsDefault != nil
 }
 
 func (p *UpdateUserModelRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -4081,6 +4262,14 @@ func (p *UpdateUserModelRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4278,6 +4467,17 @@ func (p *UpdateUserModelRequest) ReadField12(iprot thrift.TProtocol) error {
 	p.Status = _field
 	return nil
 }
+func (p *UpdateUserModelRequest) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsDefault = _field
+	return nil
+}
 
 func (p *UpdateUserModelRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4331,6 +4531,10 @@ func (p *UpdateUserModelRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -4565,6 +4769,25 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+
+func (p *UpdateUserModelRequest) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsDefault() {
+		if err = oprot.WriteFieldBegin("is_default", thrift.I32, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.IsDefault); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 
 func (p *UpdateUserModelRequest) String() string {

@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"ai-eino-interview-agent/api/response"
 	"ai-eino-interview-agent/internal/config"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -56,20 +56,14 @@ func JWTMiddlewareWithSkipper(skipper JWTSkipper) app.HandlerFunc {
 				message = "Authorization token is required"
 			}
 
-			ctx.JSON(consts.StatusUnauthorized, map[string]interface{}{
-				"code":    401,
-				"message": message,
-			})
+			response.Unauthorized(c, ctx, message)
 			ctx.Abort()
 			return
 		}
 
 		claims, err := parseToken(tokenString)
 		if err != nil {
-			ctx.JSON(consts.StatusUnauthorized, map[string]interface{}{
-				"code":    401,
-				"message": "Invalid or expired token",
-			})
+			response.Unauthorized(c, ctx, "Invalid or expired token")
 			ctx.Abort()
 			return
 		}
@@ -164,6 +158,29 @@ func GetUserRole(ctx *app.RequestContext) string {
 		return ""
 	}
 	return role.(string)
+}
+
+// ParseAndSetUserFromToken 手动解析token并设置用户信息到上下文
+// 用于跳过JWT中间件的接口中手动验证token
+// 返回 userID，如果解析失败返回 0
+func ParseAndSetUserFromToken(ctx *app.RequestContext) uint {
+	tokenString, err := extractToken(ctx)
+	if err != nil {
+		return 0
+	}
+
+	claims, err := parseToken(tokenString)
+	if err != nil {
+		return 0
+	}
+
+	// 设置到上下文中
+	ctx.Set("jwt_claims", claims)
+	ctx.Set("user_id", claims.UserID)
+	ctx.Set("username", claims.Username)
+	ctx.Set("role", claims.Role)
+
+	return claims.UserID
 }
 
 func extractToken(ctx *app.RequestContext) (string, error) {

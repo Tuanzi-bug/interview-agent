@@ -4,17 +4,18 @@ package interview
 
 import (
 	serviceMiddleware "ai-eino-interview-agent/internal/middleware"
+	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
 
 var jwtPublicRoutes = map[string]struct{}{
-	"/api/user/login":             {},
-	"/api/user/register":          {},
-	"/api/user/wechat/login":      {},
-	"/api/user/wechat/callback":   {},
-	"/api/interview/start/stream": {},
+	"/api/user/login":           {},
+	"/api/user/register":        {},
+	"/api/user/logout":          {},
+	"/api/user/wechat/login":    {},
+	"/api/user/wechat/callback": {},
 }
 
 func AuthSkipper() serviceMiddleware.JWTSkipper {
@@ -23,7 +24,7 @@ func AuthSkipper() serviceMiddleware.JWTSkipper {
 			return true
 		}
 
-		path := string(ctx.Path())
+		path := strings.TrimSuffix(string(ctx.Path()), "/")
 		if _, ok := jwtPublicRoutes[path]; ok {
 			return true
 		}
@@ -48,6 +49,10 @@ func _createMw() []app.HandlerFunc {
 }
 
 func _createusermodelMw() []app.HandlerFunc {
+	return nil
+}
+
+func _createusermodelsMw() []app.HandlerFunc {
 	return nil
 }
 
@@ -99,6 +104,10 @@ func _registerMw() []app.HandlerFunc {
 	return nil
 }
 
+func _logoutMw() []app.HandlerFunc {
+	return nil
+}
+
 func _wechatMw() []app.HandlerFunc {
 	return nil
 }
@@ -127,6 +136,76 @@ func _startMw() []app.HandlerFunc {
 }
 
 func _startinterviewstreamMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _recordsMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listinterviewrecordsMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getinterviewrecordMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _titlebankMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _createusertitleinteractMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _createinterviewlabelMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _createinterviewparseMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _createinterviewtitleMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _create0Mw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _submitMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _submitinterviewanswerMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getinterviewevaluationMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getinterviewrecordsMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getanswerrecordMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }

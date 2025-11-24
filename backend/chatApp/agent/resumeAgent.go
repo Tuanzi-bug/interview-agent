@@ -2,6 +2,7 @@ package agent
 
 import (
 	"ai-eino-interview-agent/chatApp/chat"
+	"ai-eino-interview-agent/chatApp/prompt"
 	tool2 "ai-eino-interview-agent/chatApp/tool"
 	"context"
 	"fmt"
@@ -12,18 +13,17 @@ import (
 	"github.com/cloudwego/eino/compose"
 )
 
-func NewResumAnalysisAgent(supervisorName string) adk.Agent {
+func NewResumAnalysisAgent(supervisorName string, userId uint) adk.Agent {
 	ctx := context.Background()
+
+	// 从Redis获取提示词，失败则使用默认模板
+	instruction := prompt.GetPromptInstruction(ctx, "ResumeAnalysisAgent")
 
 	baseAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Name:        "ResumeAnalysisAgent",
 		Description: "一个可以解析简历pdf分析简历的智能体",
-		Instruction: `你是一名资深的简历分析专家，负责对用户的简历进行分析,并输出对应的分析结果。
-
-工作流程：
-1. 当用户提供简历或相关背景信息时，先使用 "pdf_to_text" 工具提取文本（如需要），进行结构化评估。
-2. 从模块完整度、技能匹配度、量化成果、语言表达等角度给出详细反馈，并提供可执行的改进建议；并进行简历评分（0-100分）。`,
-		Model: chat.CreatOpenAiChatModel(ctx),
+		Instruction: instruction,
+		Model:       chat.CreatOpenAiChatModel(ctx, userId),
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: []tool.BaseTool{tool2.CreatePDFToTextTool()},

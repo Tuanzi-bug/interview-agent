@@ -66,12 +66,12 @@ func askForInput(ctx context.Context, input *AskForClarificationInput, opts ...t
 
 		// 如果达到最大数量，提示这是最后一个问题
 		if questionCount >= maxQuestions {
-			fmt.Println("很好，下面是最后的问题")
+			//待定，处理最后一个问题的提示
 		}
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Print("\nyour input here: ")
+	fmt.Print("\n您的回答是: ")
 	scanner.Scan()
 	fmt.Println()
 	nInput := scanner.Text()

@@ -13,21 +13,22 @@ func NewInterviewService() InterviewService {
 
 // InterviewService 面试服务接口
 type InterviewService interface {
-	// StartInterviewStream 启动面试流程（流式）
-	// 返回一个事件流 channel，可以实时获取 Agent 的输出
-	// maxQuestions: 最大答题次数，0 表示无限制
-	StartInterviewStream(ctx context.Context, req *interviewsapi.StartInterviewRequest, maxQuestions int) (<-chan *interviewsapi.InterviewEvent, error)
 
-	// ContinueInterview 继续面试流程（用于多轮对话）
-	// maxQuestions: 最大答题次数，0 表示无限制
-	ContinueInterview(ctx context.Context, req *interviewsapi.ContinueInterviewRequest, maxQuestions int) (<-chan *interviewsapi.InterviewEvent, error)
+	// CreateInterviewRecord 创建面试记录，返回记录ID
+	CreateInterviewRecord(ctx context.Context, record *interviewsapi.InterviewRecordDTO) (uint64, error)
 
-	// SaveInterviewRecord 保存面试记录
-	SaveInterviewRecord(ctx context.Context, userID uint, title, query string) (uint64, error)
+	// SaveInterviewDialogues 保存面试对话和问题主题
+	SaveInterviewDialogues(ctx context.Context, userID uint, recordID uint64, questions []interface{}, dialogues []interface{}) error
 
-	// UpdateInterviewRecord 更新面试记录（用于保存对话历史和状态）
-	UpdateInterviewRecord(ctx context.Context, recordID uint64, messages string, status, currentAgent string) error
+	// UpdateInterviewRecord 更新面试记录
+	UpdateInterviewRecord(ctx context.Context, record *interviewsapi.InterviewRecordDTO) error
 
-	// CompleteInterviewRecord 完成面试记录（保存最终报告和评分）
-	CompleteInterviewRecord(ctx context.Context, recordID uint64, report string, duration int64, score *float64) error
+	// ListInterviewRecords 获取面试记录列表
+	ListInterviewRecords(ctx context.Context, userID uint, page, pageSize *int32) ([]*interviewsapi.InterviewRecordDTO, int64, error)
+
+	// GetInterviewEvaluation 根据用户ID和报告ID获取面试评估报告
+	GetInterviewEvaluation(ctx context.Context, userID uint, reportID uint64) (interface{}, error)
+
+	// GetAnswerReport 根据用户ID和报告ID获取答题报告
+	GetAnswerReport(ctx context.Context, userID uint, reportID uint64) (interface{}, error)
 }

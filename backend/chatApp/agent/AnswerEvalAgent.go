@@ -2,6 +2,7 @@ package agent
 
 import (
 	"ai-eino-interview-agent/chatApp/chat"
+	"ai-eino-interview-agent/chatApp/prompt"
 	tool2 "ai-eino-interview-agent/chatApp/tool"
 	"context"
 	"fmt"
@@ -13,25 +14,21 @@ import (
 )
 
 // NewAnswerEvalAgent 基于现有模板构建的模拟面试智能体
-func NewAnswerEvalAgent(supervisorName string) adk.Agent {
+func NewAnswerEvalAgent(supervisorName string, userId uint) adk.Agent {
 	ctx := context.Background()
+
+	// 从Redis获取提示词，失败则使用默认模板
+	instruction := prompt.GetPromptInstruction(ctx, "AnswerEvalAgent")
 
 	a, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Name:        "AnswerEvalAgent",
-		Description: "根据前面的简历分析和问题,对用户的答案进行评估",
-		Instruction: `你是一名资深的技术面试官 你要去调用 "answer_eval" 工具去获取评估的方向生成评估结果
-			流程：
-			1. 调用 "answer_eval" 工具获取评估的方向。
-			2. 根据评估的方向生成评估结果。
-			3. 返回评估结果。
-			约束：
-			1. 评估结果必须是中文。
-		`,
-		Model: chat.CreatOpenAiChatModel(ctx),
+		Description: "根据简历分析、问题和答案进行多维度评估，生成结构化评估报告",
+		Instruction: instruction,
+		Model:       chat.CreatOpenAiChatModel(ctx, userId),
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: []componenttool.BaseTool{
-					tool2.CreateAnswerEvalTool(),
+					tool2.CreateScoreExtractionTool(),
 				},
 			},
 		},

@@ -6,4 +6,3 @@ namespace go interview
 
 service UserService extends user.UserService {}
 service InterviewsService extends interviews.InterviewsService {}
-
