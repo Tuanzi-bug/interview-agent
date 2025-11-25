@@ -6,6 +6,7 @@ import (
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
 	"ai-eino-interview-agent/api/response"
 	"ai-eino-interview-agent/chatApp/agent/service"
+	"ai-eino-interview-agent/internal/alert"
 	"ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/model"
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
@@ -354,14 +355,24 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 
 		// 判断是否为可重试的错误
 		if !isRetryableError(saveErr) {
-			//sendErrorEvent(writer, fmt.Sprintf("保存面试对话失败（不可重试）: %v", saveErr))
-			//失败重试 处理应该使用的是 告警，不是向前端发送信息
+			// 上下文取消/超时通常是用户主动中断或请求生命周期结束，不发送告警
+			if !errors.Is(saveErr, context.Canceled) && !errors.Is(saveErr, context.DeadlineExceeded) {
+				alert.SendDatabaseErrorAlert(
+					fmt.Sprintf("SaveInterviewDialogues (不可重试) - UserID: %d, RecordID: %d", session.UserID, session.RecordID),
+					saveErr,
+					attempt+1,
+				)
+			}
 			break
 		}
 
-		// 最后一次尝试失败
+		// 最后一次尝试失败（所有重试机会耗尽）
 		if attempt == maxRetries-1 {
-			//sendErrorEvent(writer, fmt.Sprintf("保存面试对话失败（已重试%d次）: %v", maxRetries, saveErr))
+			alert.SendDatabaseErrorAlert(
+				fmt.Sprintf("SaveInterviewDialogues (重试耗尽) - UserID: %d, RecordID: %d", session.UserID, session.RecordID),
+				saveErr,
+				maxRetries,
+			)
 			break
 		}
 
@@ -665,11 +676,8 @@ func GetInterviewRecords(ctx context.Context, c *app.RequestContext) {
 	response.Success(ctx, c, resp)
 }
 
-// isRetryableError 判断错误是否可重试
+// isRetryableError 判断错误是否可重试 调用时确保 err!=nil
 func isRetryableError(err error) bool {
-	if err == nil {
-		return false
-	}
 
 	// 上下文被取消/超时一般是业务上主动终止或请求生命周期结束，不应重试
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
@@ -678,7 +686,7 @@ func isRetryableError(err error) bool {
 
 	errMsg := strings.ToLower(err.Error())
 
-	// 可重试的错误类型
+	// 可重试的错误类型（多为瞬时的网络/数据库故障）
 	retryableErrors := []string{
 		"connection refused",
 		"connection reset",
