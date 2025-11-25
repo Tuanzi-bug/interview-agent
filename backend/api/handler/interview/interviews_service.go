@@ -11,12 +11,14 @@ import (
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
@@ -341,9 +343,31 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 		sm.ClearAnswer(session.SessionID)
 	}
 
-	//todo 存储失败的处理方案
-	if err := interviewService.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, session.AllQuestions, session.AllDialogues); err != nil {
-		_ = err
+	// 保存面试对话，带重试机制
+	const maxRetries = 3
+	var saveErr error
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		saveErr = interviewService.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, session.AllQuestions, session.AllDialogues)
+		if saveErr == nil {
+			break
+		}
+
+		// 判断是否为可重试的错误
+		if !isRetryableError(saveErr) {
+			//sendErrorEvent(writer, fmt.Sprintf("保存面试对话失败（不可重试）: %v", saveErr))
+			//失败重试 处理应该使用的是 告警，不是向前端发送信息
+			break
+		}
+
+		// 最后一次尝试失败
+		if attempt == maxRetries-1 {
+			//sendErrorEvent(writer, fmt.Sprintf("保存面试对话失败（已重试%d次）: %v", maxRetries, saveErr))
+			break
+		}
+
+		// 指数退避：等待 100ms * 2^attempt
+		backoffDuration := time.Duration(100*(1<<uint(attempt))) * time.Millisecond
+		time.Sleep(backoffDuration)
 	}
 
 	duration := int64(time.Since(session.StartTime).Seconds())
@@ -639,4 +663,43 @@ func GetInterviewRecords(ctx context.Context, c *app.RequestContext) {
 	resp.Total = total
 
 	response.Success(ctx, c, resp)
+}
+
+// isRetryableError 判断错误是否可重试
+func isRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// 上下文被取消/超时一般是业务上主动终止或请求生命周期结束，不应重试
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+
+	errMsg := strings.ToLower(err.Error())
+
+	// 可重试的错误类型
+	retryableErrors := []string{
+		"connection refused",
+		"connection reset",
+		"broken pipe",
+		"timeout",
+		"deadlock",
+		"lock wait timeout",
+		"too many connections",
+		"server has gone away",
+		"lost connection",
+		"can't connect",
+		"dial tcp",
+		"i/o timeout",
+	}
+
+	for _, retryable := range retryableErrors {
+		if strings.Contains(errMsg, retryable) {
+			return true
+		}
+	}
+
+	// 其他错误默认视为不可重试（例如参数问题、唯一约束冲突等）
+	return false
 }
