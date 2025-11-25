@@ -62,7 +62,7 @@ func (s *UserModelServer) CreateUserModel(ctx context.Context,
 		_ = model.UserModelDao.CancelDefaultUserModel(userID, 0) // 0 表示取消所有
 	}
 
-	err = model.UserModelDao.CreateUserModel(&model.UserModel{
+	newModel := &model.UserModel{
 		UserID:          userID,
 		Name:            req.GetName(),
 		ModelKey:        req.GetModelKey(),
@@ -76,9 +76,13 @@ func (s *UserModelServer) CreateUserModel(ctx context.Context,
 		Status:          status,
 		IsDefault:       isDefault,
 		ProviderName:    req.GetProviderName(),
-	})
+	}
+	err = model.UserModelDao.CreateUserModel(newModel)
 	if err != nil {
 		return "fail", err
+	}
+	if status == 1 {
+		_ = model.UserModelDao.SetEnabledUserModel(userID, int64(newModel.ID))
 	}
 	return "success", nil
 }
@@ -160,32 +164,37 @@ func (s *UserModelServer) UpdateUserModel(ctx context.Context,
 		existingModel.Status = int(req.GetStatus())
 	}
 
-    // 处理可选字段 - IsDefault（支持 1 设为默认、0 取消默认）
-    var isDefaultProvided bool
-    var isDefaultValue int
-    if req.IsSetIsDefault() {
-        isDefaultProvided = true
-        isDefaultValue = int(req.GetIsDefault())
-        existingModel.IsDefault = isDefaultValue
-    }
+	// 处理可选字段 - IsDefault（支持 1 设为默认、0 取消默认）
+	var isDefaultProvided bool
+	var isDefaultValue int
+	if req.IsSetIsDefault() {
+		isDefaultProvided = true
+		isDefaultValue = int(req.GetIsDefault())
+		existingModel.IsDefault = isDefaultValue
+	}
 
-    existingModel.UpdatedAt = time.Now().UnixMilli()
-    if err := model.UserModelDao.UpdateUserModel(existingModel); err != nil {
-        return err
-    }
+	existingModel.UpdatedAt = time.Now().UnixMilli()
+	if err := model.UserModelDao.UpdateUserModel(existingModel); err != nil {
+		return err
+	}
 
-    if isDefaultProvided {
-        if isDefaultValue == 1 {
-            if err := model.UserModelDao.SetDefaultUserModel(userID, int64(existingModel.ID)); err != nil {
-                return err
-            }
-        } else {
-            if err := model.UserModelDao.CancelDefaultUserModel(userID, int64(existingModel.ID)); err != nil {
-                return err
-            }
-        }
-    }
-    return nil
+	if isDefaultProvided {
+		if isDefaultValue == 1 {
+			if err := model.UserModelDao.SetDefaultUserModel(userID, int64(existingModel.ID)); err != nil {
+				return err
+			}
+		} else {
+			if err := model.UserModelDao.CancelDefaultUserModel(userID, int64(existingModel.ID)); err != nil {
+				return err
+			}
+		}
+	}
+	if req.IsSetStatus() && int(req.GetStatus()) == 1 {
+		if err := model.UserModelDao.SetEnabledUserModel(userID, int64(existingModel.ID)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // DeleteUserModel 删除用户模型
