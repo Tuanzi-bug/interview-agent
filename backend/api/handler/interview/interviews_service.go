@@ -341,6 +341,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 		sm.ClearAnswer(session.SessionID)
 	}
 
+	//todo 存储失败的处理方案
 	if err := interviewService.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, session.AllQuestions, session.AllDialogues); err != nil {
 		_ = err
 	}
