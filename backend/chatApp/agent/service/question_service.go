@@ -2,6 +2,7 @@ package service
 
 import (
 	"ai-eino-interview-agent/chatApp/agent/question"
+	"ai-eino-interview-agent/chatApp/agent/session"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -401,4 +402,38 @@ func cleanJSON(jsonStr string) string {
 	}
 
 	return builder.String()
+}
+
+// BuildPromptFromSessionContext 从会话值构建提示词
+// 优化版本：直接从会话值获取所需信息，无需参数传递
+func BuildPromptFromSessionContext(ctx context.Context, questionIndex int, query string,
+	dimension string, followUpCount int) (string, error) {
+	scm := session.NewSessionContextManager(ctx)
+
+	// 从会话值获取配置
+	interviewType, domain, difficulty, err := scm.GetInterviewConfig()
+	if err != nil {
+		return "", fmt.Errorf("failed to get interview config: %w", err)
+	}
+
+	// 调用原有的 BuildInterviewPrompt 函数
+	prompt := BuildInterviewPrompt(questionIndex, query, "", false, dimension,
+		followUpCount, interviewType, domain, difficulty)
+
+	return prompt, nil
+}
+
+// GenerateInterviewQuestionsWithSessionContext 使用会话值生成面试问题
+// 优化版本：从会话值获取参数，减少参数传递
+func GenerateInterviewQuestionsWithSessionContext(ctx context.Context, questionIndex int,
+	query string, dimension string, followUpCount int, userId uint) (*QuestionGeneratorResult, error) {
+
+	// 从会话值构建提示词
+	prompt, err := BuildPromptFromSessionContext(ctx, questionIndex, query, dimension, followUpCount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build prompt from session context: %w", err)
+	}
+
+	// 调用原有的 GenerateInterviewQuestions 函数
+	return GenerateInterviewQuestions(ctx, prompt, userId)
 }

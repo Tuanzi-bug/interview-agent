@@ -5,6 +5,7 @@ package interview
 import (
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
 	"ai-eino-interview-agent/api/response"
+	"ai-eino-interview-agent/chatApp/agent"
 	"ai-eino-interview-agent/chatApp/agent/service"
 	"ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/model"
@@ -104,6 +105,15 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 			"message":    "面试已开始，正在生成第一个问题...",
 			"session_id": session.SessionID,
 		})
+
+		// 初始化会话值：存储简历、配置等信息供 Agent 使用
+		// 这样工具可以直接从会话值获取数据，无需参数传递
+		if err := agent.InitializeQuestionGeneratorContext(ctx, session.Query,
+			req.Type, req.Domain, req.Difficulty); err != nil {
+			sendErrorEvent(pipeWriter, "Failed to initialize session context: "+err.Error())
+			sendCompleteEvent(pipeWriter)
+			return
+		}
 
 		writer := &SSEWriter{ctx: c, writer: pipeWriter}
 		runInterviewLoopAsync(ctx, userID, writer, session, interviewService)
