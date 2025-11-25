@@ -9,6 +9,7 @@ import (
 	"ai-eino-interview-agent/chatApp/agent/service"
 	"ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/model"
+	"ai-eino-interview-agent/internal/mq"
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
 	"context"
 	"encoding/json"
@@ -377,6 +378,20 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 		log.Printf("[Interview Loop] Failed to update interview record: %v, sessionID: %s", err, session.SessionID)
 		_ = err
 	}
+
+	// 面试完成后，发送 MQ 消息触发评估报告生成
+	log.Printf("[Interview Loop] Publishing evaluation messages, sessionID: %s, userID: %d, recordID: %d", session.SessionID, session.UserID, session.RecordID)
+
+	// 发布评估报告生成消息
+	if err := mq.PublishEvaluationReport(ctx, session.UserID, session.RecordID); err != nil {
+		log.Printf("[Interview Loop] Failed to publish evaluation report message: %v, sessionID: %s", err, session.SessionID)
+	}
+
+	// 发布主题评估消息
+	if err := mq.PublishTopicEvaluation(ctx, session.UserID, session.RecordID); err != nil {
+		log.Printf("[Interview Loop] Failed to publish topic evaluation message: %v, sessionID: %s", err, session.SessionID)
+	}
+
 	log.Printf("[Interview Loop] Interview completed, sessionID: %s", session.SessionID)
 }
 
