@@ -1,6 +1,6 @@
 'use client';
 
-import { Typography, Card as AntCard, Table, Button, Space, Tag, Modal, Form, Input, Select, InputNumber, message } from 'antd';
+import { Typography, Card as AntCard, Table, Button, Space, Tag, Modal, Form, Input, Select, InputNumber, message, Switch } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import apiClient from '@/services/api/client';
 
@@ -13,7 +13,7 @@ type ModelItem = {
   protocol: string;
   baseURL?: string;
   providerName?: string;
-  status?: number;
+  is_default?: number;
   createdAt?: number;
 };
 
@@ -41,7 +41,7 @@ export default function UserModelsPage() {
         protocol: it.protocol ?? it.Protocol,
         baseURL: it.baseURL ?? it.base_url ?? it.BaseURL,
         providerName: it.providerName ?? it.provider_name ?? it.ProviderName,
-        status: it.status ?? it.Status,
+        is_default: it.is_default ?? it.IsDefault,
         createdAt: it.createdAt ?? it.created_at ?? it.CreatedAt,
       }));
       setList(items);
@@ -86,7 +86,7 @@ export default function UserModelsPage() {
         meta_id: v.metaId !== undefined && v.metaId !== null && v.metaId !== '' ? Number(v.metaId) : undefined,
         config_json: JSON.stringify(config),
         scope: 7,
-        status: v.status !== undefined && v.status !== null ? Number(v.status) : 1,
+        is_default: v.is_default === true ? 1 : 0,
       };
       await apiClient.post('http://localhost:8888/api/user/create/model', payload);
       message.success('创建成功');
@@ -116,7 +116,32 @@ export default function UserModelsPage() {
       { title: '模型 Key', dataIndex: 'modelKey' },
       { title: '协议', dataIndex: 'protocol', render: (v: string) => <Tag color="blue">{v}</Tag> },
       { title: '提供商', dataIndex: 'providerName' },
-      { title: '状态', dataIndex: 'status', render: (v: number) => <Tag color={v === 1 ? 'green' : 'red'}>{v === 1 ? '启用' : '停用'}</Tag> },
+      { title: '状态', dataIndex: 'is_default', render: (v: number, row: ModelItem) => (
+        <Switch
+          checked={v === 1}
+          checkedChildren="启用"
+          unCheckedChildren="停用"
+          onChange={async (checked) => {
+            try {
+              const res: any = await apiClient.get(`/user/model/details/${row.id}`);
+              const detail = res?.data || res;
+              const payload: any = {
+                name: detail?.name ?? row.name,
+                model_key: detail?.model_key ?? detail?.modelKey ?? row.modelKey,
+                protocol: detail?.protocol ?? row.protocol,
+                base_url: detail?.base_url ?? detail?.baseURL ?? row.baseURL,
+                provider_name: detail?.provider_name ?? detail?.providerName ?? row.providerName,
+                is_default: checked ? 1 : 0,
+              };
+              await apiClient.put(`http://localhost:8888/api/user/model/update/${row.id}`, payload);
+              message.success('状态已更新');
+              fetchList(page, pageSize);
+            } catch (e: any) {
+              message.error(e?.response?.data?.message || '更新状态失败');
+            }
+          }}
+        />
+      ) },
       { title: '创建时间', dataIndex: 'createdAt', render: (ts?: any) => (ts ? (typeof ts === 'number' ? new Date(ts).toLocaleString() : String(ts)) : '-') },
       {
         title: '操作',
@@ -146,7 +171,7 @@ export default function UserModelsPage() {
                     providerName: detail?.provider_name ?? detail?.providerName ?? row.providerName,
                     protocol: detail?.protocol ?? row.protocol,
                     metaId: detail?.meta_id,
-                    status: Number(detail?.status ?? row.status ?? 1),
+                    is_default: Boolean(Number(detail?.is_default ?? row.is_default ?? 1)),
                     baseURL: detail?.base_url ?? detail?.baseURL ?? row.baseURL,
                     defaultParams: detail?.default_params ?? '',
                     iconURI: cfg?.icon_uri,
@@ -193,7 +218,7 @@ export default function UserModelsPage() {
       </AntCard>
 
       <Modal open={openCreate} title="创建模型" onCancel={() => setOpenCreate(false)} onOk={onCreate} okText="创建" width={800} styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }} destroyOnClose>
-        <Form form={form} layout="vertical" initialValues={{ protocol: 'ark', providerName: 'OpenAI', status: 1, temperature: 0.7, maxTokens: 2048, topP: 0.9, topK: 40, timeout: 30, functionCall: true, jsonMode: true, inputTokenLimit: 128000, outputTokenLimit: 128000 }}>
+        <Form form={form} layout="vertical" initialValues={{ protocol: 'ark', providerName: 'OpenAI', is_default: true, temperature: 0.7, maxTokens: 2048, topP: 0.9, topK: 40, timeout: 30, functionCall: true, jsonMode: true, inputTokenLimit: 128000, outputTokenLimit: 128000 }}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Form.Item label="模型名称" name="name" rules={[{ required: true, message: '请输入模型名称' }]}>
               <Input placeholder="如：My GPT-4 Model" maxLength={100} />
@@ -213,8 +238,8 @@ export default function UserModelsPage() {
             <Form.Item label="Meta ID" name="metaId">
               <InputNumber style={{ width: '100%' }} placeholder="如：1001" />
             </Form.Item>
-            <Form.Item label="状态" name="status">
-              <Select options={[{ value: 1, label: '启用' }, { value: 0, label: '停用' }]} />
+            <Form.Item label="状态" name="is_default" valuePropName="checked">
+              <Switch checkedChildren="启用" unCheckedChildren="停用" />
             </Form.Item>
             <Form.Item label="基础 URI" name="baseURL">
               <Input placeholder="API 基础接口地址，如：https://api.xxx.com" maxLength={500} />
@@ -290,13 +315,13 @@ export default function UserModelsPage() {
             };
             if (v.defaultParams) payload.default_params = v.defaultParams;
             if (v.metaId !== undefined && v.metaId !== null && v.metaId !== '') payload.meta_id = Number(v.metaId);
-            if (v.status !== undefined && v.status !== null) payload.status = Number(v.status);
+            if (v.is_default !== undefined && v.is_default !== null) payload.is_default = v.is_default === true ? 1 : 0;
             if (v.apiSecret) payload.api_key = v.apiSecret;
             if (!editingId) {
               message.error('未选择编辑的模型');
               return;
             }
-            await apiClient.put(`/user/model/update/${editingId}`, payload);
+            await apiClient.put(`http://localhost:8888/api/user/model/update/${editingId}`, payload);
             message.success('更新成功');
             setOpenEdit(false);
             editForm.resetFields();
@@ -311,7 +336,7 @@ export default function UserModelsPage() {
         styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
         destroyOnClose
       >
-        <Form form={editForm} layout="vertical" initialValues={{ protocol: 'ark', providerName: 'OpenAI', status: 1, temperature: 0.7, maxTokens: 2048, topP: 0.9, topK: 40, timeout: 30, functionCall: true, jsonMode: true, inputTokenLimit: 128000, outputTokenLimit: 128000 }}>
+        <Form form={editForm} layout="vertical" initialValues={{ protocol: 'ark', providerName: 'OpenAI', is_default: true, temperature: 0.7, maxTokens: 2048, topP: 0.9, topK: 40, timeout: 30, functionCall: true, jsonMode: true, inputTokenLimit: 128000, outputTokenLimit: 128000 }}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Form.Item label="模型名称" name="name" rules={[{ required: true, message: '请输入模型名称' }]}> 
               <Input placeholder="如：My GPT-4 Model" maxLength={100} />
@@ -331,8 +356,8 @@ export default function UserModelsPage() {
             <Form.Item label="Meta ID" name="metaId">
               <InputNumber style={{ width: '100%' }} placeholder="如：1001" />
             </Form.Item>
-            <Form.Item label="状态" name="status">
-              <Select options={[{ value: 1, label: '启用' }, { value: 0, label: '停用' }]} />
+            <Form.Item label="状态" name="is_default" valuePropName="checked">
+              <Switch checkedChildren="启用" unCheckedChildren="停用" />
             </Form.Item>
             <Form.Item label="基础 URI" name="baseURL" rules={[{ required: true, message: '请输入基础 URI' }]}> 
               <Input placeholder="API 基础接口地址，如：https://api.xxx.com" maxLength={500} />

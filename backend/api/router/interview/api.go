@@ -45,6 +45,7 @@ func Register(r *server.Hertz) {
 			}
 			{
 				_model := _user.Group("/model", _modelMw()...)
+				_model.GET("/check", append(_checkusermodelconfiguredMw(), interview.CheckUserModelConfigured)...)
 				_model.GET("/list", append(_listusermodelsMw(), interview.ListUserModels)...)
 				{
 					_delete := _model.Group("/delete", _deleteMw()...)

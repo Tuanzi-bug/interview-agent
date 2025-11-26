@@ -190,3 +190,27 @@ func (u *_UserModel) CancelDefaultUserModel(userID int64, modelID int64) error {
 	}
 	return nil
 }
+
+func (u *_UserModel) SetEnabledUserModel(userID int64, modelID int64) error {
+    if getDB == nil {
+        panic("getDB function not initialized, please call model.SetDBGetter first")
+    }
+
+    tx := getDB().Begin()
+
+    if err := tx.Model(&UserModel{}).
+        Where("user_id = ? AND deleted = ?", userID, 0).
+        Update("status", 0).Error; err != nil {
+        tx.Rollback()
+        return err
+    }
+
+    if err := tx.Model(&UserModel{}).
+        Where("id = ? AND user_id = ? AND deleted = ?", modelID, userID, 0).
+        Update("status", 1).Error; err != nil {
+        tx.Rollback()
+        return err
+    }
+
+    return tx.Commit().Error
+}

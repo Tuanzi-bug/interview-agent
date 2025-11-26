@@ -5,14 +5,17 @@ package interview
 import (
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
 	"ai-eino-interview-agent/api/response"
+	"ai-eino-interview-agent/chatApp/agent"
 	"ai-eino-interview-agent/chatApp/agent/service"
 	"ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/model"
+	"ai-eino-interview-agent/internal/mq"
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 
 	"net/http"
 	"os"
@@ -104,6 +107,15 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 			"message":    "面试已开始，正在生成第一个问题...",
 			"session_id": session.SessionID,
 		})
+
+		// 初始化会话值：存储简历、配置等信息供 Agent 使用
+		// 这样工具可以直接从会话值获取数据，无需参数传递
+		if err := agent.InitializeQuestionGeneratorContext(ctx, session.Query,
+			req.Type, req.Domain, req.Difficulty); err != nil {
+			sendErrorEvent(pipeWriter, "Failed to initialize session context: "+err.Error())
+			sendCompleteEvent(pipeWriter)
+			return
+		}
 
 		writer := &SSEWriter{ctx: c, writer: pipeWriter}
 		runInterviewLoopAsync(ctx, userID, writer, session, interviewService)
@@ -197,7 +209,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 	var resumeContent string
 	const maxFollowUps = 2
 	const answerTimeout = 30 * time.Minute
-	const heartbeatInterval = 30 * time.Second
+	const heartbeatInterval = 15 * time.Second
 
 	// 根据面试类型选择维度
 	var dimensions []string
@@ -228,13 +240,17 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 
 		select {
 		case <-ctx.Done():
+			log.Printf("[Interview Loop] Context cancelled, sessionID: %s", session.SessionID)
 			return
 		default:
 		}
 
 		if questionIndex > 0 {
+			log.Printf("[Interview Loop] Waiting for answer, sessionID: %s, questionIndex: %d", session.SessionID, questionIndex)
 			answer, received := waitForAnswerWithHeartbeat(sm, session.SessionID, answerTimeout, heartbeatInterval, writer)
+			log.Printf("[Interview Loop] Answer received: %v, sessionID: %s", received, session.SessionID)
 			if !received {
+				log.Printf("[Interview Loop] Answer timeout, sessionID: %s", session.SessionID)
 				sendErrorEvent(writer, "等待答案超时，面试已结束")
 				sendCompleteEvent(writer)
 				break
@@ -341,7 +357,9 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 		sm.ClearAnswer(session.SessionID)
 	}
 
+	log.Printf("[Interview Loop] Saving dialogues, sessionID: %s", session.SessionID)
 	if err := interviewService.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, session.AllQuestions, session.AllDialogues); err != nil {
+		log.Printf("[Interview Loop] Failed to save dialogues: %v, sessionID: %s", err, session.SessionID)
 		_ = err
 	}
 
@@ -354,44 +372,71 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 		Duration: &duration,
 	}
 
+	log.Printf("[Interview Loop] Updating interview record, sessionID: %s, duration: %d seconds", session.SessionID, duration)
 	if err := interviewService.UpdateInterviewRecord(ctx, updateDTO); err != nil {
 		// 记录更新失败，但不中断流程
+		log.Printf("[Interview Loop] Failed to update interview record: %v, sessionID: %s", err, session.SessionID)
 		_ = err
 	}
+
+	// 面试完成后，发送 MQ 消息触发评估报告生成
+	log.Printf("[Interview Loop] Publishing evaluation messages, sessionID: %s, userID: %d, recordID: %d", session.SessionID, session.UserID, session.RecordID)
+
+	// 发布评估报告生成消息
+	if err := mq.PublishEvaluationReport(ctx, session.UserID, session.RecordID); err != nil {
+		log.Printf("[Interview Loop] Failed to publish evaluation report message: %v, sessionID: %s", err, session.SessionID)
+	}
+
+	// 发布主题评估消息
+	if err := mq.PublishTopicEvaluation(ctx, session.UserID, session.RecordID); err != nil {
+		log.Printf("[Interview Loop] Failed to publish topic evaluation message: %v, sessionID: %s", err, session.SessionID)
+	}
+
+	log.Printf("[Interview Loop] Interview completed, sessionID: %s", session.SessionID)
 }
 
 // waitForAnswerWithHeartbeat 等待用户答案，并定期发送心跳保活
 func waitForAnswerWithHeartbeat(sm *SessionManager, sessionID string, timeout time.Duration, heartbeatInterval time.Duration, writer io.Writer) (string, bool) {
-	deadline := time.Now().Add(timeout)
-	ticker := time.NewTicker(heartbeatInterval)
-	defer ticker.Stop()
+	log.Printf("[Wait Answer] Starting, sessionID: %s, timeout: %v, heartbeatInterval: %v", sessionID, timeout, heartbeatInterval)
 
+	heartbeatTicker := time.NewTicker(heartbeatInterval)
+	defer heartbeatTicker.Stop()
+
+	timeoutTimer := time.NewTimer(timeout)
+	defer timeoutTimer.Stop()
+
+	// 获取会话的答案通道
+	session := sm.GetSession(sessionID)
+	if session == nil {
+		log.Printf("[Wait Answer] Session not found, sessionID: %s", sessionID)
+		return "", false
+	}
+
+	heartbeatCount := 0
 	for {
-		// 计算剩余等待时间
-		remaining := time.Until(deadline)
-		if remaining <= 0 {
-			return "", false // 超时
-		}
+		select {
+		// 定期发送心跳保活
+		case <-heartbeatTicker.C:
+			heartbeatCount++
+			log.Printf("[Wait Answer] Sending heartbeat #%d, sessionID: %s", heartbeatCount, sessionID)
+			sendHeartbeatEvent(writer)
 
-		// 尝试获取答案（使用较短的等待时间）
-		answer, received := sm.GetAnswer(sessionID, heartbeatInterval)
-		if received {
-			return answer, true // 获取到答案
-		}
+		// 接收用户答案
+		case answer := <-session.AnswerChan:
+			log.Printf("[Wait Answer] Received answer, sessionID: %s, answer: %s", sessionID, answer)
+			return answer, true
 
-		// 发送心跳保活
-		sendHeartbeatEvent(writer)
-
-		// 检查是否超时
-		if time.Now().After(deadline) {
-			return "", false // 超时
+		// 等待超时
+		case <-timeoutTimer.C:
+			log.Printf("[Wait Answer] Timeout after %v, sent %d heartbeats, sessionID: %s", timeout, heartbeatCount, sessionID)
+			return "", false
 		}
 	}
 }
 
 // sendHeartbeatEvent 发送心跳事件保活连接
-func sendHeartbeatEvent(writer io.Writer) {
-	sendSSEEvent(writer, map[string]interface{}{
+func sendHeartbeatEvent(writer io.Writer) error {
+	return sendSSEEvent(writer, map[string]interface{}{
 		"type":    "heartbeat",
 		"message": "连接保活",
 	})
@@ -414,12 +459,28 @@ func buildPrompt(questionIndex int, query string, resumeFilePath string, hasResu
 }
 
 // sendSSEEvent 发送 SSE 事件
-func sendSSEEvent(writer io.Writer, event map[string]interface{}) {
+func sendSSEEvent(writer io.Writer, event map[string]interface{}) error {
 	eventJSON, _ := json.Marshal(event)
-	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
+
+	// 获取事件类型
+	eventType := "message"
+	if t, ok := event["type"]; ok {
+		eventType = fmt.Sprintf("%v", t)
+	}
+
+	// 标准 SSE 格式：event: type\ndata: {...}\n\n
+	message := fmt.Sprintf("event: %s\ndata: %s\n\n", eventType, string(eventJSON))
+	n, err := fmt.Fprint(writer, message)
+	if err != nil {
+		log.Printf("[SSE] Failed to write event: %v (wrote %d bytes)", err, n)
+		return err
+	}
+
+	// 立即 flush，确保数据发送到客户端
 	if flusher, ok := writer.(http.Flusher); ok {
 		flusher.Flush()
 	}
+	return nil
 }
 
 func sendErrorEvent(writer io.Writer, message string) {
