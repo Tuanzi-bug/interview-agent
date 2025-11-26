@@ -37,7 +37,6 @@ func WithTransaction(ctx context.Context, fn func(tx *gorm.DB) error) (err error
 				log.Printf("[WithTransaction] rollback error after panic: %v", rbErr)
 			}
 			log.Printf("[WithTransaction] panic, transaction rolled back: %v", r)
-			panic(r)
 		}
 	}()
 

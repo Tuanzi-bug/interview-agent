@@ -1,6 +1,7 @@
-package alert
+package alert_test
 
 import (
+	"ai-eino-interview-agent/internal/alert"
 	"ai-eino-interview-agent/internal/config"
 	"errors"
 	"fmt"
@@ -24,7 +25,7 @@ func TestSendDatabaseErrorAlert(t *testing.T) {
 
 	// 执行测试
 	testErr := errors.New("connection timeout")
-	SendDatabaseErrorAlert("SaveInterviewDialogues", testErr, 3)
+	alert.SendDatabaseErrorAlert("SaveInterviewDialogues", testErr, 3)
 
 }
 
@@ -49,7 +50,7 @@ func TestSendFeishuAlert_Integration(t *testing.T) {
 	config.Global.Feishu.WebhookURL = webhookURL
 
 	// 执行测试
-	err := SendFeishuAlert("单元测试告警", fmt.Sprintf("这是一条来自单元测试的告警消息\n测试时间: %s", "2025-11-25"))
+	err := alert.SendFeishuAlert("单元测试告警", fmt.Sprintf("这是一条来自单元测试的告警消息\n测试时间: %s", "2025-11-25"))
 	if err != nil {
 		t.Fatalf("集成测试失败: %v", err)
 	}

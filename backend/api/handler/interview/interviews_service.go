@@ -354,7 +354,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 		}
 
 		// 判断是否为可重试的错误
-		if !isRetryableError(saveErr) {
+		if !IsRetryableError(saveErr) {
 			// 上下文取消/超时通常是用户主动中断或请求生命周期结束，不发送告警
 			if !errors.Is(saveErr, context.Canceled) && !errors.Is(saveErr, context.DeadlineExceeded) {
 				alert.SendDatabaseErrorAlert(
@@ -676,9 +676,8 @@ func GetInterviewRecords(ctx context.Context, c *app.RequestContext) {
 	response.Success(ctx, c, resp)
 }
 
-// isRetryableError 判断错误是否可重试 调用时确保 err!=nil
-func isRetryableError(err error) bool {
-
+// IsRetryableError 判断错误是否可重试 调用时确保 err!=nil
+func IsRetryableError(err error) bool {
 	// 上下文被取消/超时一般是业务上主动终止或请求生命周期结束，不应重试
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return false
