@@ -708,13 +708,13 @@ func processFolderRecursive(ctx context.Context, client *lark.Client, appID, app
 	return nil
 }
 
-func main() {
+func Test() []DocumentResult {
 	ctx := context.Background()
 
 	// TODO: 这些配置建议换成环境变量或配置文件
 	const appID = "cli_a9afad5abfb85bc0"
 	const appSecret = "RDIAVuYOukhGNdZcn1zO9dLJS8up7rYL"
-	const userAccessToken = "u-cJG7hB2nh839Dl4ijPlcIdh5kydNggirVo0aZRO02BiR"
+	const userAccessToken = "u-f_K1.XDc97VWO80DO_LEDPh4j9kBggipNU0GiN402wct"
 	const folderToken = "PyOifPcHPldVPodJaxVce2LBnSb"
 
 	fmt.Println("🚀 开始递归处理飞书文件夹...")
@@ -724,10 +724,12 @@ func main() {
 	results, err := FetchFolderDocumentsToMarkdown(ctx, appID, appSecret, folderToken, userAccessToken)
 	if err != nil {
 		fmt.Printf("❌ 处理失败: %v\n", err)
-		return
+		panic(err)
 	}
 
-	fmt.Printf("成功获取 %d 个文档块，开始转换为 Markdown...\n", len(apiResponse.Data.Items))
+	fmt.Printf("成功获取 %d 个文档块，开始转换为 Markdown...\n", len(results))
+	return results
+}
 
 // testSaveDocuments 测试函数：保存所有文档为文件并打印统计信息（用于单元测试）
 func testSaveDocuments(results []DocumentResult) {
