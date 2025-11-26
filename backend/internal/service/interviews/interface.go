@@ -6,29 +6,117 @@ import (
 	"context"
 )
 
-// NewInterviewService 初始化面试服务的实例
-func NewInterviewService() InterviewService {
+// NewInterviewService  返回面试服务的实现
+func NewInterviewService() InterviewManager {
 	return impl.NewInterviewServiceImpl()
 }
 
-// InterviewService 面试服务接口
-type InterviewService interface {
+// NewResumeService 返回简历服务的实现
+func NewResumeService() ResumeManager {
+	return impl.NewResumeServer()
+}
 
+// InterviewManager 面试管理接口
+type InterviewManager interface {
 	// CreateInterviewRecord 创建面试记录，返回记录ID
-	CreateInterviewRecord(ctx context.Context, record *interviewsapi.InterviewRecordDTO) (uint64, error)
+	CreateInterviewRecord(
+		ctx context.Context,
+		record *interviewsapi.InterviewRecordDTO,
+	) (uint64, error)
 
 	// SaveInterviewDialogues 保存面试对话和问题主题
-	SaveInterviewDialogues(ctx context.Context, userID uint, recordID uint64, questions []interface{}, dialogues []interface{}) error
+	SaveInterviewDialogues(
+		ctx context.Context,
+		userID uint,
+		recordID uint64,
+		questions []interface{},
+		dialogues []interface{},
+	) error
 
 	// UpdateInterviewRecord 更新面试记录
-	UpdateInterviewRecord(ctx context.Context, record *interviewsapi.InterviewRecordDTO) error
+	UpdateInterviewRecord(
+		ctx context.Context,
+		record *interviewsapi.InterviewRecordDTO,
+	) error
 
 	// ListInterviewRecords 获取面试记录列表
-	ListInterviewRecords(ctx context.Context, userID uint, page, pageSize *int32) ([]*interviewsapi.InterviewRecordDTO, int64, error)
+	ListInterviewRecords(
+		ctx context.Context,
+		userID uint,
+		page, pageSize *int32,
+	) ([]*interviewsapi.InterviewRecordDTO, int64, error)
 
 	// GetInterviewEvaluation 根据用户ID和报告ID获取面试评估报告
-	GetInterviewEvaluation(ctx context.Context, userID uint, reportID uint64) (interface{}, error)
+	GetInterviewEvaluation(
+		ctx context.Context,
+		userID uint,
+		reportID uint64,
+	) (interface{}, error)
 
 	// GetAnswerReport 根据用户ID和报告ID获取答题报告
-	GetAnswerReport(ctx context.Context, userID uint, reportID uint64) (interface{}, error)
+	GetAnswerReport(
+		ctx context.Context,
+		userID uint,
+		reportID uint64,
+	) (interface{}, error)
+}
+
+// ResumeManager 简历管理接口
+type ResumeManager interface {
+	// UploadResume 上传简历，返回简历ID
+	UploadResume(
+		ctx context.Context,
+		userID uint,
+		fileName string,
+		fileType string,
+		fileSize int64,
+		content string,
+	) (uint64, error)
+
+	// GetResumeByID 根据简历ID获取简历详情
+	GetResumeByID(
+		ctx context.Context,
+		resumeID uint64,
+	) (interface{}, error)
+
+	// GetUserResumes 获取用户的所有简历列表
+	GetUserResumes(
+		ctx context.Context,
+		userID uint,
+	) (interface{}, error)
+
+	// GetDefaultResume 获取用户的默认简历
+	GetDefaultResume(
+		ctx context.Context,
+		userID uint,
+	) (interface{}, error)
+
+	// SetDefaultResume 设置用户的默认简历
+	SetDefaultResume(
+		ctx context.Context,
+		userID uint,
+		resumeID uint64,
+	) error
+
+	// UpdateResume 更新简历信息
+	UpdateResume(
+		ctx context.Context,
+		resumeID uint64,
+		fileName string,
+		content string,
+	) error
+
+	// DeleteResume 删除简历
+	DeleteResume(
+		ctx context.Context,
+		userID uint,
+		resumeID uint64,
+	) error
+
+	// ListResumesByUserID 分页获取用户的简历列表
+	ListResumesByUserID(
+		ctx context.Context,
+		userID uint,
+		page, pageSize int32,
+	) (interface{}, int64, error)
 }

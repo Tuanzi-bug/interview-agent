@@ -36,8 +36,7 @@ func GenerateInterviewEvaluation(ctx context.Context, userId uint, reportId uint
 1. 首先调用 get_interviews_data 工具获取面试的完整问题和对话记录
 2. 仔细分析每个问题的回答质量
 3. 对每个评估维度进行详细分析和评分
-4. 使用 score_extraction 工具生成结构化的评分数据
-5. 生成一份专业的评估报告
+4. 生成一份专业的评估报告
 
 评估报告应包含：
 - 总体评分

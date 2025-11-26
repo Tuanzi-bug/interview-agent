@@ -191,7 +191,7 @@ func setupSSEResponse(c *app.RequestContext) {
 }
 
 // runInterviewLoopAsync 异步运行面试循环
-func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, session *InterviewSession, interviewService interviewservice.InterviewService) {
+func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, session *InterviewSession, interviewService interviewservice.InterviewManager) {
 	defer func() {
 		if r := recover(); r != nil {
 			sendErrorEvent(writer, fmt.Sprintf("面试异常: %v", r))
