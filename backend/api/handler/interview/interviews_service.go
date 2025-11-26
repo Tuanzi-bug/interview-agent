@@ -551,6 +551,7 @@ func GetInterviewEvaluation(ctx context.Context, c *app.RequestContext) {
 		response.Success(ctx, c, existingEvaluation)
 		return
 	}
+	//todo 触发逻辑要优化
 	resp, err := service.GenerateInterviewEvaluation(ctx, userId, reportID)
 	if err != nil {
 		response.InternalServerError(ctx, c, "Failed to generate evaluation: "+err.Error())
