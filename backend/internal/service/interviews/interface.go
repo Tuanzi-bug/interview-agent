@@ -6,33 +6,111 @@ import (
 	"context"
 )
 
-// NewInterviewService 初始化面试服务的实例
-func NewInterviewService() InterviewService {
+// NewInterviewService  返回面试服务的实现
+func NewInterviewService() InterviewManager {
 	return impl.NewInterviewServiceImpl()
 }
 
-// InterviewService 面试服务接口
-type InterviewService interface {
-	// StartInterviewStream 启动面试流程（流式）
-	// 返回一个事件流 channel，可以实时获取 Agent 的输出
-	// maxQuestions: 最大答题次数，0 表示无限制
-	StartInterviewStream(ctx context.Context, req *interviewsapi.StartInterviewRequest, maxQuestions int) (<-chan *interviewsapi.InterviewEvent, error)
+// NewResumeService 返回简历服务的实现
+func NewResumeService() ResumeManager {
+	return impl.NewResumeServer()
+}
 
-	// ContinueInterview 继续面试流程（用于多轮对话）
-	// maxQuestions: 最大答题次数，0 表示无限制
-	ContinueInterview(ctx context.Context, req *interviewsapi.ContinueInterviewRequest, maxQuestions int) (<-chan *interviewsapi.InterviewEvent, error)
+// InterviewManager 面试管理接口
+type InterviewManager interface {
+	// CreateInterviewRecord 创建面试记录，返回记录ID
+	CreateInterviewRecord(
+		ctx context.Context,
+		record *interviewsapi.InterviewRecordDTO,
+	) (uint64, error)
 
-	// SaveInterviewRecord 保存面试记录
-	SaveInterviewRecord(ctx context.Context, userID uint, title, query string) (uint64, error)
+	// SaveInterviewDialogues 保存面试对话和问题主题
+	SaveInterviewDialogues(
+		ctx context.Context,
+		userID uint,
+		recordID uint64,
+		questions []interface{},
+		dialogues []interface{},
+	) error
 
-	// UpdateInterviewRecord 更新面试记录（用于保存对话历史和状态）
-	// lastModifiedAt: 上次修改的时间戳，用于并发控制检查
-	UpdateInterviewRecord(ctx context.Context, recordID uint64, messages string, status, currentAgent string) error
+	// UpdateInterviewRecord 更新面试记录
+	UpdateInterviewRecord(
+		ctx context.Context,
+		record *interviewsapi.InterviewRecordDTO,
+	) error
 
-	// CompleteInterviewRecord 完成面试记录（保存最终报告和评分）
-	CompleteInterviewRecord(ctx context.Context, recordID uint64, report string, duration int64, score *float64) error
+	// ListInterviewRecords 获取面试记录列表
+	ListInterviewRecords(
+		ctx context.Context,
+		userID uint,
+		page, pageSize *int32,
+	) ([]*interviewsapi.InterviewRecordDTO, int64, error)
 
-	ListInterviewRecords(ctx context.Context, userID uint, page, pageSize int) ([]*interviewsapi.InterviewRecordDTO, int64, error)
+	// GetInterviewEvaluation 根据用户ID和报告ID获取面试评估报告
+	GetInterviewEvaluation(
+		ctx context.Context,
+		userID uint,
+		reportID uint64,
+	) (interface{}, error)
 
-	GetInterviewRecord(ctx context.Context, userID uint, recordID uint64) (*interviewsapi.InterviewRecordDTO, error)
+	// GetAnswerReport 根据用户ID和报告ID获取答题报告
+	GetAnswerReport(
+		ctx context.Context,
+		userID uint,
+		reportID uint64,
+	) (interface{}, error)
+}
+
+// ResumeManager 简历管理接口
+type ResumeManager interface {
+	// UploadResume 上传简历，返回简历ID
+	UploadResume(
+		ctx context.Context,
+		userID uint,
+		fileName string,
+		fileType string,
+		fileSize int64,
+		content string,
+	) (uint64, error)
+
+	// SetDefaultResume 设置用户的默认简历
+	SetDefaultResume(
+		ctx context.Context,
+		userID uint,
+		resumeID uint64,
+	) error
+
+	// UpdateResume 更新简历信息
+	UpdateResume(
+		ctx context.Context,
+		resumeID uint64,
+		fileName string,
+		content string,
+	) error
+
+	// DeleteResume 删除简历
+	DeleteResume(
+		ctx context.Context,
+		userID uint,
+		resumeID uint64,
+	) error
+
+	// GetResumeInfoByID 根据简历ID获取简历详情，返回强类型 ResumeInfo
+	GetResumeInfoByID(
+		ctx context.Context,
+		resumeID uint64,
+	) (interface{}, error)
+
+	// GetDefaultResumeInfo 获取用户的默认简历，返回强类型 ResumeInfo
+	GetDefaultResumeInfo(
+		ctx context.Context,
+		userID uint,
+	) (interface{}, error)
+
+	// ListResumeInfosByUserID 分页获取用户的简历列表，返回强类型 ResumeInfo 列表
+	ListResumeInfosByUserID(
+		ctx context.Context,
+		userID uint,
+		page, pageSize int32,
+	) (interface{}, int64, error)
 }

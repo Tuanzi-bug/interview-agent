@@ -26,6 +26,8 @@ type CreateUserModelRequest struct {
 	Scope *int32 `thrift:"scope,10,optional" form:"scope" json:"scope,omitempty"`
 	// 默认 1
 	Status *int32 `thrift:"status,11,optional" form:"status" json:"status,omitempty"`
+	// 是否为默认（0=不是, 1=是）
+	IsDefault *int32 `thrift:"is_default,12,optional" form:"is_default" json:"is_default,omitempty"`
 }
 
 func NewCreateUserModelRequest() *CreateUserModelRequest {
@@ -104,6 +106,15 @@ func (p *CreateUserModelRequest) GetStatus() (v int32) {
 	return *p.Status
 }
 
+var CreateUserModelRequest_IsDefault_DEFAULT int32
+
+func (p *CreateUserModelRequest) GetIsDefault() (v int32) {
+	if !p.IsSetIsDefault() {
+		return CreateUserModelRequest_IsDefault_DEFAULT
+	}
+	return *p.IsDefault
+}
+
 var fieldIDToName_CreateUserModelRequest = map[int16]string{
 	1:  "name",
 	2:  "model_key",
@@ -116,6 +127,7 @@ var fieldIDToName_CreateUserModelRequest = map[int16]string{
 	9:  "config_json",
 	10: "scope",
 	11: "status",
+	12: "is_default",
 }
 
 func (p *CreateUserModelRequest) IsSetMetaID() bool {
@@ -136,6 +148,10 @@ func (p *CreateUserModelRequest) IsSetScope() bool {
 
 func (p *CreateUserModelRequest) IsSetStatus() bool {
 	return p.Status != nil
+}
+
+func (p *CreateUserModelRequest) IsSetIsDefault() bool {
+	return p.IsDefault != nil
 }
 
 func (p *CreateUserModelRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -252,6 +268,14 @@ func (p *CreateUserModelRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -438,6 +462,17 @@ func (p *CreateUserModelRequest) ReadField11(iprot thrift.TProtocol) error {
 	p.Status = _field
 	return nil
 }
+func (p *CreateUserModelRequest) ReadField12(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsDefault = _field
+	return nil
+}
 
 func (p *CreateUserModelRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -487,6 +522,10 @@ func (p *CreateUserModelRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 	}
@@ -702,6 +741,25 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
+func (p *CreateUserModelRequest) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsDefault() {
+		if err = oprot.WriteFieldBegin("is_default", thrift.I32, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.IsDefault); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
 
 func (p *CreateUserModelRequest) String() string {
@@ -1380,6 +1438,7 @@ type UserModelItem struct {
 	UpdatedAt     int64   `thrift:"updated_at,13,required" form:"updated_at,required" json:"updated_at,required" query:"updated_at,required"`
 	HasSecret     bool    `thrift:"has_secret,14,required" form:"has_secret,required" json:"has_secret,required" query:"has_secret,required"`
 	SecretHint    *string `thrift:"secret_hint,15,optional" form:"secret_hint" json:"secret_hint,omitempty" query:"secret_hint"`
+	IsDefault     int32   `thrift:"is_default,16,required" form:"is_default,required" json:"is_default,required" query:"is_default,required"`
 }
 
 func NewUserModelItem() *UserModelItem {
@@ -1469,6 +1528,10 @@ func (p *UserModelItem) GetSecretHint() (v string) {
 	return *p.SecretHint
 }
 
+func (p *UserModelItem) GetIsDefault() (v int32) {
+	return p.IsDefault
+}
+
 var fieldIDToName_UserModelItem = map[int16]string{
 	1:  "id",
 	2:  "name",
@@ -1485,6 +1548,7 @@ var fieldIDToName_UserModelItem = map[int16]string{
 	13: "updated_at",
 	14: "has_secret",
 	15: "secret_hint",
+	16: "is_default",
 }
 
 func (p *UserModelItem) IsSetMetaID() bool {
@@ -1518,6 +1582,7 @@ func (p *UserModelItem) Read(iprot thrift.TProtocol) (err error) {
 	var issetCreatedAt bool = false
 	var issetUpdatedAt bool = false
 	var issetHasSecret bool = false
+	var issetIsDefault bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -1664,6 +1729,15 @@ func (p *UserModelItem) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
+		case 16:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetIsDefault = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		default:
 			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
@@ -1729,6 +1803,11 @@ func (p *UserModelItem) Read(iprot thrift.TProtocol) (err error) {
 
 	if !issetHasSecret {
 		fieldId = 14
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetIsDefault {
+		fieldId = 16
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -1914,6 +1993,17 @@ func (p *UserModelItem) ReadField15(iprot thrift.TProtocol) error {
 	p.SecretHint = _field
 	return nil
 }
+func (p *UserModelItem) ReadField16(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.IsDefault = _field
+	return nil
+}
 
 func (p *UserModelItem) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1979,6 +2069,10 @@ func (p *UserModelItem) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField15(oprot); err != nil {
 			fieldId = 15
+			goto WriteFieldError
+		}
+		if err = p.writeField16(oprot); err != nil {
+			fieldId = 16
 			goto WriteFieldError
 		}
 	}
@@ -2260,6 +2354,23 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+
+func (p *UserModelItem) writeField16(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("is_default", thrift.I32, 16); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.IsDefault); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
 
 func (p *UserModelItem) String() string {
@@ -2769,6 +2880,8 @@ type UserModelDetail struct {
 	HasSecret bool `thrift:"has_secret,14,required" form:"has_secret,required" json:"has_secret,required" query:"has_secret,required"`
 	// 密钥脱敏提示
 	SecretHint *string `thrift:"secret_hint,15,optional" form:"secret_hint" json:"secret_hint,omitempty" query:"secret_hint"`
+	// 是否为默认（0=不是, 1=是）
+	IsDefault int32 `thrift:"is_default,16,required" form:"is_default,required" json:"is_default,required" query:"is_default,required"`
 }
 
 func NewUserModelDetail() *UserModelDetail {
@@ -2858,6 +2971,10 @@ func (p *UserModelDetail) GetSecretHint() (v string) {
 	return *p.SecretHint
 }
 
+func (p *UserModelDetail) GetIsDefault() (v int32) {
+	return p.IsDefault
+}
+
 var fieldIDToName_UserModelDetail = map[int16]string{
 	1:  "id",
 	2:  "name",
@@ -2874,6 +2991,7 @@ var fieldIDToName_UserModelDetail = map[int16]string{
 	13: "updated_at",
 	14: "has_secret",
 	15: "secret_hint",
+	16: "is_default",
 }
 
 func (p *UserModelDetail) IsSetMetaID() bool {
@@ -2907,6 +3025,7 @@ func (p *UserModelDetail) Read(iprot thrift.TProtocol) (err error) {
 	var issetCreatedAt bool = false
 	var issetUpdatedAt bool = false
 	var issetHasSecret bool = false
+	var issetIsDefault bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -3053,6 +3172,15 @@ func (p *UserModelDetail) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
+		case 16:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetIsDefault = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		default:
 			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
@@ -3118,6 +3246,11 @@ func (p *UserModelDetail) Read(iprot thrift.TProtocol) (err error) {
 
 	if !issetHasSecret {
 		fieldId = 14
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetIsDefault {
+		fieldId = 16
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -3303,6 +3436,17 @@ func (p *UserModelDetail) ReadField15(iprot thrift.TProtocol) error {
 	p.SecretHint = _field
 	return nil
 }
+func (p *UserModelDetail) ReadField16(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.IsDefault = _field
+	return nil
+}
 
 func (p *UserModelDetail) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3368,6 +3512,10 @@ func (p *UserModelDetail) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField15(oprot); err != nil {
 			fieldId = 15
+			goto WriteFieldError
+		}
+		if err = p.writeField16(oprot); err != nil {
+			fieldId = 16
 			goto WriteFieldError
 		}
 	}
@@ -3651,6 +3799,23 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
 }
 
+func (p *UserModelDetail) writeField16(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("is_default", thrift.I32, 16); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.IsDefault); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
+}
+
 func (p *UserModelDetail) String() string {
 	if p == nil {
 		return "<nil>"
@@ -3833,6 +3998,8 @@ type UpdateUserModelRequest struct {
 	ConfigJSON *string `thrift:"config_json,10,optional" form:"config_json" json:"config_json,omitempty"`
 	Scope      *int32  `thrift:"scope,11,optional" form:"scope" json:"scope,omitempty"`
 	Status     *int32  `thrift:"status,12,optional" form:"status" json:"status,omitempty"`
+	// 是否为默认（0=不是, 1=是）
+	IsDefault *int32 `thrift:"is_default,13,optional" form:"is_default" json:"is_default,omitempty"`
 }
 
 func NewUpdateUserModelRequest() *UpdateUserModelRequest {
@@ -3920,6 +4087,15 @@ func (p *UpdateUserModelRequest) GetStatus() (v int32) {
 	return *p.Status
 }
 
+var UpdateUserModelRequest_IsDefault_DEFAULT int32
+
+func (p *UpdateUserModelRequest) GetIsDefault() (v int32) {
+	if !p.IsSetIsDefault() {
+		return UpdateUserModelRequest_IsDefault_DEFAULT
+	}
+	return *p.IsDefault
+}
+
 var fieldIDToName_UpdateUserModelRequest = map[int16]string{
 	1:  "id",
 	2:  "name",
@@ -3933,6 +4109,7 @@ var fieldIDToName_UpdateUserModelRequest = map[int16]string{
 	10: "config_json",
 	11: "scope",
 	12: "status",
+	13: "is_default",
 }
 
 func (p *UpdateUserModelRequest) IsSetAPIKey() bool {
@@ -3957,6 +4134,10 @@ func (p *UpdateUserModelRequest) IsSetScope() bool {
 
 func (p *UpdateUserModelRequest) IsSetStatus() bool {
 	return p.Status != nil
+}
+
+func (p *UpdateUserModelRequest) IsSetIsDefault() bool {
+	return p.IsDefault != nil
 }
 
 func (p *UpdateUserModelRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -4081,6 +4262,14 @@ func (p *UpdateUserModelRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4278,6 +4467,17 @@ func (p *UpdateUserModelRequest) ReadField12(iprot thrift.TProtocol) error {
 	p.Status = _field
 	return nil
 }
+func (p *UpdateUserModelRequest) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsDefault = _field
+	return nil
+}
 
 func (p *UpdateUserModelRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4331,6 +4531,10 @@ func (p *UpdateUserModelRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -4565,6 +4769,25 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+
+func (p *UpdateUserModelRequest) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsDefault() {
+		if err = oprot.WriteFieldBegin("is_default", thrift.I32, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.IsDefault); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 
 func (p *UpdateUserModelRequest) String() string {
@@ -7018,6 +7241,156 @@ func (p *WechatCallbackRequest) String() string {
 
 }
 
+// ==================== 7. 检查用户是否配置了模型 ====================
+type CheckUserModelConfiguredResponse struct {
+	// 是否已配置并启用默认模型（is_default = 1）
+	Configured bool `thrift:"configured,1,required" form:"configured,required" json:"configured,required" query:"configured,required"`
+}
+
+func NewCheckUserModelConfiguredResponse() *CheckUserModelConfiguredResponse {
+	return &CheckUserModelConfiguredResponse{}
+}
+
+func (p *CheckUserModelConfiguredResponse) InitDefault() {
+}
+
+func (p *CheckUserModelConfiguredResponse) GetConfigured() (v bool) {
+	return p.Configured
+}
+
+var fieldIDToName_CheckUserModelConfiguredResponse = map[int16]string{
+	1: "configured",
+}
+
+func (p *CheckUserModelConfiguredResponse) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetConfigured bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetConfigured = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetConfigured {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CheckUserModelConfiguredResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_CheckUserModelConfiguredResponse[fieldId]))
+}
+
+func (p *CheckUserModelConfiguredResponse) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Configured = _field
+	return nil
+}
+
+func (p *CheckUserModelConfiguredResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CheckUserModelConfiguredResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *CheckUserModelConfiguredResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("configured", thrift.BOOL, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteBool(p.Configured); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *CheckUserModelConfiguredResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CheckUserModelConfiguredResponse(%+v)", *p)
+
+}
+
 // 服务定义
 type UserService interface {
 	// 1. 创建用户模型
@@ -7042,6 +7415,8 @@ type UserService interface {
 	WechatLogin(ctx context.Context, request *EmptyRequest) (r *WechatLoginQRResponse, err error)
 	// 11. 微信登录回调
 	WechatCallback(ctx context.Context, request *WechatCallbackRequest) (r *LoginResponse, err error)
+	// 12. 检查用户是否配置了模型
+	CheckUserModelConfigured(ctx context.Context, request *EmptyRequest) (r *CheckUserModelConfiguredResponse, err error)
 }
 
 type UserServiceClient struct {
@@ -7169,6 +7544,15 @@ func (p *UserServiceClient) WechatCallback(ctx context.Context, request *WechatC
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *UserServiceClient) CheckUserModelConfigured(ctx context.Context, request *EmptyRequest) (r *CheckUserModelConfiguredResponse, err error) {
+	var _args UserServiceCheckUserModelConfiguredArgs
+	_args.Request = request
+	var _result UserServiceCheckUserModelConfiguredResult
+	if err = p.Client_().Call(ctx, "CheckUserModelConfigured", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 
 type UserServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
@@ -7201,6 +7585,7 @@ func NewUserServiceProcessor(handler UserService) *UserServiceProcessor {
 	self.AddToProcessorMap("UpdateProfile", &userServiceProcessorUpdateProfile{handler: handler})
 	self.AddToProcessorMap("WechatLogin", &userServiceProcessorWechatLogin{handler: handler})
 	self.AddToProcessorMap("WechatCallback", &userServiceProcessorWechatCallback{handler: handler})
+	self.AddToProcessorMap("CheckUserModelConfigured", &userServiceProcessorCheckUserModelConfigured{handler: handler})
 	return self
 }
 func (p *UserServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -7732,6 +8117,54 @@ func (p *userServiceProcessorWechatCallback) Process(ctx context.Context, seqId 
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("WechatCallback", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type userServiceProcessorCheckUserModelConfigured struct {
+	handler UserService
+}
+
+func (p *userServiceProcessorCheckUserModelConfigured) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := UserServiceCheckUserModelConfiguredArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("CheckUserModelConfigured", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := UserServiceCheckUserModelConfiguredResult{}
+	var retval *CheckUserModelConfiguredResponse
+	if retval, err2 = p.handler.CheckUserModelConfigured(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing CheckUserModelConfigured: "+err2.Error())
+		oprot.WriteMessageBegin("CheckUserModelConfigured", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("CheckUserModelConfigured", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -10980,5 +11413,299 @@ func (p *UserServiceWechatCallbackResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("UserServiceWechatCallbackResult(%+v)", *p)
+
+}
+
+type UserServiceCheckUserModelConfiguredArgs struct {
+	Request *EmptyRequest `thrift:"request,1"`
+}
+
+func NewUserServiceCheckUserModelConfiguredArgs() *UserServiceCheckUserModelConfiguredArgs {
+	return &UserServiceCheckUserModelConfiguredArgs{}
+}
+
+func (p *UserServiceCheckUserModelConfiguredArgs) InitDefault() {
+}
+
+var UserServiceCheckUserModelConfiguredArgs_Request_DEFAULT *EmptyRequest
+
+func (p *UserServiceCheckUserModelConfiguredArgs) GetRequest() (v *EmptyRequest) {
+	if !p.IsSetRequest() {
+		return UserServiceCheckUserModelConfiguredArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+
+var fieldIDToName_UserServiceCheckUserModelConfiguredArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *UserServiceCheckUserModelConfiguredArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *UserServiceCheckUserModelConfiguredArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_UserServiceCheckUserModelConfiguredArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *UserServiceCheckUserModelConfiguredArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewEmptyRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Request = _field
+	return nil
+}
+
+func (p *UserServiceCheckUserModelConfiguredArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CheckUserModelConfigured_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *UserServiceCheckUserModelConfiguredArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *UserServiceCheckUserModelConfiguredArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UserServiceCheckUserModelConfiguredArgs(%+v)", *p)
+
+}
+
+type UserServiceCheckUserModelConfiguredResult struct {
+	Success *CheckUserModelConfiguredResponse `thrift:"success,0,optional"`
+}
+
+func NewUserServiceCheckUserModelConfiguredResult() *UserServiceCheckUserModelConfiguredResult {
+	return &UserServiceCheckUserModelConfiguredResult{}
+}
+
+func (p *UserServiceCheckUserModelConfiguredResult) InitDefault() {
+}
+
+var UserServiceCheckUserModelConfiguredResult_Success_DEFAULT *CheckUserModelConfiguredResponse
+
+func (p *UserServiceCheckUserModelConfiguredResult) GetSuccess() (v *CheckUserModelConfiguredResponse) {
+	if !p.IsSetSuccess() {
+		return UserServiceCheckUserModelConfiguredResult_Success_DEFAULT
+	}
+	return p.Success
+}
+
+var fieldIDToName_UserServiceCheckUserModelConfiguredResult = map[int16]string{
+	0: "success",
+}
+
+func (p *UserServiceCheckUserModelConfiguredResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *UserServiceCheckUserModelConfiguredResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_UserServiceCheckUserModelConfiguredResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *UserServiceCheckUserModelConfiguredResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewCheckUserModelConfiguredResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *UserServiceCheckUserModelConfiguredResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CheckUserModelConfigured_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *UserServiceCheckUserModelConfiguredResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *UserServiceCheckUserModelConfiguredResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UserServiceCheckUserModelConfiguredResult(%+v)", *p)
 
 }

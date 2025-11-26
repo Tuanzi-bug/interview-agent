@@ -10,7 +10,7 @@ import (
 
 // ArkBuilder 是火山引擎 Ark 协议的构建器实现。
 // 使用的底层 SDK：
-//   - github.com/cloudwego/eino-ext/components/model/ark
+//   - github.com/cloudwego/eino-service/components/model/ark
 //
 // 参考文档：
 //   - https://www.volcengine.com/docs/82379

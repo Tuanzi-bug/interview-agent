@@ -25,8 +25,7 @@ export default function UserCenterPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res: any = await apiClient.get('/user/profile');
-        const data = res?.data || res;
+        const data: any = await apiClient.get('/user/profile');
         setProfile(data || null);
       } catch {}
     })();

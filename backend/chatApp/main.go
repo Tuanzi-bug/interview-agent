@@ -3,17 +3,18 @@ package main
 import (
 	"ai-eino-interview-agent/chatApp/agent"
 	"fmt"
+	"log"
+
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
 	"golang.org/x/net/context"
-	"log"
 )
 
 func main() {
 	ctx := context.Background()
-
+	var userId uint
 	// 1. 创建Supervisor Agent（包含所有子Agent）
-	interviewSupervisor := agent.NewInterviewSupervisorAgent()
+	interviewSupervisor := agent.NewInterviewSupervisorAgent(userId)
 
 	// 2. 创建Runner
 	runner := adk.NewRunner(ctx, adk.RunnerConfig{

@@ -2,24 +2,29 @@ package agent
 
 import (
 	"ai-eino-interview-agent/chatApp/chat"
+	"ai-eino-interview-agent/chatApp/prompt"
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
-	"log"
 )
 
 // 面试报告
-func NewInterviewReportAgent(supervisorName string) adk.Agent {
+func NewInterviewReportAgent(supervisorName string, userId uint) adk.Agent {
 	ctx := context.Background()
+
+	// 从Redis获取提示词，失败则使用默认模板
+	instruction := prompt.GetPromptInstruction(ctx, "InterviewReportAgent")
 
 	a, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Name:        "InterviewReportAgent",
 		Description: "一个可以解析面试记录生成面试报告的智能体",
-		Instruction: `你是一名资深的面试报告专家，负责对用户的面试记录进行分析,并输出对应的面试报告。`,
+		Instruction: instruction,
 
-		Model: chat.CreatOpenAiChatModel(ctx),
+		Model: chat.CreatOpenAiChatModel(ctx, userId),
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: []tool.BaseTool{},

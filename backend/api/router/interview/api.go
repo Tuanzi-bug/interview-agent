@@ -21,24 +21,27 @@ func Register(r *server.Hertz) {
 		_api := root.Group("/api", _apiMw()...)
 		{
 			_interview := _api.Group("/interview", _interviewMw()...)
-			_interview.POST("/continue", append(_continueinterviewMw(), interview.ContinueInterview)...)
-			_interview.GET("/records", append(_listinterviewrecordsMw(), interview.ListInterviewRecords)...)
-			_records := _interview.Group("/records", _recordsMw()...)
-			_records.GET("/:id", append(_getinterviewrecordMw(), interview.GetInterviewRecord)...)
+			_interview.GET("/answer-record", append(_getanswerrecordMw(), interview.GetAnswerRecord)...)
+			_interview.GET("/evaluation", append(_getinterviewevaluationMw(), interview.GetInterviewEvaluation)...)
+			_interview.GET("/records", append(_getinterviewrecordsMw(), interview.GetInterviewRecords)...)
 			{
 				_start := _interview.Group("/start", _startMw()...)
 				_start.POST("/stream", append(_startinterviewstreamMw(), interview.StartInterviewStream)...)
 			}
+			{
+				_submit := _interview.Group("/submit", _submitMw()...)
+				_submit.POST("/answer", append(_submitinterviewanswerMw(), interview.SubmitInterviewAnswer)...)
+			}
 		}
 		{
-			_titlebank := _api.Group("/titleBank", _titlebankMw()...)
-			{
-				_create := _titlebank.Group("/create", _createMw()...)
-				_create.POST("/interact", append(_createusertitleinteractMw(), interview.CreateUserTitleInteract)...)
-				_create.POST("/label", append(_createinterviewlabelMw(), interview.CreateInterviewLabel)...)
-				_create.POST("/parse", append(_createinterviewparseMw(), interview.CreateInterviewParse)...)
-				_create.POST("/title", append(_createinterviewtitleMw(), interview.CreateInterviewTitle)...)
-			}
+			_resume := _api.Group("/resume", _resumeMw()...)
+			_resume.GET("/default", append(_getdefaultresumeMw(), interview.GetDefaultResume)...)
+			_resume.GET("/list", append(_getuserresumesMw(), interview.GetUserResumes)...)
+			_resume.DELETE("/:resume_id", append(_deleteresumeMw(), interview.DeleteResume)...)
+			_resume.GET("/:resume_id", append(_getresumeMw(), interview.GetResume)...)
+			_resume.PUT("/:resume_id", append(_updateresumeMw(), interview.UpdateResume)...)
+			_resume.POST("/set-default", append(_setdefaultresumeMw(), interview.SetDefaultResume)...)
+			_resume.POST("/upload", append(_uploadresumeMw(), interview.UploadResume)...)
 		}
 		{
 			_user := _api.Group("/user", _userMw()...)
@@ -47,11 +50,12 @@ func Register(r *server.Hertz) {
 			_user.PUT("/profile", append(_updateprofileMw(), interview.UpdateProfile)...)
 			_user.POST("/register", append(_registerMw(), interview.Register)...)
 			{
-				_create0 := _user.Group("/create", _create0Mw()...)
-				_create0.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
+				_create := _user.Group("/create", _createMw()...)
+				_create.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
 			}
 			{
 				_model := _user.Group("/model", _modelMw()...)
+				_model.GET("/check", append(_checkusermodelconfiguredMw(), interview.CheckUserModelConfigured)...)
 				_model.GET("/list", append(_listusermodelsMw(), interview.ListUserModels)...)
 				{
 					_delete := _model.Group("/delete", _deleteMw()...)

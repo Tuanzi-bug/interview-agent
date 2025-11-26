@@ -10,7 +10,7 @@ import (
 func getTestConfig() *config.Config {
 	return &config.Config{
 		Embedding: config.EmbeddingConfig{
-			APIKey:     "",
+			APIKey:     "c1c8f7ce-266f-4af5-a832-9a8457f36e74",
 			Model:      "doubao-embedding-text-240715",
 			BaseURL:    "https://ark.cn-beijing.volces.com/api/v3/",
 			Region:     getEnvOrDefault("EMBEDDING_REGION", "cn-beijing"),
@@ -26,8 +26,8 @@ func getTestConfig() *config.Config {
 		},
 		Milvus: config.MilvusConfig{
 			Address:        getEnvOrDefault("MILVUS_ADDRESS", "localhost:19530"),
-			CollectionName: "knowledge",
-			DatabaseName:   "test3",
+			CollectionName: "feishu_docs_20251126", // 全新 collection 名称，2560 维向量
+			DatabaseName:   "default",              // 修改为 Milvus 默认数据库
 			MetricType:     "COSINE",
 			Username:       getEnvOrDefault("MILVUS_USERNAME", "minioadmin"),
 			Password:       getEnvOrDefault("MILVUS_PASSWORD", "minioadmin"),

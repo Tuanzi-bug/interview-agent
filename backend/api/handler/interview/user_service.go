@@ -7,11 +7,11 @@ import (
 	"errors"
 
 	user "ai-eino-interview-agent/api/model/user"
+	"ai-eino-interview-agent/api/response"
 	"ai-eino-interview-agent/internal/middleware"
 	userservice "ai-eino-interview-agent/internal/service/user"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"gorm.io/gorm"
 )
 
@@ -20,25 +20,25 @@ import (
 func CreateUserModel(ctx context.Context, c *app.RequestContext) {
 	var req user.CreateUserModelRequest
 	if err := c.BindAndValidate(&req); err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
 	userID := middleware.GetUserID(c)
 	if userID == 0 {
-		c.String(consts.StatusUnauthorized, "unauthorized")
+		response.Unauthorized(ctx, c, "Unauthorized")
 		return
 	}
 
 	state, err := userservice.NewModelManager().CreateUserModel(ctx, int64(userID), req)
 	if err != nil {
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
 	resp := user.NewCreateUserModelResponse()
 	resp.State = state
-	c.JSON(consts.StatusOK, resp)
+	response.Success(ctx, c, resp)
 }
 
 // ListUserModels .
@@ -46,13 +46,13 @@ func CreateUserModel(ctx context.Context, c *app.RequestContext) {
 func ListUserModels(ctx context.Context, c *app.RequestContext) {
 	var req user.ListUserModelsRequest
 	if err := c.BindAndValidate(&req); err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
 	userID := middleware.GetUserID(c)
 	if userID == 0 {
-		c.String(consts.StatusUnauthorized, "unauthorized")
+		response.Unauthorized(ctx, c, "Unauthorized")
 		return
 	}
 
@@ -70,7 +70,7 @@ func ListUserModels(ctx context.Context, c *app.RequestContext) {
 
 	models, total, err := userservice.NewModelManager().ListUserModels(ctx, int64(userID), req)
 	if err != nil {
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
@@ -83,7 +83,7 @@ func ListUserModels(ctx context.Context, c *app.RequestContext) {
 	resp.Page = page
 	resp.Size = size
 
-	c.JSON(consts.StatusOK, resp)
+	response.Success(ctx, c, resp)
 }
 
 // GetUserModel .
@@ -91,30 +91,30 @@ func ListUserModels(ctx context.Context, c *app.RequestContext) {
 func GetUserModel(ctx context.Context, c *app.RequestContext) {
 	var req user.IDRequest
 	if err := c.BindAndValidate(&req); err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
 	userID := middleware.GetUserID(c)
 	if userID == 0 {
-		c.String(consts.StatusUnauthorized, "unauthorized")
+		response.Unauthorized(ctx, c, "Unauthorized")
 		return
 	}
 
 	record, err := userservice.NewModelManager().UserModelDetail(ctx, int64(userID), req.GetID())
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.String(consts.StatusNotFound, "user model not found")
+			response.NotFound(ctx, c, "User model not found")
 			return
 		}
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
 	resp := user.NewGetUserModelResponse()
 	resp.Data = userservice.ToUserModelDetail(record)
 
-	c.JSON(consts.StatusOK, resp)
+	response.Success(ctx, c, resp)
 }
 
 // UpdateUserModel .
@@ -122,27 +122,27 @@ func GetUserModel(ctx context.Context, c *app.RequestContext) {
 func UpdateUserModel(ctx context.Context, c *app.RequestContext) {
 	var req user.UpdateUserModelRequest
 	if err := c.BindAndValidate(&req); err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
 	userID := middleware.GetUserID(c)
 	if userID == 0 {
-		c.String(consts.StatusUnauthorized, "unauthorized")
+		response.Unauthorized(ctx, c, "Unauthorized")
 		return
 	}
 
 	if err := userservice.NewModelManager().UpdateUserModel(ctx, int64(userID), req); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.String(consts.StatusNotFound, "user model not found")
+			response.NotFound(ctx, c, "User model not found")
 			return
 		}
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
 	resp := user.NewUpdateUserModelResponse()
-	c.JSON(consts.StatusOK, resp)
+	response.Success(ctx, c, resp)
 }
 
 // DeleteUserModel .
@@ -150,27 +150,27 @@ func UpdateUserModel(ctx context.Context, c *app.RequestContext) {
 func DeleteUserModel(ctx context.Context, c *app.RequestContext) {
 	var req user.IDRequest
 	if err := c.BindAndValidate(&req); err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
 	userID := middleware.GetUserID(c)
 	if userID == 0 {
-		c.String(consts.StatusUnauthorized, "unauthorized")
+		response.Unauthorized(ctx, c, "Unauthorized")
 		return
 	}
 
 	if err := userservice.NewModelManager().DeleteUserModel(ctx, int64(userID), req.GetID()); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.String(consts.StatusNotFound, "user model not found")
+			response.NotFound(ctx, c, "User model not found")
 			return
 		}
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
 	resp := user.NewDeleteUserModelResponse()
-	c.JSON(consts.StatusOK, resp)
+	response.Success(ctx, c, resp)
 }
 
 // Register .
@@ -180,18 +180,23 @@ func Register(ctx context.Context, c *app.RequestContext) {
 	var req user.RegisterRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
 	manager := userservice.NewUserManager()
-	resp, err := manager.Register(ctx, req)
+	registerResp, err := manager.Register(ctx, req)
 	if err != nil {
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
-	c.JSON(consts.StatusOK, resp)
+	// 将 LoginResponse 包装在响应中
+	data := map[string]interface{}{
+		"token": registerResp.GetToken(),
+		"user":  registerResp.GetUser(),
+	}
+	response.Success(ctx, c, data)
 }
 
 // Login .
@@ -201,18 +206,23 @@ func Login(ctx context.Context, c *app.RequestContext) {
 	var req user.LoginRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
 	manager := userservice.NewUserManager()
-	resp, err := manager.Login(ctx, req)
+	loginResp, err := manager.Login(ctx, req)
 	if err != nil {
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
-	c.JSON(consts.StatusOK, resp)
+	// 将 LoginResponse 包装在响应中
+	data := map[string]interface{}{
+		"token": loginResp.GetToken(),
+		"user":  loginResp.GetUser(),
+	}
+	response.Success(ctx, c, data)
 }
 
 // GetProfile .
@@ -222,27 +232,27 @@ func GetProfile(ctx context.Context, c *app.RequestContext) {
 	var req user.EmptyRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
 	userID := middleware.GetUserID(c)
 	if userID == 0 {
-		c.String(consts.StatusUnauthorized, "unauthorized")
+		response.Unauthorized(ctx, c, "Unauthorized")
 		return
 	}
 
 	manager := userservice.NewUserManager()
 	profile, err := manager.GetProfile(ctx, uint(userID))
 	if err != nil {
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
 	resp := new(user.GetProfileResponse)
 	resp.Data = profile
 
-	c.JSON(consts.StatusOK, resp)
+	response.Success(ctx, c, resp)
 }
 
 // UpdateProfile .
@@ -252,27 +262,27 @@ func UpdateProfile(ctx context.Context, c *app.RequestContext) {
 	var req user.UpdateProfileRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
 	userID := middleware.GetUserID(c)
 	if userID == 0 {
-		c.String(consts.StatusUnauthorized, "unauthorized")
+		response.Unauthorized(ctx, c, "Unauthorized")
 		return
 	}
 
 	manager := userservice.NewUserManager()
 	profile, err := manager.UpdateProfile(ctx, userID, req)
 	if err != nil {
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
 	resp := new(user.UpdateProfileResponse)
 	resp.Data = profile
 
-	c.JSON(consts.StatusOK, resp)
+	response.Success(ctx, c, resp)
 }
 
 // Logout .
@@ -285,11 +295,7 @@ func Logout(ctx context.Context, c *app.RequestContext) {
 	if userID != 0 {
 		data["user_id"] = userID
 	}
-	c.JSON(consts.StatusOK, map[string]interface{}{
-		"code":    0,
-		"message": "ok",
-		"data":    data,
-	})
+	response.Success(ctx, c, data)
 }
 
 // WechatLogin .
@@ -299,18 +305,18 @@ func WechatLogin(ctx context.Context, c *app.RequestContext) {
 	var req user.EmptyRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
 	manager := userservice.NewUserManager()
 	resp, err := manager.WechatLogin(ctx)
 	if err != nil {
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
-	c.JSON(consts.StatusOK, resp)
+	response.Success(ctx, c, resp)
 }
 
 // WechatCallback .
@@ -320,16 +326,58 @@ func WechatCallback(ctx context.Context, c *app.RequestContext) {
 	var req user.WechatCallbackRequest
 	err = c.BindAndValidate(&req)
 	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
 	manager := userservice.NewUserManager()
-	resp, err := manager.WechatCallback(ctx, req)
+	wechatResp, err := manager.WechatCallback(ctx, req)
 	if err != nil {
-		c.String(consts.StatusInternalServerError, err.Error())
+		response.InternalServerError(ctx, c, err.Error())
 		return
 	}
 
-	c.JSON(consts.StatusOK, resp)
+	// 将 LoginResponse 包装在响应中
+	data := map[string]interface{}{
+		"token": wechatResp.GetToken(),
+		"user":  wechatResp.GetUser(),
+	}
+	response.Success(ctx, c, data)
+}
+
+// CheckUserModelConfigured .
+// @router /api/user/model/check [GET]
+func CheckUserModelConfigured(ctx context.Context, c *app.RequestContext) {
+	var req user.EmptyRequest
+	if err := c.BindAndValidate(&req); err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+
+	modelManager := userservice.NewModelManager()
+	defaultModel, err := modelManager.CheckUserModelConfigured(ctx, int64(userID))
+	if err != nil {
+		response.InternalServerError(ctx, c, err.Error())
+		return
+	}
+
+	// 返回检查结果
+	resp := user.NewCheckUserModelConfiguredResponse()
+
+	// 判断是否已配置并启用：模型存在且 is_default = 1
+	if defaultModel != nil && defaultModel.IsDefault == 1 {
+		// 已配置并启用，可以开始问答
+		resp.Configured = true
+	} else {
+		// 未配置或未启用，不能开始问答
+		resp.Configured = false
+	}
+
+	response.Success(ctx, c, resp)
 }
