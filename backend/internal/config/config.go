@@ -26,6 +26,7 @@ type Config struct {
 	Milvus           MilvusConfig    `yaml:"Milvus"`
 	DocumentSplitter SplitterConfig  `yaml:"DocumentSplitter"`
 	Wechat           WechatConfig    `yaml:"wechat"` // 微信配置
+	Feishu           FeishuConfig    `yaml:"feishu"` // 飞书配置
 }
 
 // WechatConfig 微信配置
@@ -33,6 +34,12 @@ type WechatConfig struct {
 	AppID       string `yaml:"app_id"`
 	AppSecret   string `yaml:"app_secret"`
 	RedirectURL string `yaml:"redirect_url"`
+}
+
+// FeishuConfig 飞书配置
+type FeishuConfig struct {
+	WebhookURL string `yaml:"webhook_url"` // 飞书机器人 Webhook URL
+	Enabled    bool   `yaml:"enabled"`     // 是否启用飞书告警
 }
 
 // CORSConfig CORS配置
@@ -198,6 +205,9 @@ func (c *Config) ExpandEnv() {
 	c.Milvus.DatabaseName = expandEnvVar(c.Milvus.DatabaseName)
 	c.Milvus.CollectionName = expandEnvVar(c.Milvus.CollectionName)
 	c.Milvus.MetricType = expandEnvVar(c.Milvus.MetricType)
+
+	// 展开 Feishu 配置
+	c.Feishu.WebhookURL = expandEnvVar(c.Feishu.WebhookURL)
 }
 
 // expandEnvVar 展开字符串中的环境变量引用
