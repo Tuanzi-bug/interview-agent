@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	lark "github.com/larksuite/oapi-sdk-go/v3"
 	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
 	larkdocx "github.com/larksuite/oapi-sdk-go/v3/service/docx/v1"
+	larkdrive "github.com/larksuite/oapi-sdk-go/v3/service/drive/v1"
 )
 
 // SDK 使用文档：https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/server-side-sdk/golang-sdk-guide/preparations
@@ -110,6 +112,27 @@ type TableBlock struct {
 	Rows    int      `json:"rows"`
 	Columns int      `json:"columns"`
 	Style   struct{} `json:"style"`
+}
+
+// DriveListFilesResponse：飞书云文档文件列表响应（简化）
+type DriveListFilesResponse struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data struct {
+		Files []DriveFile `json:"files"`
+	} `json:"data"`
+}
+
+// DriveFile：飞书云文档文件信息
+type DriveFile struct {
+	Name         string `json:"name"`
+	Token        string `json:"token"`
+	Type         string `json:"type"`
+	URL          string `json:"url"`
+	CreatedTime  string `json:"created_time,omitempty"`
+	ModifiedTime string `json:"modified_time,omitempty"`
+	OwnerID      string `json:"owner_id,omitempty"`
+	ParentToken  string `json:"parent_token,omitempty"`
 }
 
 // TextElement：文本元素（text_run/mention_user 等）
@@ -413,6 +436,101 @@ func getCodeLanguage(langCode int) string {
 	return "plaintext"
 }
 
+// sanitizeFileName 将文档名转换为安全的文件名
+func sanitizeFileName(name string) string {
+	// 去掉路径不支持的字符
+	invalid := regexp.MustCompile(`[\\/:*?"<>|]`)
+	name = invalid.ReplaceAllString(name, "_")
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "untitled"
+	}
+	return name
+}
+
+// FetchDocumentToMarkdown 获取单个 docx 文档并转换为 Markdown，返回 markdown 字符串
+func FetchDocumentToMarkdown(ctx context.Context, appID, appSecret, documentID, userAccessToken string) (string, error) {
+	// 创建 Client
+	client := lark.NewClient(appID, appSecret)
+
+	// 创建请求对象
+	req := larkdocx.NewListDocumentBlockReqBuilder().
+		DocumentId(documentID).
+		PageSize(500).
+		DocumentRevisionId(-1).
+		Build()
+
+	// 发起请求
+	resp, err := client.Docx.V1.DocumentBlock.List(ctx, req, larkcore.WithUserAccessToken(userAccessToken))
+	if err != nil {
+		return "", fmt.Errorf("请求失败：%w", err)
+	}
+
+	// 服务端错误处理
+	if !resp.Success() {
+		return "", fmt.Errorf("飞书API返回错误：logId=%s, error=%s", resp.RequestId(), larkcore.Prettify(resp.CodeError))
+	}
+
+	// 将响应转换为 JSON 以便解析
+	respJSON, err := json.Marshal(resp)
+	if err != nil {
+		return "", fmt.Errorf("序列化响应失败：%w", err)
+	}
+
+	// 解析 JSON 响应
+	var apiResponse struct {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+		Data struct {
+			Items []FeishuBlock `json:"items"`
+		} `json:"data"`
+	}
+
+	err = json.Unmarshal(respJSON, &apiResponse)
+	if err != nil {
+		return "", fmt.Errorf("解析响应失败：%w", err)
+	}
+
+	if apiResponse.Code != 0 {
+		return "", fmt.Errorf("飞书API返回错误：code=%d, msg=%s", apiResponse.Code, apiResponse.Msg)
+	}
+
+	if len(apiResponse.Data.Items) == 0 {
+		return "", fmt.Errorf("未获取到任何文档块，请检查文档ID和权限")
+	}
+
+	// 转换为 Markdown
+	mdContent := BlocksToMarkdown(apiResponse.Data.Items)
+
+	return mdContent, nil
+}
+
+// DocumentResult 文档处理结果
+type DocumentResult struct {
+	Name     string // 文档名称
+	Token    string // 文档 token
+	Markdown string // Markdown 内容
+	Error    error  // 处理错误（如果有）
+}
+
+// processSingleDoc 处理单个文档并保存为文件（用于测试）
+func processSingleDoc(ctx context.Context, appID, appSecret, docToken, docName, userAccessToken string) error {
+	mdContent, err := FetchDocumentToMarkdown(ctx, appID, appSecret, docToken, userAccessToken)
+	if err != nil {
+		return err
+	}
+
+	fileName := sanitizeFileName(docName)
+	outputPath := fmt.Sprintf("%s_%s.md", fileName, docToken)
+
+	if err := os.WriteFile(outputPath, []byte(mdContent), 0644); err != nil {
+		return fmt.Errorf("写入 Markdown 文件失败（%s）: %w", outputPath, err)
+	}
+
+	fmt.Printf("文档 \"%s\" 转换成功，输出：%s\n", docName, outputPath)
+	return nil
+}
+
 // 解析文本元素（TextElement 数组 → 字符串）
 // 处理普通文本（text_run）和提及用户（mention_user）
 func parseTextElements(elements []TextElement) string {
@@ -453,113 +571,209 @@ func parseTextElements(elements []TextElement) string {
 	return contentBuilder.String()
 }
 
-func main() {
-	// 创建 Client
-	client := lark.NewClient("cli_a9afad5abfb85bc0", "RDIAVuYOukhGNdZcn1zO9dLJS8up7rYL")
-	// 创建请求对象
-	req := larkdocx.NewListDocumentBlockReqBuilder().
-		DocumentId(`SQbFdHo6Wo9fOixcLVecp1yTnLh`).
-		PageSize(500).
-		DocumentRevisionId(-1).
+// 从 URL 中提取 token（支持 folder 和 docx）
+func extractTokenFromURL(url string) string {
+	if url == "" {
+		return ""
+	}
+	// 处理 folder URL: https://awq7m8b63wy.feishu.cn/drive/folder/SGQ0fYKoRlOWi7dwri5clDGrnme
+	if strings.Contains(url, "/drive/folder/") {
+		parts := strings.Split(url, "/drive/folder/")
+		if len(parts) > 1 {
+			return strings.TrimSpace(parts[1])
+		}
+	}
+	// 处理 docx URL: https://awq7m8b63wy.feishu.cn/docx/GCnddftYuoVvflx5YFIc8m9mnpe
+	if strings.Contains(url, "/docx/") {
+		parts := strings.Split(url, "/docx/")
+		if len(parts) > 1 {
+			return strings.TrimSpace(parts[1])
+		}
+	}
+	// 兜底：取 URL 最后一段
+	parts := strings.Split(strings.TrimSuffix(url, "/"), "/")
+	if len(parts) > 0 {
+		return strings.TrimSpace(parts[len(parts)-1])
+	}
+	return ""
+}
+
+// FetchFolderDocumentsToMarkdown 递归获取文件夹下所有 docx 文档并转换为 Markdown，返回所有文档的结果
+func FetchFolderDocumentsToMarkdown(ctx context.Context, appID, appSecret, folderToken, userAccessToken string) ([]DocumentResult, error) {
+	client := lark.NewClient(appID, appSecret)
+	var results []DocumentResult
+
+	err := processFolderRecursive(ctx, client, appID, appSecret, folderToken, "根文件夹", userAccessToken, 0, &results)
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+// processFolderRecursive 递归处理文件夹（支持嵌套文件夹），收集所有文档的 markdown
+func processFolderRecursive(ctx context.Context, client *lark.Client, appID, appSecret, folderToken string, folderName string, userAccessToken string, depth int, results *[]DocumentResult) error {
+	indent := strings.Repeat("  ", depth)
+	fmt.Printf("%s📁 处理文件夹: %s (token: %s)\n", indent, folderName, folderToken)
+
+	// 列出文件夹下的所有文件
+	listReq := larkdrive.NewListFileReqBuilder().
+		FolderToken(folderToken).
+		OrderBy("EditedTime").
+		Direction("DESC").
+		PageSize(200).
 		Build()
 
-	// 发起请求
-	resp, err := client.Docx.V1.DocumentBlock.List(context.Background(), req, larkcore.WithUserAccessToken("u-fc61msH256qGnFLd4jD5kghh5zJ1ggoVXi8a7MO00GL2"))
-
-	// 处理错误
+	listResp, err := client.Drive.V1.File.List(ctx, listReq, larkcore.WithUserAccessToken(userAccessToken))
 	if err != nil {
-		fmt.Printf("请求失败：%v\n", err)
-		return
+		return fmt.Errorf("获取文件夹 %s 的文件列表失败: %v", folderName, err)
+	}
+	if !listResp.Success() {
+		return fmt.Errorf("获取文件夹 %s 的文件列表接口失败: logId=%s, err=%s", folderName, listResp.RequestId(), larkcore.Prettify(listResp.CodeError))
 	}
 
-	// 服务端错误处理
-	if !resp.Success() {
-		fmt.Printf("logId: %s, error response: \n%s", resp.RequestId(), larkcore.Prettify(resp.CodeError))
-		return
-	}
-
-	// 将响应转换为 JSON 以便解析
-	respJSON, err := json.Marshal(resp)
+	listJSON, err := json.Marshal(listResp)
 	if err != nil {
-		fmt.Printf("序列化响应失败：%v\n", err)
-		return
+		return fmt.Errorf("序列化文件夹 %s 的文件列表响应失败: %v", folderName, err)
 	}
 
-	// 解析 JSON 响应
-	var apiResponse struct {
-		Code int    `json:"code"`
-		Msg  string `json:"msg"`
-		Data struct {
-			Items []FeishuBlock `json:"items"`
-		} `json:"data"`
+	var driveResp DriveListFilesResponse
+	if err := json.Unmarshal(listJSON, &driveResp); err != nil {
+		return fmt.Errorf("解析文件夹 %s 的文件列表响应失败: %v", folderName, err)
+	}
+	if driveResp.Code != 0 {
+		return fmt.Errorf("文件夹 %s 的文件列表接口返回错误: code=%d, msg=%s", folderName, driveResp.Code, driveResp.Msg)
 	}
 
-	// 先解析为通用的 map 结构，以便调试
-	var rawResponse map[string]interface{}
-	if err := json.Unmarshal(respJSON, &rawResponse); err == nil {
-		// 检查是否有 data.items
-		if data, ok := rawResponse["data"].(map[string]interface{}); ok {
-			if items, ok := data["items"].([]interface{}); ok {
-				fmt.Printf("调试：发现 %d 个块，开始分析块类型...\n", len(items))
-				blockTypeCount := make(map[int]int)
-				for i, item := range items {
-					if itemMap, ok := item.(map[string]interface{}); ok {
-						if blockType, ok := itemMap["block_type"].(float64); ok {
-							bt := int(blockType)
-							blockTypeCount[bt]++
-							// 只显示前10个块的详细信息
-							if i < 10 {
-								fmt.Printf("  块 %d: block_type=%d, block_id=%v\n", i+1, bt, itemMap["block_id"])
-							}
-						}
-					}
-				}
-				fmt.Println("块类型统计：")
-				for bt, count := range blockTypeCount {
-					fmt.Printf("  block_type %d: %d 个\n", bt, count)
-				}
+	if len(driveResp.Data.Files) == 0 {
+		fmt.Printf("%s  (空文件夹)\n", indent)
+		return nil
+	}
+
+	fmt.Printf("%s  发现 %d 个项目\n", indent, len(driveResp.Data.Files))
+
+	docCount := 0
+	folderCount := 0
+
+	// 遍历处理每个文件/文件夹
+	for _, f := range driveResp.Data.Files {
+		if f.Type == "folder" {
+			// 递归处理子文件夹
+			folderCount++
+			subFolderToken := f.Token
+			if subFolderToken == "" {
+				subFolderToken = extractTokenFromURL(f.URL)
 			}
-		}
-	}
+			if subFolderToken == "" {
+				fmt.Printf("%s  ⚠️  跳过文件夹 \"%s\"，未找到 token\n", indent, f.Name)
+				continue
+			}
+			if err := processFolderRecursive(ctx, client, appID, appSecret, subFolderToken, f.Name, userAccessToken, depth+1, results); err != nil {
+				fmt.Printf("%s  ❌ 文件夹 \"%s\" 处理失败: %v\n", indent, f.Name, err)
+			}
+		} else if f.Type == "docx" {
+			// 处理 docx 文档
+			docCount++
+			docToken := f.Token
+			if docToken == "" {
+				docToken = extractTokenFromURL(f.URL)
+			}
+			if docToken == "" {
+				fmt.Printf("%s  ⚠️  跳过文档 \"%s\"，未找到 token\n", indent, f.Name)
+				continue
+			}
+			fmt.Printf("%s  📄 (%d) 处理文档: %s\n", indent, docCount, f.Name)
 
-	err = json.Unmarshal(respJSON, &apiResponse)
-	if err != nil {
-		fmt.Printf("解析响应失败：%v\n", err)
-		fmt.Println("尝试查看原始响应 JSON（前2000字符）：")
-		jsonStr := string(respJSON)
-		if len(jsonStr) > 2000 {
-			fmt.Println(jsonStr[:2000] + "...")
+			// 调用 FetchDocumentToMarkdown 获取 markdown
+			mdContent, err := FetchDocumentToMarkdown(ctx, appID, appSecret, docToken, userAccessToken)
+			result := DocumentResult{
+				Name:     f.Name,
+				Token:    docToken,
+				Markdown: mdContent,
+				Error:    err,
+			}
+			*results = append(*results, result)
+
+			if err != nil {
+				fmt.Printf("%s    ❌ 文档 \"%s\" 处理失败: %v\n", indent, f.Name, err)
+			} else {
+				fmt.Printf("%s    ✅ 文档 \"%s\" 转换成功 (%d 字符)\n", indent, f.Name, len(mdContent))
+			}
 		} else {
-			fmt.Println(jsonStr)
+			fmt.Printf("%s  ⏭️  跳过非 docx 文件: %s (type: %s)\n", indent, f.Name, f.Type)
 		}
-		return
 	}
 
-	if apiResponse.Code != 0 {
-		fmt.Printf("飞书API返回错误：code=%d, msg=%s\n", apiResponse.Code, apiResponse.Msg)
-		return
-	}
+	fmt.Printf("%s✅ 文件夹 %s 处理完成 (文档: %d, 子文件夹: %d)\n", indent, folderName, docCount, folderCount)
+	return nil
+}
 
-	if len(apiResponse.Data.Items) == 0 {
-		fmt.Println("警告：未获取到任何文档块，请检查文档ID和权限")
-		return
-	}
+func main() {
+	ctx := context.Background()
 
-	fmt.Printf("成功获取 %d 个文档块，开始转换为 Markdown...\n", len(apiResponse.Data.Items))
+	// TODO: 这些配置建议换成环境变量或配置文件
+	const appID = "cli_a9afad5abfb85bc0"
+	const appSecret = "RDIAVuYOukhGNdZcn1zO9dLJS8up7rYL"
+	const userAccessToken = "u-cJG7hB2nh839Dl4ijPlcIdh5kydNggirVo0aZRO02BiR"
+	const folderToken = "PyOifPcHPldVPodJaxVce2LBnSb"
 
-	// 转换为 Markdown
-	mdContent := BlocksToMarkdown(apiResponse.Data.Items)
+	fmt.Println("🚀 开始递归处理飞书文件夹...")
+	fmt.Println("=" + strings.Repeat("=", 60))
 
-	// 输出为 Markdown 文件
-	outputPath := "飞书文档转换结果.md"
-	err = os.WriteFile(outputPath, []byte(mdContent), 0644)
+	// 批量获取所有文档的 Markdown
+	results, err := FetchFolderDocumentsToMarkdown(ctx, appID, appSecret, folderToken, userAccessToken)
 	if err != nil {
-		fmt.Printf("保存 Markdown 文件失败：%v\n", err)
+		fmt.Printf("❌ 处理失败: %v\n", err)
 		return
 	}
 
-	fmt.Printf("转换成功！Markdown 文件已保存至：%s\n", outputPath)
-	fmt.Println("转换结果预览：")
-	fmt.Println("----------------------------------------")
-	fmt.Println(mdContent)
+	fmt.Println("=" + strings.Repeat("=", 60))
+	fmt.Printf("✅ 所有文件夹和文档处理完成！共处理 %d 个文档\n", len(results))
+
+	// 调用测试函数（保存文件和打印示例）
+	testSaveDocuments(results)
+
+	// 返回 results 供其他地方使用
+	// 注意：main 函数不能返回值，但 results 已经可以通过 FetchFolderDocumentsToMarkdown 获取
+	// 其他地方可以直接调用 FetchFolderDocumentsToMarkdown 获取结果
+}
+
+// testSaveDocuments 测试函数：保存所有文档为文件并打印统计信息（用于单元测试）
+func testSaveDocuments(results []DocumentResult) {
+	successCount := 0
+	for _, result := range results {
+		if result.Error != nil {
+			fmt.Printf("⚠️  文档 \"%s\" 处理失败: %v\n", result.Name, result.Error)
+			continue
+		}
+
+		// 保存为文件（仅用于测试）
+		fileName := sanitizeFileName(result.Name)
+		outputPath := fmt.Sprintf("%s_%s.md", fileName, result.Token)
+		if err := os.WriteFile(outputPath, []byte(result.Markdown), 0644); err != nil {
+			fmt.Printf("⚠️  保存文件失败 \"%s\": %v\n", outputPath, err)
+			continue
+		}
+		successCount++
+		fmt.Printf("💾 已保存: %s (%d 字符)\n", outputPath, len(result.Markdown))
+	}
+
+	fmt.Printf("\n📊 统计: 成功 %d/%d 个文档\n", successCount, len(results))
+
+	// 示例：如何使用返回的 markdown 数据
+	fmt.Println("\n📝 示例：如何使用返回的 Markdown 数据：")
+	for i, result := range results {
+		if i >= 3 { // 只显示前3个示例
+			break
+		}
+		if result.Error == nil {
+			preview := result.Markdown
+			if len(preview) > 100 {
+				preview = preview[:100] + "..."
+			}
+			fmt.Printf("  文档 %d: %s\n", i+1, result.Name)
+			fmt.Printf("    Token: %s\n", result.Token)
+			fmt.Printf("    Markdown 预览: %s\n", preview)
+		}
+	}
 }
