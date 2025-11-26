@@ -190,6 +190,11 @@ struct WechatCallbackRequest {
     1: required string code (api.query="code")
     2: optional string state (api.query="state")
 }
+// ==================== 7. 检查用户是否配置了模型 ====================
+struct CheckUserModelConfiguredResponse {
+    1: required bool configured  // 是否已配置并启用默认模型（is_default = 1）
+}
+
 // 服务定义
 service UserService {
     // 1. 创建用户模型
@@ -267,5 +272,11 @@ service UserService {
            api.get="/api/user/wechat/callback",
            api.category="user",
            api.gen_path="user"
+       )
+       // 12. 检查用户是否配置了模型
+              CheckUserModelConfiguredResponse CheckUserModelConfigured(1: EmptyRequest request) (
+                  api.get="/api/user/model/check",
+                  api.category="user",
+                  api.gen_path="user"
        )
 }

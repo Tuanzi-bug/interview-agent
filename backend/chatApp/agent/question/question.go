@@ -45,7 +45,7 @@ func NewQuestionAgent(userId uint) adk.Agent {
 难度级别：初级难度、中级难度、高级难度
 
 任务：
-1. 如果提供了PDF路径，使用pdf_to_text工具解析简历，只有在面试刚开始的时候调用一次即可
+1. 如果提供了resume_id字段的值，使用get_resume_info工具解析简历，只有在面试刚开始的时候调用一次即可
 2. 根据提示词中指定的面试类型、领域和难度级别进行提问
 3. 面试提问阶段：
    - 根据候选人的背景和技能，围绕指定的核心评估维度进行提问
@@ -76,7 +76,7 @@ func NewQuestionAgent(userId uint) adk.Agent {
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: []componenttool.BaseTool{
-					tool2.CreatePDFToTextTool(),
+					tool2.GetResumeInfoTool(),
 				},
 			},
 		},

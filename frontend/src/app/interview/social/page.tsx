@@ -1,7 +1,7 @@
 'use client';
 
 import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, Tag, Upload, message, Modal } from 'antd';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { CheckCircleOutlined, VideoCameraOutlined, ToolOutlined } from '@ant-design/icons';
@@ -14,7 +14,32 @@ export default function SocialInterviewPage() {
   const [resumeFile, setResumeFile] = useState<UploadFile | null>(null);
   const [starting, setStarting] = useState(false);
   const [diagnosisVisible, setDiagnosisVisible] = useState(false);
+  const [modelConfigured, setModelConfigured] = useState<boolean | null>(null);
+  const [checkingConfig, setCheckingConfig] = useState<boolean>(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    setCheckingConfig(true);
+    fetch('http://localhost:8888/api/user/model/check', {
+      method: 'GET',
+      headers: {
+        Authorization: token ? `Bearer ${token}` : '',
+        'X-Auth-Token': token || '',
+      },
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+        const configured = !!(data && data.data && data.data.configured);
+        setModelConfigured(configured);
+      })
+      .catch(() => {
+        setModelConfigured(false);
+      })
+      .finally(() => {
+        setCheckingConfig(false);
+      });
+  }, []);
 
   return (
     <div className="container mx-auto px-4">
@@ -133,15 +158,27 @@ export default function SocialInterviewPage() {
               </Row>
 
               <div className="mt-4">
+                {checkingConfig ? (
+                  <Tag color="default" className="mb-2">正在检查模型配置</Tag>
+                ) : modelConfigured ? (
+                  <Tag color="green" className="mb-2">模型已配置</Tag>
+                ) : (
+                  <Tag color="red" className="mb-2">模型未配置</Tag>
+                )}
                 <Button
                   type="primary"
                   className="bg-green-500 w-full h-12 text-base"
                   loading={starting}
+                  disabled={starting || checkingConfig || modelConfigured === false}
                   onClick={async () => {
                     try {
                       await form.validateFields();
                     } catch (e) {
                       message.error('请完善表单后再开始面试');
+                      return;
+                    }
+                    if (!modelConfigured) {
+                      message.error('未配置模型，无法开始面试');
                       return;
                     }
                     const values = form.getFieldsValue();

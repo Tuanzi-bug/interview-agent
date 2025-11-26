@@ -44,6 +44,11 @@ type ModelManager interface {
 		userID int64,
 		modelID int64,
 	) error
+	// CheckUserModelConfigured 检查用户是否配置了默认模型
+	CheckUserModelConfigured(
+		ctx context.Context,
+		userID int64,
+	) (*model.UserModel, error)
 }
 
 type UserManager interface {

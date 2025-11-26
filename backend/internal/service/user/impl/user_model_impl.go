@@ -6,6 +6,7 @@ import (
 	"ai-eino-interview-agent/internal/service/common"
 	"context"
 	"errors"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -202,4 +203,22 @@ func (s *UserModelServer) DeleteUserModel(ctx context.Context,
 	userID int64,
 	modelID int64) error {
 	return model.UserModelDao.DeleteUserModel(userID, modelID)
+}
+
+// CheckUserModelConfigured 检查用户是否配置了默认模型
+// 返回默认模型信息，如果为 nil 则表示未配置默认模型
+func (s *UserModelServer) CheckUserModelConfigured(ctx context.Context,
+	userID int64) (*model.UserModel, error) {
+	defaultModel, err := model.UserModelDao.GetDefaultUserModel(userID)
+	if err != nil {
+		// 如果没有找到默认模型（IsDefault = 1），返回 nil
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		// 其他错误返回错误信息
+		return nil, err
+	}
+	// GetDefaultUserModel 已经确保返回的是 is_default = 1 的模型
+	// 直接返回模型信息，前端可以通过判断 model 是否为 null 来判断是否配置
+	return defaultModel, nil
 }

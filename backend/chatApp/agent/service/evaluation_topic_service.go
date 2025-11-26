@@ -119,7 +119,7 @@ func buildAnswerReportResponse(agentResponse string, userId uint, reportId uint6
 	// 尝试直接解析 JSON
 	if err := json.Unmarshal([]byte(agentResponse), &tempResp); err != nil {
 		// 尝试从文本中提取 JSON
-		jsonStr := extractJSONFromResponse(agentResponse)
+		jsonStr := ExtractJSONFromResponse(agentResponse)
 		if jsonStr == "" {
 			log.Printf("[buildAnswerReportResponse] 无法提取 JSON，使用默认响应")
 			return buildDefaultAnswerReport(userId, reportId)

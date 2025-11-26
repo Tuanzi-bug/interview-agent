@@ -36,8 +36,7 @@ func GenerateInterviewEvaluation(ctx context.Context, userId uint, reportId uint
 1. 首先调用 get_interviews_data 工具获取面试的完整问题和对话记录
 2. 仔细分析每个问题的回答质量
 3. 对每个评估维度进行详细分析和评分
-4. 使用 score_extraction 工具生成结构化的评分数据
-5. 生成一份专业的评估报告
+4. 生成一份专业的评估报告
 
 评估报告应包含：
 - 总体评分
@@ -106,7 +105,7 @@ func buildEvaluationResponse(agentResponse string) *interviewsapi.GetInterviewEv
 	// 尝试直接解析 JSON
 	if err := json.Unmarshal([]byte(agentResponse), response); err != nil {
 		// 尝试从文本中提取 JSON
-		jsonStr := extractJSONFromResponse(agentResponse)
+		jsonStr := ExtractJSONFromResponse(agentResponse)
 		if jsonStr == "" {
 			log.Printf("[buildEvaluationResponse] 无法提取 JSON，使用默认响应")
 			return buildDefaultResponse()
@@ -120,34 +119,6 @@ func buildEvaluationResponse(agentResponse string) *interviewsapi.GetInterviewEv
 	}
 
 	return response
-}
-
-// extractJSONFromResponse 从文本中提取 JSON 字符串
-func extractJSONFromResponse(text string) string {
-	// 查找对象格式 {...}
-	start := -1
-	braceCount := 0
-
-	for i := 0; i < len(text); i++ {
-		if text[i] == '{' {
-			if start == -1 {
-				start = i
-			}
-			braceCount++
-		} else if text[i] == '}' {
-			braceCount--
-			if start != -1 && braceCount == 0 {
-				jsonStr := text[start : i+1]
-				// 尝试验证 JSON 是否有效
-				var temp interface{}
-				if err := json.Unmarshal([]byte(jsonStr), &temp); err == nil {
-					return jsonStr
-				}
-			}
-		}
-	}
-
-	return ""
 }
 
 // buildDefaultResponse 构建默认响应
