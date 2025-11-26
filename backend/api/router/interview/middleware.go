@@ -210,6 +210,46 @@ func _getanswerrecordMw() []app.HandlerFunc {
 	return nil
 }
 
+func _resumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getdefaultresumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getuserresumesMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _deleteresumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getresumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _updateresumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _setdefaultresumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _uploadresumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _checkusermodelconfiguredMw() []app.HandlerFunc {
 	// your code...
 	return nil

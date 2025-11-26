@@ -22,9 +22,8 @@ func NewSessionContextManager(ctx context.Context) *SessionContextManager {
 // ===== 会话值键定义 =====
 const (
 	// 简历相关
-	KeyResumeContent  = "resume-content"
-	KeyResumeFilePath = "resume-file-path"
-	KeyHasResume      = "has-resume"
+	KeyResumeContent  = "resume-content"   // 用于问题生成器初始化
+	KeyResumeFilePath = "resume-file-path" // 用于简历上传参数
 
 	// 面试配置
 	KeyInterviewType       = "interview-type"
@@ -38,17 +37,24 @@ const (
 	KeyCurrentDimension     = "current-dimension"
 
 	// 用户信息
-	KeyUserID   = "user-id"
-	KeyRecordID = "record-id"
+	KeyUserID       = "user-id"
+	KeyRecordID     = "record-id"
+	KeyResumeUserID = "resume-user-id"
 
 	// 评估相关
 	KeyEvaluationContext = "evaluation-context"
 	KeyParsedResume      = "parsed-resume"
+
+	// 简历上传相关
+	KeyResumeFileName      = "resume-file-name"
+	KeyResumeFileType      = "resume-file-type"
+	KeyResumeFileSize      = "resume-file-size"
+	KeyResumeUploadContent = "resume-upload-content"
 )
 
 // ===== 简历相关操作 =====
 
-// SetResumeContent 存储简历内容
+// SetResumeContent 存储简历内容（用于问题生成器初始化）
 func (m *SessionContextManager) SetResumeContent(content string) error {
 	adk.AddSessionValue(m.ctx, KeyResumeContent, content)
 	return nil
@@ -68,50 +74,6 @@ func (m *SessionContextManager) GetResumeContent() (string, error) {
 		return "", fmt.Errorf("resume content is not a string")
 	}
 	return content, nil
-}
-
-// SetResumeFilePath 存储简历文件路径
-func (m *SessionContextManager) SetResumeFilePath(filePath string) error {
-	adk.AddSessionValue(m.ctx, KeyResumeFilePath, filePath)
-	return nil
-}
-
-// GetResumeFilePath 获取简历文件路径
-func (m *SessionContextManager) GetResumeFilePath() (string, error) {
-	val, ok := adk.GetSessionValue(m.ctx, KeyResumeFilePath)
-	if !ok {
-		return "", nil
-	}
-	if val == nil {
-		return "", nil
-	}
-	filePath, isString := val.(string)
-	if !isString {
-		return "", fmt.Errorf("resume file path is not a string")
-	}
-	return filePath, nil
-}
-
-// SetHasResume 存储是否有简历
-func (m *SessionContextManager) SetHasResume(hasResume bool) error {
-	adk.AddSessionValue(m.ctx, KeyHasResume, hasResume)
-	return nil
-}
-
-// GetHasResume 获取是否有简历
-func (m *SessionContextManager) GetHasResume() (bool, error) {
-	val, ok := adk.GetSessionValue(m.ctx, KeyHasResume)
-	if !ok {
-		return false, nil
-	}
-	if val == nil {
-		return false, nil
-	}
-	hasResume, isBool := val.(bool)
-	if !isBool {
-		return false, fmt.Errorf("has resume is not a boolean")
-	}
-	return hasResume, nil
 }
 
 // ===== 面试配置操作 =====
@@ -352,4 +314,58 @@ func (m *SessionContextManager) GetParsedResume() (map[string]interface{}, error
 		return nil, fmt.Errorf("failed to unmarshal parsed resume: %w", err)
 	}
 	return resume, nil
+}
+
+// ===== 简历上传参数操作 =====
+
+// SetResumeUploadParams 存储简历上传参数（包括 userID 和 resumeFilePath）
+func (m *SessionContextManager) SetResumeUploadParams(userID uint, resumeFilePath, fileName, fileType string, fileSize int64, content string) error {
+	adk.AddSessionValue(m.ctx, KeyResumeUserID, userID)
+	adk.AddSessionValue(m.ctx, KeyResumeFilePath, resumeFilePath)
+	adk.AddSessionValue(m.ctx, KeyResumeFileName, fileName)
+	adk.AddSessionValue(m.ctx, KeyResumeFileType, fileType)
+	adk.AddSessionValue(m.ctx, KeyResumeFileSize, fileSize)
+	adk.AddSessionValue(m.ctx, KeyResumeUploadContent, content)
+	return nil
+}
+
+// GetResumeUploadParams 获取简历上传参数
+func (m *SessionContextManager) GetResumeUploadParams() (userID uint, resumeFilePath, fileName, fileType string, fileSize int64, content string, err error) {
+	// 获取 userID
+	val, ok := adk.GetSessionValue(m.ctx, KeyResumeUserID)
+	if ok && val != nil {
+		userID, _ = val.(uint)
+	}
+
+	// 获取 resumeFilePath
+	val, ok = adk.GetSessionValue(m.ctx, KeyResumeFilePath)
+	if ok && val != nil {
+		resumeFilePath, _ = val.(string)
+	}
+
+	// 获取文件名
+	val, ok = adk.GetSessionValue(m.ctx, KeyResumeFileName)
+	if ok && val != nil {
+		fileName, _ = val.(string)
+	}
+
+	// 获取文件类型
+	val, ok = adk.GetSessionValue(m.ctx, KeyResumeFileType)
+	if ok && val != nil {
+		fileType, _ = val.(string)
+	}
+
+	// 获取文件大小
+	val, ok = adk.GetSessionValue(m.ctx, KeyResumeFileSize)
+	if ok && val != nil {
+		fileSize, _ = val.(int64)
+	}
+
+	// 获取内容
+	val, ok = adk.GetSessionValue(m.ctx, KeyResumeUploadContent)
+	if ok && val != nil {
+		content, _ = val.(string)
+	}
+
+	return
 }

@@ -37,7 +37,7 @@ type QuestionGeneratorResult struct {
 // interviewType: "综合面试" 或 "专项面试"
 // domain: 面试领域（综合面试：校招/社招；专项面试：java/golang等）
 // difficulty: 难度级别（简单/中等/困难）
-func BuildInterviewPrompt(questionIndex int, query string, resumeFilePath string, hasResume bool, dimension string, followUpCount int, interviewType string, domain string, difficulty string) string {
+func BuildInterviewPrompt(questionIndex int, query string, resumeID int64, hasResume bool, dimension string, followUpCount int, interviewType string, domain string, difficulty string) string {
 	// 根据面试类型选择维度
 	var dimensionMap map[string]string
 	if interviewType == "综合面试" {
@@ -82,15 +82,15 @@ func BuildInterviewPrompt(questionIndex int, query string, resumeFilePath string
 		// 主问题
 		if questionIndex == 1 {
 			// 第一个问题
-			if hasResume && resumeFilePath != "" {
-				return fmt.Sprintf(`请使用 pdf_to_text 工具解析以下简历文件，然后根据简历内容生成一个面试问题。
+			if hasResume && resumeID != 0 {
+				return fmt.Sprintf(`请使用 get_resume_info 工具获取简历内容，然后根据简历内容生成一个面试问题。
 
 面试类型：%s
 面试领域：%s
 难度级别：%s
 评估维度：%s
 
-简历文件路径：%s
+简历ID：%d
 
 用户补充信息：%s
 
@@ -105,7 +105,7 @@ JSON格式：
 {
   "questions": [{"question_text": "问题内容", "eval_dimension": "%s", "order": 1}],
   "dialogues": [{"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}]
-}`, interviewTypeDesc, domainDesc, difficultyDesc, dimensionCN, resumeFilePath, query, dimensionCN, difficultyDesc, dimension)
+}`, interviewTypeDesc, domainDesc, difficultyDesc, dimensionCN, resumeID, query, dimensionCN, difficultyDesc, dimension)
 			}
 			if hasResume {
 				return fmt.Sprintf(`根据以下信息生成一个面试问题。
@@ -417,7 +417,7 @@ func BuildPromptFromSessionContext(ctx context.Context, questionIndex int, query
 	}
 
 	// 调用原有的 BuildInterviewPrompt 函数
-	prompt := BuildInterviewPrompt(questionIndex, query, "", false, dimension,
+	prompt := BuildInterviewPrompt(questionIndex, query, 0, false, dimension,
 		followUpCount, interviewType, domain, difficulty)
 
 	return prompt, nil

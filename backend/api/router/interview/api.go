@@ -34,6 +34,16 @@ func Register(r *server.Hertz) {
 			}
 		}
 		{
+			_resume := _api.Group("/resume", _resumeMw()...)
+			_resume.GET("/default", append(_getdefaultresumeMw(), interview.GetDefaultResume)...)
+			_resume.GET("/list", append(_getuserresumesMw(), interview.GetUserResumes)...)
+			_resume.DELETE("/:resume_id", append(_deleteresumeMw(), interview.DeleteResume)...)
+			_resume.GET("/:resume_id", append(_getresumeMw(), interview.GetResume)...)
+			_resume.PUT("/:resume_id", append(_updateresumeMw(), interview.UpdateResume)...)
+			_resume.POST("/set-default", append(_setdefaultresumeMw(), interview.SetDefaultResume)...)
+			_resume.POST("/upload", append(_uploadresumeMw(), interview.UploadResume)...)
+		}
+		{
 			_user := _api.Group("/user", _userMw()...)
 			_user.POST("/login", append(_loginMw(), interview.Login)...)
 			_user.GET("/profile", append(_getprofileMw(), interview.GetProfile)...)
