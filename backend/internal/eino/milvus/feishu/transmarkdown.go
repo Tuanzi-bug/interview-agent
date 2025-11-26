@@ -463,7 +463,7 @@ func Test() string {
 		Build()
 
 	// 发起请求
-	resp, err := client.Docx.V1.DocumentBlock.List(context.Background(), req, larkcore.WithUserAccessToken("u-c4yKD.czt8v9VL33TukAWX40gssNggqpNE2aZAI024i2"))
+	resp, err := client.Docx.V1.DocumentBlock.List(context.Background(), req, larkcore.WithUserAccessToken("u-fSJtoUlf9cuaVCduZCHUt_1g5awBggiNigEamRuw08au"))
 
 	// 处理错误
 	if err != nil {
