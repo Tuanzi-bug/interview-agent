@@ -22,8 +22,9 @@ func NewSessionContextManager(ctx context.Context) *SessionContextManager {
 // ===== 会话值键定义 =====
 const (
 	// 简历相关
-	KeyResumeContent  = "resume-content"   // 用于问题生成器初始化
-	KeyResumeFilePath = "resume-file-path" // 用于简历上传参数
+	KeyResumeContent  = "resume-content"
+	KeyResumeFilePath = "resume-file-path"
+	KeyHasResume      = "has-resume"
 
 	// 面试配置
 	KeyInterviewType       = "interview-type"
@@ -53,7 +54,6 @@ const (
 )
 
 // ===== 简历相关操作 =====
-
 // SetResumeContent 存储简历内容（用于问题生成器初始化）
 func (m *SessionContextManager) SetResumeContent(content string) error {
 	adk.AddSessionValue(m.ctx, KeyResumeContent, content)
@@ -74,6 +74,50 @@ func (m *SessionContextManager) GetResumeContent() (string, error) {
 		return "", fmt.Errorf("resume content is not a string")
 	}
 	return content, nil
+}
+
+// SetResumeFilePath 存储简历文件路径
+func (m *SessionContextManager) SetResumeFilePath(filePath string) error {
+	adk.AddSessionValue(m.ctx, KeyResumeFilePath, filePath)
+	return nil
+}
+
+// GetResumeFilePath 获取简历文件路径
+func (m *SessionContextManager) GetResumeFilePath() (string, error) {
+	val, ok := adk.GetSessionValue(m.ctx, KeyResumeFilePath)
+	if !ok {
+		return "", nil
+	}
+	if val == nil {
+		return "", nil
+	}
+	filePath, isString := val.(string)
+	if !isString {
+		return "", fmt.Errorf("resume file path is not a string")
+	}
+	return filePath, nil
+}
+
+// SetHasResume 存储是否有简历
+func (m *SessionContextManager) SetHasResume(hasResume bool) error {
+	adk.AddSessionValue(m.ctx, KeyHasResume, hasResume)
+	return nil
+}
+
+// GetHasResume 获取是否有简历
+func (m *SessionContextManager) GetHasResume() (bool, error) {
+	val, ok := adk.GetSessionValue(m.ctx, KeyHasResume)
+	if !ok {
+		return false, nil
+	}
+	if val == nil {
+		return false, nil
+	}
+	hasResume, isBool := val.(bool)
+	if !isBool {
+		return false, fmt.Errorf("has resume is not a boolean")
+	}
+	return hasResume, nil
 }
 
 // ===== 面试配置操作 =====
