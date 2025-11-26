@@ -56,6 +56,7 @@ struct StartInterviewRequest {
     3: required string difficulty (api.body="difficulty")  // 难度级别（简单、中等、困难）
     4: optional string company_name (api.body="company_name")  // 公司名称（专项面试不用填写）
     5: optional string position_name (api.body="position_name")  // 岗位名称（专项面试不用填写）
+    6: optional i64 resume_id (api.body="resume_id")  // 简历ID
 }
 
 // 启动面试响应
