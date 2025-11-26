@@ -5,16 +5,19 @@ package interview
 import (
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
 	"ai-eino-interview-agent/api/response"
+	"ai-eino-interview-agent/chatApp/agent"
 	"ai-eino-interview-agent/chatApp/agent/service"
 	"ai-eino-interview-agent/internal/alert"
 	"ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/model"
+	"ai-eino-interview-agent/internal/mq"
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 
 	"net/http"
 	"os"
@@ -55,12 +58,6 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	resumeFilePath, err := handleResumeUpload(c)
-	if err != nil {
-		response.InternalServerError(ctx, c, err.Error())
-		return
-	}
-
 	userID := middleware.GetUserID(c)
 	if userID == 0 {
 		response.Unauthorized(ctx, c, "Authorization token is required")
@@ -85,10 +82,15 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		response.InternalServerError(ctx, c, "Failed to create interview record: "+err.Error())
 		return
 	}
-	hasResume := resumeFilePath != ""
+	var hasResume bool
+	var resumeID int64
 
+	if req.ResumeID != nil && *req.ResumeID > 0 {
+		hasResume = true
+		resumeID = *req.ResumeID
+	}
 	sm := GetSessionManager()
-	session := sm.CreateSession(userID, recordID, resumeFilePath, hasResume, "", req.Type, req.Domain, req.Difficulty)
+	session := sm.CreateSession(userID, recordID, resumeID, hasResume, "", req.Type, req.Domain, req.Difficulty)
 
 	pipeReader, pipeWriter := io.Pipe()
 	c.SetBodyStream(pipeReader, -1)
@@ -107,6 +109,15 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 			"message":    "面试已开始，正在生成第一个问题...",
 			"session_id": session.SessionID,
 		})
+
+		// 初始化会话值：存储简历、配置等信息供 Agent 使用
+		// 这样工具可以直接从会话值获取数据，无需参数传递
+		if err := agent.InitializeQuestionGeneratorContext(ctx, session.Query,
+			req.Type, req.Domain, req.Difficulty); err != nil {
+			sendErrorEvent(pipeWriter, "Failed to initialize session context: "+err.Error())
+			sendCompleteEvent(pipeWriter)
+			return
+		}
 
 		writer := &SSEWriter{ctx: c, writer: pipeWriter}
 		runInterviewLoopAsync(ctx, userID, writer, session, interviewService)
@@ -182,12 +193,11 @@ func setupSSEResponse(c *app.RequestContext) {
 }
 
 // runInterviewLoopAsync 异步运行面试循环
-func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, session *InterviewSession, interviewService interviewservice.InterviewService) {
+func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, session *InterviewSession, interviewService interviewservice.InterviewManager) {
 	defer func() {
 		if r := recover(); r != nil {
 			sendErrorEvent(writer, fmt.Sprintf("面试异常: %v", r))
 		}
-		cleanupResumeFile(session.ResumeFilePath)
 		// 延迟删除会话，给前端充足时间来获取最后的数据
 		go func() {
 			time.Sleep(10 * time.Second)
@@ -200,7 +210,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 	var resumeContent string
 	const maxFollowUps = 2
 	const answerTimeout = 30 * time.Minute
-	const heartbeatInterval = 30 * time.Second
+	const heartbeatInterval = 15 * time.Second
 
 	// 根据面试类型选择维度
 	var dimensions []string
@@ -231,13 +241,17 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 
 		select {
 		case <-ctx.Done():
+			log.Printf("[Interview Loop] Context cancelled, sessionID: %s", session.SessionID)
 			return
 		default:
 		}
 
 		if questionIndex > 0 {
+			log.Printf("[Interview Loop] Waiting for answer, sessionID: %s, questionIndex: %d", session.SessionID, questionIndex)
 			answer, received := waitForAnswerWithHeartbeat(sm, session.SessionID, answerTimeout, heartbeatInterval, writer)
+			log.Printf("[Interview Loop] Answer received: %v, sessionID: %s", received, session.SessionID)
 			if !received {
+				log.Printf("[Interview Loop] Answer timeout, sessionID: %s", session.SessionID)
 				sendErrorEvent(writer, "等待答案超时，面试已结束")
 				sendCompleteEvent(writer)
 				break
@@ -274,7 +288,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 
 		var prompt string
 		if questionIndex == 1 {
-			prompt = buildPrompt(questionIndex, session.Query, session.ResumeFilePath, session.HasResume, dimensions[dimensionIndex], 0, session.Type, session.Domain, session.Difficulty)
+			prompt = buildPrompt(questionIndex, session.Query, session.ResumeId, session.HasResume, dimensions[dimensionIndex], 0, session.Type, session.Domain, session.Difficulty)
 		} else if followUpCount > 0 {
 			lastAnswer := ""
 			displayOrder := uint32(questionIndex)*100 + uint32(followUpCount-1)
@@ -285,7 +299,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 					break
 				}
 			}
-			prompt = buildPrompt(questionIndex, lastAnswer, "", false, dimensions[dimensionIndex], followUpCount, session.Type, session.Domain, session.Difficulty)
+			prompt = buildPrompt(questionIndex, lastAnswer, 0, false, dimensions[dimensionIndex], followUpCount, session.Type, session.Domain, session.Difficulty)
 		} else {
 			userAnswers := ""
 			for i := 1; i < questionIndex; i++ {
@@ -298,7 +312,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 					}
 				}
 			}
-			prompt = buildPrompt(questionIndex, resumeContent+"\n\n用户已回答的问题：\n"+userAnswers, "", false, dimensions[dimensionIndex], 0, session.Type, session.Domain, session.Difficulty)
+			prompt = buildPrompt(questionIndex, resumeContent+"\n\n用户已回答的问题：\n"+userAnswers, 0, false, dimensions[dimensionIndex], 0, session.Type, session.Domain, session.Difficulty)
 		}
 
 		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId)
@@ -344,6 +358,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 		sm.ClearAnswer(session.SessionID)
 	}
 
+	log.Printf("[Interview Loop] Saving dialogues, sessionID: %s", session.SessionID)
 	// 保存面试对话，带重试机制
 	const maxRetries = 3
 	var saveErr error
@@ -390,44 +405,72 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 		Duration: &duration,
 	}
 
+	log.Printf("[Interview Loop] Updating interview record, sessionID: %s, duration: %d seconds", session.SessionID, duration)
 	if err := interviewService.UpdateInterviewRecord(ctx, updateDTO); err != nil {
 		// 记录更新失败，但不中断流程
+		log.Printf("[Interview Loop] Failed to update interview record: %v, sessionID: %s", err, session.SessionID)
 		_ = err
 	}
+
+	// 面试完成后，发送 MQ 消息触发评估报告生成
+	log.Printf("[Interview Loop] Publishing evaluation messages, sessionID: %s, userID: %d, recordID: %d", session.SessionID, session.UserID, session.RecordID)
+
+	// 发布评估报告生成消息
+	if err := mq.PublishEvaluationReport(ctx, session.UserID, session.RecordID); err != nil {
+		log.Printf("[Interview Loop] Failed to publish evaluation report message: %v, sessionID: %s", err, session.SessionID)
+	}
+
+	// 发布主题评估消息
+	if err := mq.PublishTopicEvaluation(ctx, session.UserID, session.RecordID); err != nil {
+		log.Printf("[Interview Loop] Failed to publish topic evaluation message: %v, sessionID: %s", err, session.SessionID)
+	}
+
+	log.Printf("[Interview Loop] Interview completed, sessionID: %s", session.SessionID)
+
 }
 
 // waitForAnswerWithHeartbeat 等待用户答案，并定期发送心跳保活
 func waitForAnswerWithHeartbeat(sm *SessionManager, sessionID string, timeout time.Duration, heartbeatInterval time.Duration, writer io.Writer) (string, bool) {
-	deadline := time.Now().Add(timeout)
-	ticker := time.NewTicker(heartbeatInterval)
-	defer ticker.Stop()
+	log.Printf("[Wait Answer] Starting, sessionID: %s, timeout: %v, heartbeatInterval: %v", sessionID, timeout, heartbeatInterval)
 
+	heartbeatTicker := time.NewTicker(heartbeatInterval)
+	defer heartbeatTicker.Stop()
+
+	timeoutTimer := time.NewTimer(timeout)
+	defer timeoutTimer.Stop()
+
+	// 获取会话的答案通道
+	session := sm.GetSession(sessionID)
+	if session == nil {
+		log.Printf("[Wait Answer] Session not found, sessionID: %s", sessionID)
+		return "", false
+	}
+
+	heartbeatCount := 0
 	for {
-		// 计算剩余等待时间
-		remaining := time.Until(deadline)
-		if remaining <= 0 {
-			return "", false // 超时
-		}
+		select {
+		// 定期发送心跳保活
+		case <-heartbeatTicker.C:
+			heartbeatCount++
+			log.Printf("[Wait Answer] Sending heartbeat #%d, sessionID: %s", heartbeatCount, sessionID)
+			sendHeartbeatEvent(writer)
 
-		// 尝试获取答案（使用较短的等待时间）
-		answer, received := sm.GetAnswer(sessionID, heartbeatInterval)
-		if received {
-			return answer, true // 获取到答案
-		}
+		// 接收用户答案
+		case answer := <-session.AnswerChan:
+			log.Printf("[Wait Answer] Received answer, sessionID: %s, answer: %s", sessionID, answer)
+			return answer, true
 
-		// 发送心跳保活
-		sendHeartbeatEvent(writer)
-
-		// 检查是否超时
-		if time.Now().After(deadline) {
-			return "", false // 超时
+		// 等待超时
+		case <-timeoutTimer.C:
+			log.Printf("[Wait Answer] Timeout after %v, sent %d heartbeats, sessionID: %s", timeout, heartbeatCount, sessionID)
+			return "", false
 		}
 	}
 }
 
 // sendHeartbeatEvent 发送心跳事件保活连接
-func sendHeartbeatEvent(writer io.Writer) {
-	sendSSEEvent(writer, map[string]interface{}{
+func sendHeartbeatEvent(writer io.Writer) error {
+	return sendSSEEvent(writer, map[string]interface{}{
 		"type":    "heartbeat",
 		"message": "连接保活",
 	})
@@ -445,17 +488,33 @@ func toString(v interface{}) string {
 }
 
 // buildPrompt 构建面试问题生成的提示词
-func buildPrompt(questionIndex int, query string, resumeFilePath string, hasResume bool, dimension string, followUpCount int, interviewType string, domain string, difficulty string) string {
-	return service.BuildInterviewPrompt(questionIndex, query, resumeFilePath, hasResume, dimension, followUpCount, interviewType, domain, difficulty)
+func buildPrompt(questionIndex int, query string, resumeID int64, hasResume bool, dimension string, followUpCount int, interviewType string, domain string, difficulty string) string {
+	return service.BuildInterviewPrompt(questionIndex, query, resumeID, hasResume, dimension, followUpCount, interviewType, domain, difficulty)
 }
 
 // sendSSEEvent 发送 SSE 事件
-func sendSSEEvent(writer io.Writer, event map[string]interface{}) {
+func sendSSEEvent(writer io.Writer, event map[string]interface{}) error {
 	eventJSON, _ := json.Marshal(event)
-	fmt.Fprintf(writer, "data: %s\n\n", string(eventJSON))
+
+	// 获取事件类型
+	eventType := "message"
+	if t, ok := event["type"]; ok {
+		eventType = fmt.Sprintf("%v", t)
+	}
+
+	// 标准 SSE 格式：event: type\ndata: {...}\n\n
+	message := fmt.Sprintf("event: %s\ndata: %s\n\n", eventType, string(eventJSON))
+	n, err := fmt.Fprint(writer, message)
+	if err != nil {
+		log.Printf("[SSE] Failed to write event: %v (wrote %d bytes)", err, n)
+		return err
+	}
+
+	// 立即 flush，确保数据发送到客户端
 	if flusher, ok := writer.(http.Flusher); ok {
 		flusher.Flush()
 	}
+	return nil
 }
 
 func sendErrorEvent(writer io.Writer, message string) {
@@ -672,6 +731,273 @@ func GetInterviewRecords(ctx context.Context, c *app.RequestContext) {
 	resp := new(interviewsapi.ListInterviewRecordsResponse)
 	resp.Records = records
 	resp.Total = total
+
+	response.Success(ctx, c, resp)
+}
+
+// UploadResume 上传简历
+// @router /api/resume/upload [POST]
+func UploadResume(ctx context.Context, c *app.RequestContext) {
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Authorization token is required")
+		return
+	}
+	// 处理文件上传
+	resumeFilePath, err := handleResumeUpload(c)
+	if err != nil {
+		response.BadRequest(ctx, c, err.Error())
+		return
+	}
+	if resumeFilePath == "" {
+		response.BadRequest(ctx, c, "No resume file uploaded")
+		return
+	}
+	// 获取文件信息
+	fileHeader, err := c.FormFile("resume")
+	if err != nil {
+		response.BadRequest(ctx, c, "Failed to get file info: "+err.Error())
+		return
+	}
+	// 调用简历解析服务（从 session 中获取参数）
+	dbResumeID, _, err := service.ParseResumeAndSave(ctx, userID, resumeFilePath, fileHeader.Size)
+	if err != nil {
+		log.Printf("[UploadResume] 简历解析失败: %v", err)
+		response.InternalServerError(ctx, c, "Failed to parse resume: "+err.Error())
+		return
+	}
+	resp := &interviewsapi.UploadResumeResponse{
+		ResumeID: int64(dbResumeID),
+		Message:  "Resume uploaded and parsed successfully",
+	}
+
+	response.Success(ctx, c, resp)
+}
+
+// GetResume 获取简历详情
+// @router /api/resume/:resume_id [GET]
+func GetResume(ctx context.Context, c *app.RequestContext) {
+	var req interviewsapi.GetResumeRequest
+	err := c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Authorization token is required")
+		return
+	}
+
+	resumeService := interviewservice.NewResumeService()
+	data, err := resumeService.GetResumeInfoByID(ctx, uint64(req.ResumeID))
+	if err != nil {
+		log.Printf("[GetResume] 获取简历失败: %v", err)
+		response.InternalServerError(ctx, c, "Failed to get resume: "+err.Error())
+		return
+	}
+
+	// 类型断言
+	resumeInfo, ok := data.(*interviewsapi.ResumeInfo)
+	if !ok {
+		log.Printf("[GetResume] 类型断言失败: 期望 *ResumeInfo, 实际类型: %T", data)
+		response.InternalServerError(ctx, c, "Invalid resume data format")
+		return
+	}
+
+	resp := &interviewsapi.GetResumeResponse{
+		Resume: resumeInfo,
+	}
+
+	response.Success(ctx, c, resp)
+}
+
+// GetUserResumes 获取用户简历列表
+// @router /api/resume/list [GET]
+func GetUserResumes(ctx context.Context, c *app.RequestContext) {
+	var req interviewsapi.GetUserResumesRequest
+	err := c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Authorization token is required")
+		return
+	}
+
+	page := int32(1)
+	if req.Page != nil && *req.Page > 0 {
+		page = *req.Page
+	}
+
+	pageSize := int32(10)
+	if req.PageSize != nil && *req.PageSize > 0 {
+		pageSize = *req.PageSize
+	}
+
+	resumeService := interviewservice.NewResumeService()
+	data, total, err := resumeService.ListResumeInfosByUserID(ctx, userID, page, pageSize)
+	if err != nil {
+		log.Printf("[GetUserResumes] 获取简历列表失败: %v", err)
+		response.InternalServerError(ctx, c, "Failed to get resumes: "+err.Error())
+		return
+	}
+
+	// 类型断言
+	resumes, ok := data.([]*interviewsapi.ResumeInfo)
+	if !ok {
+		log.Printf("[GetUserResumes] 类型断言失败: 期望 []*ResumeInfo, 实际类型: %T", data)
+		response.InternalServerError(ctx, c, "Invalid resume data format")
+		return
+	}
+
+	resp := &interviewsapi.GetUserResumesResponse{
+		Resumes:  resumes,
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+	}
+
+	response.Success(ctx, c, resp)
+}
+
+// GetDefaultResume 获取默认简历
+// @router /api/resume/default [GET]
+func GetDefaultResume(ctx context.Context, c *app.RequestContext) {
+	var req interviewsapi.GetDefaultResumeRequest
+	err := c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Authorization token is required")
+		return
+	}
+
+	resumeService := interviewservice.NewResumeService()
+	data, err := resumeService.GetDefaultResumeInfo(ctx, userID)
+	if err != nil {
+		log.Printf("[GetDefaultResume] 获取默认简历失败: %v", err)
+		response.InternalServerError(ctx, c, "Failed to get default resume: "+err.Error())
+		return
+	}
+
+	// 类型断言
+	resumeInfo, ok := data.(*interviewsapi.ResumeInfo)
+	if !ok {
+		log.Printf("[GetDefaultResume] 类型断言失败: 期望 *ResumeInfo, 实际类型: %T", data)
+		response.InternalServerError(ctx, c, "Invalid resume data format")
+		return
+	}
+
+	resp := &interviewsapi.GetDefaultResumeResponse{
+		Resume: resumeInfo,
+	}
+
+	response.Success(ctx, c, resp)
+}
+
+// SetDefaultResume 设置默认简历
+// @router /api/resume/set-default [POST]
+func SetDefaultResume(ctx context.Context, c *app.RequestContext) {
+	var req interviewsapi.SetDefaultResumeRequest
+	err := c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Authorization token is required")
+		return
+	}
+
+	resumeService := interviewservice.NewResumeService()
+	err = resumeService.SetDefaultResume(ctx, userID, uint64(req.ResumeID))
+	if err != nil {
+		log.Printf("[SetDefaultResume] 设置默认简历失败: %v", err)
+		response.InternalServerError(ctx, c, "Failed to set default resume: "+err.Error())
+		return
+	}
+
+	resp := &interviewsapi.SetDefaultResumeResponse{
+		Message: "Default resume set successfully",
+	}
+
+	response.Success(ctx, c, resp)
+}
+
+// UpdateResume 更新简历
+// @router /api/resume/:resume_id [PUT]
+func UpdateResume(ctx context.Context, c *app.RequestContext) {
+	var req interviewsapi.UpdateResumeRequest
+	err := c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Authorization token is required")
+		return
+	}
+
+	fileName := ""
+	if req.FileName != nil {
+		fileName = *req.FileName
+	}
+
+	resumeService := interviewservice.NewResumeService()
+	err = resumeService.UpdateResume(ctx, uint64(req.ResumeID), fileName, "")
+	if err != nil {
+		log.Printf("[UpdateResume] 更新简历失败: %v", err)
+		response.InternalServerError(ctx, c, "Failed to update resume: "+err.Error())
+		return
+	}
+
+	resp := &interviewsapi.UpdateResumeResponse{
+		Message: "Resume updated successfully",
+	}
+
+	response.Success(ctx, c, resp)
+}
+
+// DeleteResume 删除简历
+// @router /api/resume/:resume_id [DELETE]
+func DeleteResume(ctx context.Context, c *app.RequestContext) {
+	var req interviewsapi.DeleteResumeRequest
+	err := c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Authorization token is required")
+		return
+	}
+
+	resumeService := interviewservice.NewResumeService()
+	err = resumeService.DeleteResume(ctx, userID, uint64(req.ResumeID))
+	if err != nil {
+		log.Printf("[DeleteResume] 删除简历失败: %v", err)
+		response.InternalServerError(ctx, c, "Failed to delete resume: "+err.Error())
+		return
+	}
+
+	resp := &interviewsapi.DeleteResumeResponse{
+		Message: "Resume deleted successfully",
+	}
 
 	response.Success(ctx, c, resp)
 }

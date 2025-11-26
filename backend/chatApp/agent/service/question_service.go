@@ -2,6 +2,7 @@ package service
 
 import (
 	"ai-eino-interview-agent/chatApp/agent/question"
+	"ai-eino-interview-agent/chatApp/agent/session"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -36,7 +37,7 @@ type QuestionGeneratorResult struct {
 // interviewType: "综合面试" 或 "专项面试"
 // domain: 面试领域（综合面试：校招/社招；专项面试：java/golang等）
 // difficulty: 难度级别（简单/中等/困难）
-func BuildInterviewPrompt(questionIndex int, query string, resumeFilePath string, hasResume bool, dimension string, followUpCount int, interviewType string, domain string, difficulty string) string {
+func BuildInterviewPrompt(questionIndex int, query string, resumeID int64, hasResume bool, dimension string, followUpCount int, interviewType string, domain string, difficulty string) string {
 	// 根据面试类型选择维度
 	var dimensionMap map[string]string
 	if interviewType == "综合面试" {
@@ -81,15 +82,15 @@ func BuildInterviewPrompt(questionIndex int, query string, resumeFilePath string
 		// 主问题
 		if questionIndex == 1 {
 			// 第一个问题
-			if hasResume && resumeFilePath != "" {
-				return fmt.Sprintf(`请使用 pdf_to_text 工具解析以下简历文件，然后根据简历内容生成一个面试问题。
+			if hasResume && resumeID != 0 {
+				return fmt.Sprintf(`请使用 get_resume_info 工具获取简历内容，然后根据简历内容生成一个面试问题。
 
 面试类型：%s
 面试领域：%s
 难度级别：%s
 评估维度：%s
 
-简历文件路径：%s
+简历ID：%d
 
 用户补充信息：%s
 
@@ -104,7 +105,7 @@ JSON格式：
 {
   "questions": [{"question_text": "问题内容", "eval_dimension": "%s", "order": 1}],
   "dialogues": [{"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}]
-}`, interviewTypeDesc, domainDesc, difficultyDesc, dimensionCN, resumeFilePath, query, dimensionCN, difficultyDesc, dimension)
+}`, interviewTypeDesc, domainDesc, difficultyDesc, dimensionCN, resumeID, query, dimensionCN, difficultyDesc, dimension)
 			}
 			if hasResume {
 				return fmt.Sprintf(`根据以下信息生成一个面试问题。
@@ -203,8 +204,8 @@ JSON格式：
 // GenerateInterviewQuestions 调用智能体生成面试问题
 // 返回生成的问题列表和对话列表
 func GenerateInterviewQuestions(ctx context.Context, prompt string, userId uint) (*QuestionGeneratorResult, error) {
-	// 添加 120 秒超时，防止无限等待（API 响应可能需要较长时间）
-	timeoutCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	// 添加 30分钟 超时，防止无限等待（API 响应可能需要较长时间）
+	timeoutCtx, cancel := context.WithTimeout(ctx, 1800*time.Second)
 	defer cancel()
 
 	// 创建问题生成智能体
@@ -401,4 +402,38 @@ func cleanJSON(jsonStr string) string {
 	}
 
 	return builder.String()
+}
+
+// BuildPromptFromSessionContext 从会话值构建提示词
+// 优化版本：直接从会话值获取所需信息，无需参数传递
+func BuildPromptFromSessionContext(ctx context.Context, questionIndex int, query string,
+	dimension string, followUpCount int) (string, error) {
+	scm := session.NewSessionContextManager(ctx)
+
+	// 从会话值获取配置
+	interviewType, domain, difficulty, err := scm.GetInterviewConfig()
+	if err != nil {
+		return "", fmt.Errorf("failed to get interview config: %w", err)
+	}
+
+	// 调用原有的 BuildInterviewPrompt 函数
+	prompt := BuildInterviewPrompt(questionIndex, query, 0, false, dimension,
+		followUpCount, interviewType, domain, difficulty)
+
+	return prompt, nil
+}
+
+// GenerateInterviewQuestionsWithSessionContext 使用会话值生成面试问题
+// 优化版本：从会话值获取参数，减少参数传递
+func GenerateInterviewQuestionsWithSessionContext(ctx context.Context, questionIndex int,
+	query string, dimension string, followUpCount int, userId uint) (*QuestionGeneratorResult, error) {
+
+	// 从会话值构建提示词
+	prompt, err := BuildPromptFromSessionContext(ctx, questionIndex, query, dimension, followUpCount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build prompt from session context: %w", err)
+	}
+
+	// 调用原有的 GenerateInterviewQuestions 函数
+	return GenerateInterviewQuestions(ctx, prompt, userId)
 }
