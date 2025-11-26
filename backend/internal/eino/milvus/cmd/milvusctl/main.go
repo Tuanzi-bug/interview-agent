@@ -14,6 +14,9 @@ import (
 
 	"ai-eino-interview-agent/internal/config"
 	"ai-eino-interview-agent/internal/eino/milvus"
+
+	// 新增：导入飞书文档转换模块
+	"ai-eino-interview-agent/internal/eino/milvus/feishu"
 )
 
 func main() {
@@ -264,6 +267,81 @@ Go（又称 Golang）是 Google 开发的一种静态强类型、编译型、并
 		for i, d := range res {
 			fmt.Printf("%d) %s\n", i+1, truncate(d.Content, 160))
 		}
+	// ============================================================================
+	// 新增：飞书文档导入命令
+	// 演示如何将飞书文档转换为 Markdown 后导入到 Milvus
+	// ============================================================================
+	case "feishu-import":
+		// 从飞书 API 获取文档并转换为 Markdown
+		fmt.Println("正在从飞书 API 获取文档...")
+		markdownContent := feishu.Test() // 调用 transmarkdown.go 中的 Test 函数获取 Markdown
+		if markdownContent == "" {
+			exitIfErr(fmt.Errorf("failed to fetch feishu document or document is empty"))
+		}
+		fmt.Printf("成功获取飞书文档，内容长度: %d 字节\n", len(markdownContent))
+
+		// 打印配置信息用于调试
+		fmt.Printf("配置信息: Collection=%s, Dimension=%d\n", cfg.Milvus.CollectionName, cfg.Embedding.Dimensions)
+
+		// 初始化 Milvus 管理器
+		manager, err := milvus.InitMilvusManager(ctx, cfg)
+		exitIfErr(err)
+		defer manager.Close()
+
+		// 创建导入器
+		importer, err := milvus.NewMarkdownImporter(manager)
+		exitIfErr(err)
+
+		// 准备导入选项
+		opts := &milvus.TextImportOptions{
+			Title:  "", // 留空，让系统自动从 Markdown 内容提取标题
+			Source: "feishu",
+		}
+		// 如果用户通过命令行指定了语言和分类，则使用用户指定的值
+		if l, ok := parseLanguage(*langFlag); ok {
+			opts.Language = l
+		}
+		if c, ok := parseCategory(*catFlag); ok {
+			opts.Category = c
+		}
+
+		// 调用核心方法：导入文本到 Milvus
+		fmt.Println("正在切割文档并上传到 Milvus...")
+		res, err := importer.ImportText(ctx, markdownContent, opts)
+		exitIfErr(err)
+
+		// 打印结果
+		fmt.Printf("\n✅ 飞书文档导入成功！\n")
+		fmt.Printf("   - 文档切片数: %d\n", res.TotalChunks)
+		fmt.Printf("   - 存储的文档ID数: %d\n", len(res.DocumentIDs))
+		if len(res.DocumentIDs) > 0 && len(res.DocumentIDs) <= 5 {
+			fmt.Printf("   - 文档ID列表: %v\n", res.DocumentIDs)
+		}
+
+	// 新增：从命令行文本直接导入
+	case "text-import":
+		if *text == "" {
+			exitIfErr(fmt.Errorf("-text is required for text-import"))
+		}
+		manager, err := milvus.InitMilvusManager(ctx, cfg)
+		exitIfErr(err)
+		defer manager.Close()
+		importer, err := milvus.NewMarkdownImporter(manager)
+		exitIfErr(err)
+		opts := &milvus.TextImportOptions{
+			Title:  "",
+			Source: *source,
+		}
+		if l, ok := parseLanguage(*langFlag); ok {
+			opts.Language = l
+		}
+		if c, ok := parseCategory(*catFlag); ok {
+			opts.Category = c
+		}
+		res, err := importer.ImportText(ctx, *text, opts)
+		exitIfErr(err)
+		fmt.Printf("Text imported. chunks=%d ids=%d\n", res.TotalChunks, len(res.DocumentIDs))
+
 	default:
 		// Dynamic data source commands:
 		// - import-<source>: single-file import, requires -file <filename only>
@@ -391,14 +469,24 @@ func usage() {
 	fmt.Println("Usage:")
 	fmt.Println("  From repo root:  go run ./backend/internal/eino/milvus/cmd/milvusctl -cmd <command> [flags]")
 	fmt.Println("  From milvusctl/: go run . -cmd <command> [flags]")
+	fmt.Println("")
 	fmt.Println("Commands:")
 	fmt.Println("  retrieve          -query <text>                 Retrieve similar docs [-topk N]")
 	fmt.Println("  import-<source>   -file <filename>              Import one file under data/<source>/")
 	fmt.Println("  batch-<source>                                  Import entire data/<source>/ directory")
 	fmt.Println("  import-<source>-batch                           Same as batch-<source>")
+	fmt.Println("")
+	fmt.Println("  # 新增命令（纯文本导入）:")
+	fmt.Println("  feishu-import                                   从飞书 API 获取文档并导入到 Milvus")
+	fmt.Println("  text-import       -text <content>               导入命令行文本到 Milvus")
+	fmt.Println("")
 	fmt.Println("Common import flags:")
 	fmt.Println("  -language   golang|java|middleware   (optional, default: auto infer)")
 	fmt.Println("  -category   basic|specialized|comprehensive (optional, default: auto infer)")
+	fmt.Println("")
+	fmt.Println("Example:")
+	fmt.Println("  go run . -cmd feishu-import -language golang -category specialized")
+	fmt.Println("  go run . -cmd text-import -text \"# Hello World\\n\\nThis is a test document.\"")
 }
 
 // parseLanguage maps user flag to milvus.DocumentLanguage.

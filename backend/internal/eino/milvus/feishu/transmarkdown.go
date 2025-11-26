@@ -457,7 +457,7 @@ func Test() string {
 	client := lark.NewClient("cli_a9afad5abfb85bc0", "RDIAVuYOukhGNdZcn1zO9dLJS8up7rYL")
 	// 创建请求对象
 	req := larkdocx.NewListDocumentBlockReqBuilder().
-		DocumentId(`SQbFdHo6Wo9fOixcLVecp1yTnLh`).
+		DocumentId(`BgpHdzUSnocxtbxIoVlc2lIqnHe`).
 		PageSize(500).
 		DocumentRevisionId(-1).
 		Build()
