@@ -73,24 +73,6 @@ type ResumeManager interface {
 		content string,
 	) (uint64, error)
 
-	// GetResumeByID 根据简历ID获取简历详情
-	GetResumeByID(
-		ctx context.Context,
-		resumeID uint64,
-	) (interface{}, error)
-
-	// GetUserResumes 获取用户的所有简历列表
-	GetUserResumes(
-		ctx context.Context,
-		userID uint,
-	) (interface{}, error)
-
-	// GetDefaultResume 获取用户的默认简历
-	GetDefaultResume(
-		ctx context.Context,
-		userID uint,
-	) (interface{}, error)
-
 	// SetDefaultResume 设置用户的默认简历
 	SetDefaultResume(
 		ctx context.Context,
@@ -113,8 +95,20 @@ type ResumeManager interface {
 		resumeID uint64,
 	) error
 
-	// ListResumesByUserID 分页获取用户的简历列表
-	ListResumesByUserID(
+	// GetResumeInfoByID 根据简历ID获取简历详情，返回强类型 ResumeInfo
+	GetResumeInfoByID(
+		ctx context.Context,
+		resumeID uint64,
+	) (interface{}, error)
+
+	// GetDefaultResumeInfo 获取用户的默认简历，返回强类型 ResumeInfo
+	GetDefaultResumeInfo(
+		ctx context.Context,
+		userID uint,
+	) (interface{}, error)
+
+	// ListResumeInfosByUserID 分页获取用户的简历列表，返回强类型 ResumeInfo 列表
+	ListResumeInfosByUserID(
 		ctx context.Context,
 		userID uint,
 		page, pageSize int32,

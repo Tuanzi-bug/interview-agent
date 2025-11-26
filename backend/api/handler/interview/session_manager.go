@@ -28,7 +28,7 @@ type InterviewSession struct {
 	CreatedAt       time.Time     // 创建时间
 	StartTime       time.Time     // 面试开始时间
 	LastActivity    time.Time     // 最后活动时间
-	ResumeFilePath  string        // 简历文件路径
+	ResumeId        int64         // 简历id
 	HasResume       bool          // 是否有简历
 	Query           string        // 用户查询
 	AnswerChan      chan string   // 答案通道
@@ -62,7 +62,7 @@ func init() {
 }
 
 // CreateSession 创建新会话
-func (sm *SessionManager) CreateSession(userID uint, recordID uint64, resumeFilePath string, hasResume bool, query string, interviewType string, domain string, difficulty string) *InterviewSession {
+func (sm *SessionManager) CreateSession(userID uint, recordID uint64, resumeId int64, hasResume bool, query string, interviewType string, domain string, difficulty string) *InterviewSession {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -78,7 +78,7 @@ func (sm *SessionManager) CreateSession(userID uint, recordID uint64, resumeFile
 		CreatedAt:       now,
 		StartTime:       now,
 		LastActivity:    now,
-		ResumeFilePath:  resumeFilePath,
+		ResumeId:        resumeId,
 		HasResume:       hasResume,
 		Query:           query,
 		Type:            interviewType,

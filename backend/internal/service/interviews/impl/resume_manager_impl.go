@@ -1,6 +1,7 @@
 package impl
 
 import (
+	interviewsapi "ai-eino-interview-agent/api/model/interviews"
 	"ai-eino-interview-agent/internal/model"
 	"context"
 	"log"
@@ -12,6 +13,69 @@ type ResumeServer struct{}
 // NewResumeServer 创建简历管理服务实例
 func NewResumeServer() *ResumeServer {
 	return &ResumeServer{}
+}
+
+// toResumeInfo 将 map 转换为 ResumeInfo
+func toResumeInfo(dataMap map[string]interface{}) *interviewsapi.ResumeInfo {
+	resumeInfo := &interviewsapi.ResumeInfo{}
+
+	// 提取 ID
+	if id, ok := dataMap["id"]; ok {
+		if idVal, ok := id.(uint64); ok {
+			resumeInfo.ID = int64(idVal)
+		} else if idVal, ok := id.(int64); ok {
+			resumeInfo.ID = idVal
+		}
+	}
+
+	// 提取 UserID
+	if userID, ok := dataMap["user_id"]; ok {
+		if userIDVal, ok := userID.(uint); ok {
+			resumeInfo.UserID = int32(userIDVal)
+		} else if userIDVal, ok := userID.(int); ok {
+			resumeInfo.UserID = int32(userIDVal)
+		}
+	}
+
+	// 提取 FileName
+	if fileName, ok := dataMap["file_name"].(string); ok {
+		resumeInfo.FileName = fileName
+	}
+
+	// 提取 FileSize
+	if fileSize, ok := dataMap["file_size"].(int64); ok {
+		resumeInfo.FileSize = fileSize
+	}
+
+	// 提取 FileType
+	if fileType, ok := dataMap["file_type"].(string); ok {
+		resumeInfo.FileType = fileType
+	}
+
+	// 提取 IsDefault
+	if isDefault, ok := dataMap["is_default"]; ok {
+		if isDefaultVal, ok := isDefault.(int); ok {
+			resumeInfo.IsDefault = int32(isDefaultVal)
+		} else if isDefaultVal, ok := isDefault.(int32); ok {
+			resumeInfo.IsDefault = isDefaultVal
+		}
+	}
+
+	// 提取 CreatedAt
+	if createdAt, ok := dataMap["created_at"]; ok {
+		if createdAtVal, ok := createdAt.(int64); ok {
+			resumeInfo.CreatedAt = createdAtVal
+		}
+	}
+
+	// 提取 UpdatedAt
+	if updatedAt, ok := dataMap["updated_at"]; ok {
+		if updatedAtVal, ok := updatedAt.(int64); ok {
+			resumeInfo.UpdatedAt = updatedAtVal
+		}
+	}
+
+	return resumeInfo
 }
 
 // UploadResume 上传简历，返回简历ID
@@ -41,85 +105,6 @@ func (s *ResumeServer) UploadResume(
 
 	log.Printf("[UploadResume] 简历上传成功: userID=%d, resumeID=%d, fileName=%s", userID, resumeID, fileName)
 	return resumeID, nil
-}
-
-// GetResumeByID 根据简历ID获取简历详情
-func (s *ResumeServer) GetResumeByID(
-	ctx context.Context,
-	resumeID uint64,
-) (interface{}, error) {
-	resume, err := model.ResumeDao.GetResumeByID(resumeID)
-	if err != nil {
-		log.Printf("[GetResumeByID] 获取简历失败: %v", err)
-		return nil, err
-	}
-
-	return map[string]interface{}{
-		"id":         resume.ID,
-		"user_id":    resume.UserID,
-		"content":    resume.Content,
-		"file_name":  resume.FileName,
-		"file_size":  resume.FileSize,
-		"file_type":  resume.FileType,
-		"is_default": resume.IsDefault,
-		"created_at": resume.CreatedAt,
-		"updated_at": resume.UpdatedAt,
-	}, nil
-}
-
-// GetUserResumes 获取用户的所有简历列表
-func (s *ResumeServer) GetUserResumes(
-	ctx context.Context,
-	userID uint,
-) (interface{}, error) {
-	resumes, err := model.ResumeDao.GetResumeByUserID(userID)
-	if err != nil {
-		log.Printf("[GetUserResumes] 获取用户简历列表失败: %v", err)
-		return nil, err
-	}
-
-	var resumeList []map[string]interface{}
-	for _, resume := range resumes {
-		resumeList = append(resumeList, map[string]interface{}{
-			"id":         resume.ID,
-			"user_id":    resume.UserID,
-			"file_name":  resume.FileName,
-			"file_size":  resume.FileSize,
-			"file_type":  resume.FileType,
-			"is_default": resume.IsDefault,
-			"created_at": resume.CreatedAt,
-			"updated_at": resume.UpdatedAt,
-		})
-	}
-
-	return map[string]interface{}{
-		"resumes": resumeList,
-		"count":   len(resumeList),
-	}, nil
-}
-
-// GetDefaultResume 获取用户的默认简历
-func (s *ResumeServer) GetDefaultResume(
-	ctx context.Context,
-	userID uint,
-) (interface{}, error) {
-	resume, err := model.ResumeDao.GetDefaultResumeByUserID(userID)
-	if err != nil {
-		log.Printf("[GetDefaultResume] 获取默认简历失败: %v", err)
-		return nil, err
-	}
-
-	return map[string]interface{}{
-		"id":         resume.ID,
-		"user_id":    resume.UserID,
-		"content":    resume.Content,
-		"file_name":  resume.FileName,
-		"file_size":  resume.FileSize,
-		"file_type":  resume.FileType,
-		"is_default": resume.IsDefault,
-		"created_at": resume.CreatedAt,
-		"updated_at": resume.UpdatedAt,
-	}, nil
 }
 
 // SetDefaultResume 设置用户的默认简历
@@ -195,21 +180,71 @@ func (s *ResumeServer) DeleteResume(
 	return nil
 }
 
-// ListResumesByUserID 分页获取用户的简历列表
-func (s *ResumeServer) ListResumesByUserID(
+// GetResumeInfoByID 根据简历ID获取简历详情，返回强类型 ResumeInfo
+func (s *ResumeServer) GetResumeInfoByID(
+	ctx context.Context,
+	resumeID uint64,
+) (interface{}, error) {
+	resume, err := model.ResumeDao.GetResumeByID(resumeID)
+	if err != nil {
+		log.Printf("[GetResumeInfoByID] 获取简历失败: %v", err)
+		return nil, err
+	}
+
+	dataMap := map[string]interface{}{
+		"id":         resume.ID,
+		"user_id":    resume.UserID,
+		"file_name":  resume.FileName,
+		"file_size":  resume.FileSize,
+		"file_type":  resume.FileType,
+		"is_default": resume.IsDefault,
+		"created_at": resume.CreatedAt,
+		"updated_at": resume.UpdatedAt,
+	}
+
+	return toResumeInfo(dataMap), nil
+}
+
+// GetDefaultResumeInfo 获取用户的默认简历，返回强类型 ResumeInfo
+func (s *ResumeServer) GetDefaultResumeInfo(
+	ctx context.Context,
+	userID uint,
+) (interface{}, error) {
+	resume, err := model.ResumeDao.GetDefaultResumeByUserID(userID)
+	if err != nil {
+		log.Printf("[GetDefaultResumeInfo] 获取默认简历失败: %v", err)
+		return nil, err
+	}
+
+	dataMap := map[string]interface{}{
+		"id":         resume.ID,
+		"user_id":    resume.UserID,
+		"file_name":  resume.FileName,
+		"file_size":  resume.FileSize,
+		"file_type":  resume.FileType,
+		"is_default": resume.IsDefault,
+		"created_at": resume.CreatedAt,
+		"updated_at": resume.UpdatedAt,
+	}
+
+	return toResumeInfo(dataMap), nil
+}
+
+// ListResumeInfosByUserID 分页获取用户的简历列表，返回强类型 ResumeInfo 列表
+func (s *ResumeServer) ListResumeInfosByUserID(
 	ctx context.Context,
 	userID uint,
 	page, pageSize int32,
 ) (interface{}, int64, error) {
 	resumes, total, err := model.ResumeDao.ListResumesByUserID(userID, page, pageSize)
 	if err != nil {
-		log.Printf("[ListResumesByUserID] 分页获取简历列表失败: %v", err)
+		log.Printf("[ListResumeInfosByUserID] 分页获取简历列表失败: %v", err)
 		return nil, 0, err
 	}
 
-	var resumeList []map[string]interface{}
+	var resumeInfoList []*interviewsapi.ResumeInfo
 	for _, resume := range resumes {
-		resumeList = append(resumeList, map[string]interface{}{
+		dataMap := map[string]interface{}{
 			"id":         resume.ID,
 			"user_id":    resume.UserID,
 			"file_name":  resume.FileName,
@@ -218,13 +253,9 @@ func (s *ResumeServer) ListResumesByUserID(
 			"is_default": resume.IsDefault,
 			"created_at": resume.CreatedAt,
 			"updated_at": resume.UpdatedAt,
-		})
+		}
+		resumeInfoList = append(resumeInfoList, toResumeInfo(dataMap))
 	}
 
-	return map[string]interface{}{
-		"resumes":   resumeList,
-		"page":      page,
-		"page_size": pageSize,
-		"total":     total,
-	}, total, nil
+	return resumeInfoList, total, nil
 }
