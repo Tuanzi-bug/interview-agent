@@ -1,10 +1,9 @@
-package main
+package feishu
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	lark "github.com/larksuite/oapi-sdk-go/v3"
@@ -453,7 +452,7 @@ func parseTextElements(elements []TextElement) string {
 	return contentBuilder.String()
 }
 
-func main() {
+func Test() string {
 	// 创建 Client
 	client := lark.NewClient("cli_a9afad5abfb85bc0", "RDIAVuYOukhGNdZcn1zO9dLJS8up7rYL")
 	// 创建请求对象
@@ -464,25 +463,25 @@ func main() {
 		Build()
 
 	// 发起请求
-	resp, err := client.Docx.V1.DocumentBlock.List(context.Background(), req, larkcore.WithUserAccessToken("u-fc61msH256qGnFLd4jD5kghh5zJ1ggoVXi8a7MO00GL2"))
+	resp, err := client.Docx.V1.DocumentBlock.List(context.Background(), req, larkcore.WithUserAccessToken("u-c4yKD.czt8v9VL33TukAWX40gssNggqpNE2aZAI024i2"))
 
 	// 处理错误
 	if err != nil {
 		fmt.Printf("请求失败：%v\n", err)
-		return
+		return ""
 	}
 
 	// 服务端错误处理
 	if !resp.Success() {
 		fmt.Printf("logId: %s, error response: \n%s", resp.RequestId(), larkcore.Prettify(resp.CodeError))
-		return
+		return ""
 	}
 
 	// 将响应转换为 JSON 以便解析
 	respJSON, err := json.Marshal(resp)
 	if err != nil {
 		fmt.Printf("序列化响应失败：%v\n", err)
-		return
+		return ""
 	}
 
 	// 解析 JSON 响应
@@ -532,17 +531,17 @@ func main() {
 		} else {
 			fmt.Println(jsonStr)
 		}
-		return
+		return ""
 	}
 
 	if apiResponse.Code != 0 {
 		fmt.Printf("飞书API返回错误：code=%d, msg=%s\n", apiResponse.Code, apiResponse.Msg)
-		return
+		return ""
 	}
 
 	if len(apiResponse.Data.Items) == 0 {
 		fmt.Println("警告：未获取到任何文档块，请检查文档ID和权限")
-		return
+		return ""
 	}
 
 	fmt.Printf("成功获取 %d 个文档块，开始转换为 Markdown...\n", len(apiResponse.Data.Items))
@@ -550,16 +549,18 @@ func main() {
 	// 转换为 Markdown
 	mdContent := BlocksToMarkdown(apiResponse.Data.Items)
 
-	// 输出为 Markdown 文件
-	outputPath := "飞书文档转换结果.md"
-	err = os.WriteFile(outputPath, []byte(mdContent), 0644)
-	if err != nil {
-		fmt.Printf("保存 Markdown 文件失败：%v\n", err)
-		return
-	}
+	// // 输出为 Markdown 文件
+	// outputPath := "飞书文档转换结果.md"
+	// err = os.WriteFile(outputPath, []byte(mdContent), 0644)
+	// if err != nil {
+	// 	fmt.Printf("保存 Markdown 文件失败：%v\n", err)
+	// 	return ""
+	// }
 
-	fmt.Printf("转换成功！Markdown 文件已保存至：%s\n", outputPath)
+	// fmt.Printf("转换成功！Markdown 文件已保存至：%s\n", outputPath)
 	fmt.Println("转换结果预览：")
 	fmt.Println("----------------------------------------")
 	fmt.Println(mdContent)
+	return mdContent
+
 }
