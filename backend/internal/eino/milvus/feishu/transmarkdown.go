@@ -708,7 +708,7 @@ func processFolderRecursive(ctx context.Context, client *lark.Client, appID, app
 	return nil
 }
 
-func Test() []DocumentResult {
+func Test() ([]DocumentResult, error) {
 	ctx := context.Background()
 
 	// TODO: 这些配置建议换成环境变量或配置文件
@@ -724,11 +724,11 @@ func Test() []DocumentResult {
 	results, err := FetchFolderDocumentsToMarkdown(ctx, appID, appSecret, folderToken, userAccessToken)
 	if err != nil {
 		fmt.Printf("❌ 处理失败: %v\n", err)
-		panic(err)
+		return nil, err
 	}
 
 	fmt.Printf("成功获取 %d 个文档块，开始转换为 Markdown...\n", len(results))
-	return results
+	return results, nil
 }
 
 // testSaveDocuments 测试函数：保存所有文档为文件并打印统计信息（用于单元测试）

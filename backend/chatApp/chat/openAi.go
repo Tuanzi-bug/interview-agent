@@ -1,24 +1,23 @@
 package chat
 
 import (
+	"ai-eino-interview-agent/internal/errors"
 	usermodel "ai-eino-interview-agent/internal/model"
 	"ai-eino-interview-agent/internal/service/common"
 	"context"
-	"github.com/cloudwego/eino/components/model"
-
-	"log"
-
 	"github.com/cloudwego/eino-ext/components/model/openai"
+	"github.com/cloudwego/eino/components/model"
 )
 
-func CreatOpenAiChatModel(ctx context.Context, userId uint) model.ToolCallingChatModel {
+func CreatOpenAiChatModel(ctx context.Context, userId uint) (model.ToolCallingChatModel, error) {
 	result, err := usermodel.UserModelDao.GetDefaultUserModel(int64(userId))
 	if err != nil {
-		log.Println(err)
+
+		return nil, errors.NewDBError("Failed to get user model", err)
 	}
 	apiKey, err := common.DecryptAPIKey(result.APIKeyEncrypted)
 	if err != nil {
-		log.Println(err)
+		return nil, errors.NewInternalError("Failed to decrypt API key", err)
 	}
 	key := apiKey
 	//模型名称
@@ -32,8 +31,8 @@ func CreatOpenAiChatModel(ctx context.Context, userId uint) model.ToolCallingCha
 		BaseURL: url,
 	})
 	if err != nil {
-		log.Fatalf("create openai chat model failed: %v", err)
+		return nil, errors.NewOpenAIError("Failed to create OpenAI chat model", err)
 	}
 
-	return chatModel
+	return chatModel, nil
 }
