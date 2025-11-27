@@ -3,3 +3,5 @@ frontend/.next/
 node_modules/
 backend/config.yaml
 backend/uploads/
+.next/
+frontend/next/

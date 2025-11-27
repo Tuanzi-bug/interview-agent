@@ -13,7 +13,7 @@ database:
 # Redis配置
 redis:
   addr: "localhost:6379"
-  password: "root"
+  password: ""
   db: 0
   dial_timeout: "5s"
   read_timeout: "3s"
