@@ -714,7 +714,7 @@ func Test() []DocumentResult {
 	// TODO: 这些配置建议换成环境变量或配置文件
 	const appID = "cli_a9afad5abfb85bc0"
 	const appSecret = "RDIAVuYOukhGNdZcn1zO9dLJS8up7rYL"
-	const userAccessToken = "u-f_K1.XDc97VWO80DO_LEDPh4j9kBggipNU0GiN402wct"
+	const userAccessToken = "u-daQsAlLPRambYOI54uf0Zrhk16vlggUVpE2aEB6w0LKf"
 	const folderToken = "PyOifPcHPldVPodJaxVce2LBnSb"
 
 	fmt.Println("🚀 开始递归处理飞书文件夹...")
