@@ -312,7 +312,9 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 			prompt = buildPrompt(questionIndex, resumeContent+"\n\n用户已回答的问题：\n"+userAnswers, 0, false, dimensions[dimensionIndex], 0, session.Type, session.Domain, session.Difficulty)
 		}
 
-		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId)
+		// 只有第一个问题才需要简历解析工具
+		isFirstQuestion := questionIndex == 1 && followUpCount == 0
+		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId, isFirstQuestion)
 		if err != nil {
 			sendErrorEvent(writer, "Failed to generate question: "+err.Error())
 			sendCompleteEvent(writer)

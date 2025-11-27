@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -83,8 +84,7 @@ func BuildInterviewPrompt(questionIndex int, query string, resumeID int64, hasRe
 		if questionIndex == 1 {
 			// 第一个问题
 			if hasResume && resumeID != 0 {
-				return fmt.Sprintf(`请使用 get_resume_info 工具获取简历内容，然后根据简历内容生成一个面试问题。
-
+				return fmt.Sprintf(`
 面试类型：%s
 面试领域：%s
 难度级别：%s
@@ -203,13 +203,14 @@ JSON格式：
 
 // GenerateInterviewQuestions 调用智能体生成面试问题
 // 返回生成的问题列表和对话列表
-func GenerateInterviewQuestions(ctx context.Context, prompt string, userId uint) (*QuestionGeneratorResult, error) {
+// isFirstQuestion: 是否是第一个问题（决定是否需要简历解析工具）
+func GenerateInterviewQuestions(ctx context.Context, prompt string, userId uint, isFirstQuestion bool) (*QuestionGeneratorResult, error) {
 	// 添加 30分钟 超时，防止无限等待（API 响应可能需要较长时间）
 	timeoutCtx, cancel := context.WithTimeout(ctx, 1800*time.Second)
 	defer cancel()
 
-	// 创建问题生成智能体
-	agent := question.NewQuestionAgent(userId)
+	// 创建问题生成智能体（仅第一个问题需要简历工具）
+	agent := question.NewQuestionAgent(userId, isFirstQuestion)
 
 	// 创建 runner
 	runner := adk.NewRunner(timeoutCtx, adk.RunnerConfig{
@@ -289,6 +290,7 @@ JSON格式：
 			var questions []QuestionData
 			if err := json.Unmarshal([]byte(jsonStr), &questions); err == nil {
 				result.Questions = questions
+				logQuestionResult(result)
 				return result, nil
 			}
 			// 尝试解析为对话数组
@@ -306,6 +308,7 @@ JSON格式：
 						break
 					}
 				}
+				logQuestionResult(result)
 				return result, nil
 			}
 		}
@@ -316,7 +319,26 @@ JSON格式：
 		}
 	}
 
+	logQuestionResult(result)
 	return result, nil
+}
+
+// logQuestionResult 输出 AI 生成的问题内容到终端控制台
+func logQuestionResult(result *QuestionGeneratorResult) {
+	log.Println("============ AI Generated Interview Question ============")
+	if len(result.Questions) > 0 {
+		for i, q := range result.Questions {
+			log.Printf("[Question %d] Dimension: %s, Order: %d", i+1, q.EvalDimension, q.Order)
+			log.Printf("[Question %d] Content: %s", i+1, q.QuestionText)
+		}
+	}
+	if len(result.Dialogues) > 0 {
+		for i, d := range result.Dialogues {
+			log.Printf("[Dialogue %d] Speaker: %s, Order: %d", i+1, d.SpeakerType, d.DisplayOrder)
+			log.Printf("[Dialogue %d] Content: %s", i+1, d.Content)
+		}
+	}
+	log.Println("==========================================================")
 }
 
 // extractJSON 从文本中提取 JSON 字符串
@@ -434,6 +456,7 @@ func GenerateInterviewQuestionsWithSessionContext(ctx context.Context, questionI
 		return nil, fmt.Errorf("failed to build prompt from session context: %w", err)
 	}
 
-	// 调用原有的 GenerateInterviewQuestions 函数
-	return GenerateInterviewQuestions(ctx, prompt, userId)
+	// 只有第一个问题才需要简历解析工具
+	isFirstQuestion := questionIndex == 1 && followUpCount == 0
+	return GenerateInterviewQuestions(ctx, prompt, userId, isFirstQuestion)
 }
