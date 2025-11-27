@@ -80,7 +80,6 @@ require (
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/larksuite/oapi-sdk-go/v3 v3.4.26 // indirect
 	github.com/mailru/easyjson v0.9.1 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/meguminnnnnnnnn/go-openai v0.1.0 // indirect
