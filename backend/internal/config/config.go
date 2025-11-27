@@ -167,7 +167,10 @@ type MilvusConfig struct {
 	Username       string `yaml:"Username"`       // 用户名（可选）
 	Password       string `yaml:"Password"`       // 密码（可选）
 	DatabaseName   string `yaml:"DatabaseName"`   // 数据库名称
-	CollectionName string `yaml:"CollectionName"` // 集合名称
+	CollectionName string `yaml:"CollectionName"` // 默认集合名称
+
+	// 多集合配置
+	Collections map[string]string `yaml:"Collections"` // 多个集合的命名映射
 
 	// 检索配置
 	TopK       int    `yaml:"TopK"`       // 返回的最相似文档数量
@@ -176,6 +179,16 @@ type MilvusConfig struct {
 	// 超时配置
 	ConnectTimeout time.Duration `yaml:"ConnectTimeout"` // 连接超时
 	SearchTimeout  time.Duration `yaml:"SearchTimeout"`  // 搜索超时
+}
+
+// GetCollection 获取指定名称的集合，如果不存在则返回默认集合
+func (c *MilvusConfig) GetCollection(name string) string {
+	if c.Collections != nil {
+		if col, ok := c.Collections[name]; ok {
+			return col
+		}
+	}
+	return c.CollectionName
 }
 
 // SplitterConfig 文档分割器配置

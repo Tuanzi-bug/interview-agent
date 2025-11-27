@@ -84,7 +84,13 @@ Milvus:
   Username: "${MILVUS_USERNAME}"            # 从环境变量 MILVUS_USERNAME 读取
   Password: "${MILVUS_PASSWORD}"            # 从环境变量 MILVUS_PASSWORD 读取
   DatabaseName: "default"                   # 数据库名称
-  CollectionName: "documents"               # 集合名称
+  CollectionName: "documents"               # 默认集合名称
+
+  # 多集合配置（可选）- 支持配置多个命名集合
+  Collections:
+    feishu: "feishu_docs_20251126"           # 飞书文档集合
+    interview: "interview_questions"         # 面试题库集合
+    knowledge: "knowledge_base"              # 知识库集合
 
   # 检索配置
   TopK: 5                                   # 返回的最相似文档数量
