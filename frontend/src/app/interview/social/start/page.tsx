@@ -35,23 +35,20 @@ export default function SocialInterviewStartPage() {
 
   useEffect(() => {
     const params = (window as any).__interviewParams || (() => { try { return JSON.parse(sessionStorage.getItem('interviewParams') || 'null'); } catch { return null; } })();
-    const resumeFile = (window as any).__interviewResume || null;
-    if (!params || !resumeFile) {
-      message.error('缺少面试参数，请从表单页重新进入');
+    if (!params || !params.resume_id) {
+      message.error('缺少面试参数或简历，请从表单页重新进入');
       return;
     }
     setStarting(true);
-    const formData = new FormData();
     const sanitize = (s: string) => s.replace(/[<>&"'`]/g, '');
-    formData.append('type', String(params.type || '综合面试'));
-    formData.append('domain', String(params.domain || '社招'));
-    formData.append('difficulty', String(params.difficulty || 'easy'));
-    formData.append('position_name', String(params.position_name || ''));
-    formData.append('company_name', sanitize(String(params.company_name || '')));
-    
-    const f = (resumeFile?.originFileObj || resumeFile) as Blob;
-    const fname = (resumeFile?.name || 'resume.pdf');
-    formData.append('resume', f, fname);
+    const requestBody = {
+      type: String(params.type || '综合面试'),
+      domain: String(params.domain || '社招'),
+      difficulty: String(params.difficulty || 'easy'),
+      position_name: String(params.position_name || ''),
+      company_name: sanitize(String(params.company_name || '')),
+      resume_id: Number(params.resume_id),
+    };
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -80,19 +77,19 @@ export default function SocialInterviewStartPage() {
           return;
         }
 
-        // 尝试方案1: 使用Authorization header
+        // 使用JSON格式发送请求，包含resume_id
         let response;
-        console.log('[面试启动] 尝试方案1: 使用Authorization header');
+        console.log('[面试启动] 使用JSON格式发送请求');
+        console.log('[面试启动] 请求参数:', requestBody);
+        
         try {
-          const headers: Record<string, string> = {};
-          headers['Authorization'] = `Bearer ${token}`;
-          
-          console.log('[面试启动] 请求URL:', 'http://localhost:8888/api/interview/start/stream');
-          
           response = await fetch('http://localhost:8888/api/interview/start/stream', {
             method: 'POST',
-            headers,
-            body: formData,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify(requestBody),
             signal: abortController.signal,
             mode: 'cors',
           });
@@ -100,11 +97,13 @@ export default function SocialInterviewStartPage() {
           // 如果Authorization header方式失败，尝试使用URL参数
           console.log('[面试启动] 方案1失败，尝试方案2: 使用URL参数传递token');
           const urlWithToken = `http://localhost:8888/api/interview/start/stream?token=${encodeURIComponent(token)}`;
-          console.log('[面试启动] 请求URL:', urlWithToken);
           
           response = await fetch(urlWithToken, {
             method: 'POST',
-            body: formData,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
             signal: abortController.signal,
             mode: 'cors',
           });
@@ -149,9 +148,11 @@ export default function SocialInterviewStartPage() {
           const lines = buffer.split('\n\n');
           buffer = lines.pop() || '';
 
-          for (const line of lines) {
-            if (line.trim().startsWith('data:')) {
-              const json = line.trim().replace(/^data:\s*/, '');
+          for (const block of lines) {
+            // SSE 格式可能是 "event: xxx\ndata: {...}" 或仅 "data: {...}"
+            const dataMatch = block.match(/^data:\s*(.+)$/m);
+            if (dataMatch) {
+              const json = dataMatch[1];
               try {
                 const payload = JSON.parse(json);
                 console.log('[SSE数据]', payload);
