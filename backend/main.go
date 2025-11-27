@@ -3,6 +3,7 @@ package main
 import (
 	"ai-eino-interview-agent/api/router"
 	interviewRouter "ai-eino-interview-agent/api/router/interview"
+	routerMiddleware "ai-eino-interview-agent/api/router/middleware"
 	"ai-eino-interview-agent/internal/config"
 	"ai-eino-interview-agent/internal/eino/milvus"
 	appMiddleware "ai-eino-interview-agent/internal/middleware"
@@ -100,6 +101,11 @@ func main() {
 
 	// 初始化Hertz服务器
 	s := server.Default(server.WithHostPorts(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)))
+
+	// 添加错误处理中间件（必须在最前面）
+	// Recovery: 捕获请求处理中的 panic，防止服务崩溃
+	// ErrorHandler: 统一处理业务错误，返回标准格式的错误响应
+	s.Use(routerMiddleware.Recovery()) // 捕获 Panic
 
 	// 添加全局CORS中间件，处理OPTIONS预检请求
 	s.Use(func(ctx context.Context, c *app.RequestContext) {
