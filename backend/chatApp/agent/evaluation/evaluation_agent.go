@@ -29,7 +29,7 @@ func NewEvaluationAgent(userId uint) adk.Agent {
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: []componenttool.BaseTool{
 					tool2.GetInterviewsDataTool(),
-					//tool2.GetMilvusRetrieverTool(),
+					tool2.GetMilvusRetrieverTool(),
 				},
 			},
 		},
