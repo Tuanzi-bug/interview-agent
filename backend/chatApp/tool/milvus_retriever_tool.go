@@ -2,6 +2,7 @@ package tool
 
 import (
 	"ai-eino-interview-agent/internal/eino/milvus"
+	"ai-eino-interview-agent/internal/errors"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -129,14 +130,14 @@ func formatErrorOutput(errMsg string, count int) (string, error) {
 }
 
 // GetMilvusRetrieverTool 创建向量数据库检索工具
-func GetMilvusRetrieverTool() tool.InvokableTool {
+func GetMilvusRetrieverTool() (tool.InvokableTool, error) {
 	t, err := utils.InferTool(
 		"get_milvus_retriever",
 		"从向量数据库中检索出对应相关的数据。输入查询文本，返回最相关的文档列表。",
 		GetMilvusRetrieverWithInput, // 使用包装函数，接收 MilvusRetrieverInput 结构体
 	)
 	if err != nil {
-		log.Fatalf("创建检索工具失败: %v", err)
+		return nil, errors.NewMilvusError("创建检索工具失败", err)
 	}
-	return t
+	return t, nil
 }
