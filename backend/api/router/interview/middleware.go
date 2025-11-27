@@ -16,6 +16,7 @@ var jwtPublicRoutes = map[string]struct{}{
 	"/api/user/logout":          {},
 	"/api/user/wechat/login":    {},
 	"/api/user/wechat/callback": {},
+	"/api/demo/create":          {},
 }
 
 func AuthSkipper() serviceMiddleware.JWTSkipper {
@@ -251,6 +252,16 @@ func _uploadresumeMw() []app.HandlerFunc {
 }
 
 func _checkusermodelconfiguredMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _demoMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _createdemoMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }

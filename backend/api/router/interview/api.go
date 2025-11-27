@@ -20,6 +20,10 @@ func Register(r *server.Hertz) {
 	{
 		_api := root.Group("/api", _apiMw()...)
 		{
+			_demo := _api.Group("/demo", _demoMw()...)
+			_demo.POST("/create", append(_createdemoMw(), interview.CreateDemo)...)
+		}
+		{
 			_interview := _api.Group("/interview", _interviewMw()...)
 			_interview.GET("/answer-record", append(_getanswerrecordMw(), interview.GetAnswerRecord)...)
 			_interview.GET("/evaluation", append(_getinterviewevaluationMw(), interview.GetInterviewEvaluation)...)
