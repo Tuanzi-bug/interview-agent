@@ -13,8 +13,22 @@ import (
 )
 
 // NewQuestionAgent 基于现有模板构建的模拟面试智能体
-func NewQuestionAgent(userId uint) adk.Agent {
+// needResumeTool: 是否需要简历解析工具（仅第一个问题需要）
+func NewQuestionAgent(userId uint, needResumeTool bool) adk.Agent {
 	ctx := context.Background()
+
+	// 根据是否需要简历工具构建不同的配置
+	var toolsConfig adk.ToolsConfig
+	if needResumeTool {
+		toolsConfig = adk.ToolsConfig{
+			ToolsNodeConfig: compose.ToolsNodeConfig{
+				Tools: []componenttool.BaseTool{
+					tool2.GetResumeInfoTool(),
+				},
+			},
+		}
+	}
+
 	baseAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Name:        "QuestionAgent",
 		Description: "一个专业面试提问的智能体",
@@ -45,7 +59,7 @@ func NewQuestionAgent(userId uint) adk.Agent {
 难度级别：初级难度、中级难度、高级难度
 
 任务：
-1. 如果提供了resume_id字段的值，使用get_resume_info工具解析简历，只有在面试刚开始的时候调用一次即可
+1. 如果提供了resume_id字段的值，使用get_resume_info工具解析简历获取简历内容
 2. 根据提示词中指定的面试类型、领域和难度级别进行提问
 3. 面试提问阶段：
    - 根据候选人的背景和技能，围绕指定的核心评估维度进行提问
@@ -72,14 +86,8 @@ func NewQuestionAgent(userId uint) adk.Agent {
   ]
 }`,
 
-		Model: chat.CreatOpenAiChatModel(ctx, userId),
-		ToolsConfig: adk.ToolsConfig{
-			ToolsNodeConfig: compose.ToolsNodeConfig{
-				Tools: []componenttool.BaseTool{
-					tool2.GetResumeInfoTool(),
-				},
-			},
-		},
+		Model:         chat.CreatOpenAiChatModel(ctx, userId),
+		ToolsConfig:   toolsConfig,
 		MaxIterations: 20,
 	})
 	if err != nil {
