@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Typography, Row, Col, Card as AntCard, Space, Tag, Button, Input, Avatar, Progress, message } from 'antd';
 import { AudioOutlined, CustomerServiceOutlined, QuestionCircleOutlined, SendOutlined } from '@ant-design/icons';
 
@@ -27,6 +28,7 @@ export default function SocialInterviewStartPage() {
   const [waitingNextQuestion, setWaitingNextQuestion] = useState(false);
   const [conversationHistory, setConversationHistory] = useState<ConversationItem[]>([]);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const timer = setInterval(() => setElapsed(prev => prev + 1), 1000);
@@ -234,8 +236,30 @@ export default function SocialInterviewStartPage() {
     
     // 如果是结束面试
     if (action === 'quit') {
-      message.success('面试已结束');
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          // 调用后端接口结束面试
+          await fetch('http://localhost:8888/api/interview/submit/answer', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              session_id: sessionId,
+              answer: '',
+              action: 'quit',
+            }),
+            mode: 'cors',
+          });
+        }
+      } catch (e) {
+        console.error('[结束面试] 请求失败:', e);
+      }
       try { abortControllerRef.current?.abort(); } catch {}
+      message.success('面试已结束，正在跳转...');
+      router.push('/user/interviews');
       return;
     }
     
