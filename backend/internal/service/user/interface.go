@@ -44,6 +44,11 @@ type ModelManager interface {
 		userID int64,
 		modelID int64,
 	) error
+	// CheckUserModelConfigured 检查用户是否配置了默认模型
+	CheckUserModelConfigured(
+		ctx context.Context,
+		userID int64,
+	) (*model.UserModel, error)
 }
 
 type UserManager interface {
@@ -83,6 +88,7 @@ func ToUserModelItem(m *model.UserModel) *userapi.UserModelItem {
 
 	item.Scope = int32(m.Scope)
 	item.Status = int32(m.Status)
+	item.IsDefault = int32(m.IsDefault)
 	item.CreatedAt = m.CreatedAt
 	item.UpdatedAt = m.UpdatedAt
 	item.HasSecret = strings.TrimSpace(m.APIKeyEncrypted) != ""
@@ -122,6 +128,7 @@ func ToUserModelDetail(m *model.UserModel) *userapi.UserModelDetail {
 
 	detail.Scope = int32(m.Scope)
 	detail.Status = int32(m.Status)
+	detail.IsDefault = int32(m.IsDefault)
 	detail.CreatedAt = m.CreatedAt
 	detail.UpdatedAt = m.UpdatedAt
 	detail.HasSecret = strings.TrimSpace(m.APIKeyEncrypted) != ""

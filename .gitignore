@@ -1,0 +1,7 @@
+# 忽略Next.js的构建输出目录
+frontend/.next/
+node_modules/
+backend/config.yaml
+backend/uploads/
+.next/
+frontend/next/

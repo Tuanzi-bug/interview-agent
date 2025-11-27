@@ -30,15 +30,25 @@ apiClient.interceptors.request.use(
 // 响应拦截器
 apiClient.interceptors.response.use(
   (response: AxiosResponse<any>) => {
-    // 对响应数据做点什么
-    return response.data;
+    const payload = response?.data;
+    if (payload && typeof payload === 'object' && 'code' in payload) {
+      if (payload.code === 200) {
+        let data = payload.data;
+        if (data && typeof data === 'object' && 'data' in data && Object.keys(data).length === 1) {
+          data = (data as any).data;
+        }
+        return data;
+      }
+      if (payload.code === 401) {
+        localStorage.removeItem('token');
+      }
+      return Promise.reject({ response, message: payload.message, code: payload.code });
+    }
+    return payload;
   },
   (error) => {
-    // 对响应错误做点什么
     if (error.response?.status === 401) {
-      // 处理未授权错误
       localStorage.removeItem('token');
-      // 可以重定向到登录页
     }
     return Promise.reject(error);
   }

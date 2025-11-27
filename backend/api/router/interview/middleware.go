@@ -11,6 +11,7 @@ import (
 )
 
 var jwtPublicRoutes = map[string]struct{}{
+<<<<<<< HEAD
 	"/api/user/login":                {},
 	"/api/user/register":             {},
 	"/api/user/logout":               {},
@@ -23,6 +24,13 @@ var jwtPublicRoutes = map[string]struct{}{
 	"/api/interview/titleBank/:id":   {},
 	"/api/interview/continue":        {},
 	"/api/interview/continue/stream": {},
+=======
+	"/api/user/login":           {},
+	"/api/user/register":        {},
+	"/api/user/logout":          {},
+	"/api/user/wechat/login":    {},
+	"/api/user/wechat/callback": {},
+>>>>>>> master
 }
 
 func AuthSkipper() serviceMiddleware.JWTSkipper {
@@ -188,6 +196,76 @@ func _createinterviewtitleMw() []app.HandlerFunc {
 }
 
 func _create0Mw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _submitMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _submitinterviewanswerMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getinterviewevaluationMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getinterviewrecordsMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getanswerrecordMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _resumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getdefaultresumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getuserresumesMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _deleteresumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getresumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _updateresumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _setdefaultresumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _uploadresumeMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _checkusermodelconfiguredMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
