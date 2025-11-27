@@ -1,24 +1,46 @@
 'use client';
 
-import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, Tag, Upload, message, Modal } from 'antd';
-import { useState, useEffect } from 'react';
+import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, Tag, message, Modal, Spin } from 'antd';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import type { UploadFile } from 'antd/es/upload/interface';
-import { CheckCircleOutlined, VideoCameraOutlined, ToolOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, VideoCameraOutlined, ToolOutlined, FileOutlined } from '@ant-design/icons';
 import BackendHealthCheck from '@/components/BackendHealthCheck';
+import apiClient from '@/services/api/client';
 
 const { Title, Paragraph } = Typography;
 
+// 简历信息类型
+interface ResumeInfo {
+  id: number;
+  file_name: string;
+}
+
 export default function SocialInterviewPage() {
   const [form] = Form.useForm();
-  const [resumeFile, setResumeFile] = useState<UploadFile | null>(null);
+  const [selectedResumeId, setSelectedResumeId] = useState<number | null>(null);
+  const [resumes, setResumes] = useState<ResumeInfo[]>([]);
+  const [loadingResumes, setLoadingResumes] = useState(false);
   const [starting, setStarting] = useState(false);
   const [diagnosisVisible, setDiagnosisVisible] = useState(false);
   const [modelConfigured, setModelConfigured] = useState<boolean | null>(null);
   const [checkingConfig, setCheckingConfig] = useState<boolean>(false);
   const router = useRouter();
 
+  // 获取用户简历列表
+  const fetchResumes = useCallback(async () => {
+    setLoadingResumes(true);
+    try {
+      const data: any = await apiClient.get('/resume/list');
+      setResumes(data?.resumes || []);
+    } catch (err) {
+      console.error('获取简历列表失败:', err);
+    } finally {
+      setLoadingResumes(false);
+    }
+  }, []);
+
   useEffect(() => {
+    fetchResumes();
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     setCheckingConfig(true);
     fetch('http://localhost:8888/api/user/model/check', {
@@ -39,7 +61,7 @@ export default function SocialInterviewPage() {
       .finally(() => {
         setCheckingConfig(false);
       });
-  }, []);
+  }, [fetchResumes]);
 
   return (
     <div className="container mx-auto px-4">
@@ -89,46 +111,26 @@ export default function SocialInterviewPage() {
               initialValues={{ job: 'Java后端开发', level: '入门' }}
             >
               <Form.Item
-                label="上传简历"
-                name="resume"
-                valuePropName="fileList"
-                getValueFromEvent={(e) => (e?.fileList || [])}
-                rules={[
-                  { required: true, message: '请上传简历文件' },
-                  {
-                    validator: async (_, value) => {
-                      const f: UploadFile | undefined = resumeFile || undefined;
-                      if (!f) throw new Error('请上传简历文件');
-                      const name = String(f.name || '').toLowerCase();
-                      const okType = name.endsWith('.pdf') || name.endsWith('.doc') || name.endsWith('.docx');
-                      if (!okType) throw new Error('仅支持 PDF/DOC/DOCX 格式');
-                      const size = (f.size || 0);
-                      if (size <= 0 || size > 2 * 1024 * 1024) throw new Error('文件大小需小于2MB');
-                    },
-                  },
-                ]}
+                label="选择简历"
+                name="resume_id"
+                rules={[{ required: true, message: '请选择简历' }]}
               >
-                <Upload.Dragger
-                  name="resume"
-                  multiple={false}
-                  maxCount={1}
-                  accept=".pdf,.doc,.docx"
-                  beforeUpload={() => false}
-                  onChange={({ file, fileList }) => {
-                    const f = fileList?.[0] || file;
-                    setResumeFile(f || null);
-                    const name = String((f?.name) || '').toLowerCase();
-                    if (name && !(name.endsWith('.pdf'))) {
-                      message.warning('当前后端仅支持PDF文件，DOC/DOCX将无法启动面试');
-                    }
-                  }}
-                  onRemove={() => setResumeFile(null)}
+                <Select
+                  placeholder="请选择已上传的简历"
+                  loading={loadingResumes}
                   disabled={starting}
-                >
-                  <p className="ant-upload-drag-icon">📄</p>
-                  <p className="ant-upload-text">点击或拖拽上传简历（PDF/DOC/DOCX，不超过2MB）</p>
-                  <p className="ant-upload-hint">用于生成更贴合你的面试问题</p>
-                </Upload.Dragger>
+                  onChange={(value) => setSelectedResumeId(value)}
+                  notFoundContent={loadingResumes ? <Spin size="small" /> : '暂无简历，请先在个人中心上传'}
+                  options={resumes.map((r) => ({
+                    value: r.id,
+                    label: (
+                      <div className="flex items-center gap-2">
+                        <FileOutlined className="text-red-500" />
+                        <span>{r.file_name}</span>
+                      </div>
+                    ),
+                  }))}
+                />
               </Form.Item>
               <Row gutter={16}>
                 <Col xs={24} md={12}>
@@ -188,9 +190,9 @@ export default function SocialInterviewPage() {
                       difficulty: values.level,
                       position_name: values.job || '',
                       company_name: String(values.company_name || ''),
+                      resume_id: values.resume_id,
                     };
                     (window as any).__interviewParams = { ...params };
-                    (window as any).__interviewResume = resumeFile;
                     try { sessionStorage.setItem('interviewParams', JSON.stringify(params)); } catch {}
                     setStarting(true);
                     router.push('/interview/social/start');
