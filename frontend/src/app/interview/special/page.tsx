@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Typography, Row, Col, Card as AntCard, Form, Select, Button, Tag } from 'antd';
+import { Typography, Row, Col, Card as AntCard, Form, Select, Button, Tag, message } from 'antd';
 import { CheckCircleOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import { useRouter } from 'next/navigation';
 
 const { Title, Paragraph } = Typography;
 
@@ -34,12 +35,39 @@ const GROUPED_OPTIONS = [
 ];
 
 export default function SpecialInterviewPage() {
-  const [stack, setStack] = useState<string>('Go');
+  const router = useRouter();
   const [form] = Form.useForm();
+  const [starting, setStarting] = useState(false);
+  const selectedStack = Form.useWatch('stack', form) ?? 'Go';
+
+  const handleStart = async () => {
+    try {
+      await form.validateFields();
+    } catch (err) {
+      message.error('请选择专项方向和难度后再开始');
+      return;
+    }
+
+    const values = form.getFieldsValue();
+    const params = {
+      domain: String(values.stack || selectedStack || 'java'),
+      difficulty: String(values.level || '简单'),
+    };
+
+    try {
+      (window as any).__specialInterviewParams = { ...params };
+      sessionStorage.setItem('specialInterviewParams', JSON.stringify(params));
+    } catch (storageError) {
+      console.warn('无法缓存专项面试参数', storageError);
+    }
+
+    setStarting(true);
+    router.push('/interview/special/start');
+  };
 
   return (
     <div className="container mx-auto px-4">
-      <Title level={2} className="mt-2">专项面试 · {stack}</Title>
+      <Title level={2} className="mt-2">专项面试 · {selectedStack}</Title>
       <Paragraph className="text-gray-600 max-w-3xl">
         选择专项方向后，系统会围绕该技术栈构建真实面试场景，聚焦高频问题与深度追问，结合行业通用标准输出结构化评估与改进建议。
       </Paragraph>
@@ -61,20 +89,29 @@ export default function SpecialInterviewPage() {
           </div>
 
           <AntCard className="rounded-2xl">
-            <Form form={form} layout="vertical" initialValues={{ stack: stack, level: '入门' }}>
-              <Form.Item label="专项类别" name="stack">
+            <Form
+              form={form}
+              layout="vertical"
+              initialValues={{ stack: selectedStack, level: '简单' }}
+            >
+              <Form.Item label="专项类别" name="stack" rules={[{ required: true, message: '请选择专项方向' }]}>
                 <Select
                   popupMatchSelectWidth={false}
                   options={GROUPED_OPTIONS}
-                  value={stack}
-                  onChange={(v) => setStack(v)}
                 />
               </Form.Item>
-              <Form.Item label="难度等级" name="level">
-                <Select options={[{ value: '入门', label: '入门' }, { value: '中级', label: '中级' }, { value: '进阶', label: '进阶' }]} />
+              <Form.Item label="难度等级" name="level" rules={[{ required: true, message: '请选择难度等级' }]}>
+                <Select options={[{ value: '简单', label: '简单' }, { value: '中等', label: '中等' }, { value: '困难', label: '困难' }]} />
               </Form.Item>
               <div className="mt-2">
-                <Button type="primary" className="bg-green-500 w-full h-12 text-base">首次专项面试免费</Button>
+                <Button
+                  type="primary"
+                  className="bg-green-500 w-full h-12 text-base"
+                  loading={starting}
+                  onClick={handleStart}
+                >
+                  开始专项面试
+                </Button>
                 <div className="text-center text-gray-500 text-sm mt-2">单次专项面试约30-60分钟，系统自动续集题目链路</div>
               </div>
             </Form>

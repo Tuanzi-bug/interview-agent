@@ -64,6 +64,17 @@ struct StartInterviewResponse {
     1: required InterviewResult result
 }
 
+// 专项面试请求
+struct StartSpecialInterviewRequest {
+    1: required string domain (api.body="domain")  // 面试领域（专项面试对应java、golang等)
+    2: required string difficulty (api.body="difficulty")  // 难度级别（简单、中等、困难）
+}
+
+// 专项面试响应
+struct StartSpecialInterviewResponse {
+    1: required InterviewResult result
+}
+
 // 继续面试请求
 struct ContinueInterviewRequest {
     1: required string query (api.body="query")  // 用户输入的查询
@@ -259,6 +270,13 @@ service InterviewsService {
     // 启动面试流程（流式）
     StartInterviewResponse StartInterviewStream(1: StartInterviewRequest request) (
         api.post="/api/interview/start/stream",
+        api.category="interviews",
+        api.gen_path="interviews"
+    )
+
+    // 启动专项面试流程（流式）
+    StartSpecialInterviewResponse StartSpecialInterviewStream(1: StartSpecialInterviewRequest request) (
+        api.post="/api/interview/special/stream",
         api.category="interviews",
         api.gen_path="interviews"
     )

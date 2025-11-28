@@ -1,9 +1,8 @@
 package main
 
 import (
-	"ai-eino-interview-agent/chatApp/agent/testAgent"
+	"ai-eino-interview-agent/chatApp/agent/question"
 	"ai-eino-interview-agent/internal/config"
-	"ai-eino-interview-agent/internal/eino/milvus"
 	"ai-eino-interview-agent/internal/repository"
 	"bufio"
 	"fmt"
@@ -27,8 +26,11 @@ func main() {
 
 	userId = 2
 
+	//测试Agent
+	agent := question.NewQuestionAgent(userId, false)
+
 	// 1. 创建 Milvus Agent
-	agent := testAgent.NewMilvuesAgent(userId)
+	//agent := testAgent.NewMilvuesAgent(userId)
 
 	// 2. 创建 Runner
 	runner := adk.NewRunner(ctx, adk.RunnerConfig{
@@ -116,12 +118,12 @@ func initApp() {
 	log.Println("数据库初始化成功")
 
 	// 初始化 Milvus
-	ctx := context.Background()
-	_, err = milvus.InitMilvusManager(ctx, cfg)
-	if err != nil {
-		log.Fatalf("Failed to initialize Milvus: %v", err)
-	}
-	log.Println("Milvus 初始化成功")
+	//ctx := context.Background()
+	//_, err = milvus.InitMilvusManager(ctx, cfg)
+	//if err != nil {
+	//	log.Fatalf("Failed to initialize Milvus: %v", err)
+	//}
+	//log.Println("Milvus 初始化成功")
 }
 
 // findConfigFile 查找配置文件

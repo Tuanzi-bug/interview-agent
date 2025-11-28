@@ -254,3 +254,13 @@ func _checkusermodelconfiguredMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _specialMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _startspecialinterviewstreamMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}

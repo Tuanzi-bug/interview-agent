@@ -424,7 +424,6 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 	}
 
 	log.Printf("[Interview Loop] Interview completed, sessionID: %s", session.SessionID)
-
 }
 
 // waitForAnswerWithHeartbeat 等待用户答案，并定期发送心跳保活
@@ -1039,4 +1038,63 @@ func IsRetryableError(err error) bool {
 
 	// 其他错误默认视为不可重试（例如参数问题、唯一约束冲突等）
 	return false
+}
+
+// StartSpecialInterviewStream .
+// @router /api/interview/special/stream [POST]
+func StartSpecialInterviewStream(ctx context.Context, c *app.RequestContext) {
+	// 1. 解析请求（必须在设置 SSE 响应头之前）
+	var req interviewsapi.StartSpecialInterviewRequest
+	if err := c.BindAndValidate(&req); err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Authorization token is required")
+		return
+	}
+
+	setupSSEResponse(c)
+
+	interviewService := interviewservice.NewInterviewService()
+	recordDTO := &interviewsapi.InterviewRecordDTO{
+		UserID:     int32(userID),
+		Difficulty: req.Difficulty,
+		Domain:     req.Domain,
+		Status:     "pending",
+	}
+
+	recordID, err := interviewService.CreateInterviewRecord(ctx, recordDTO)
+	if err != nil {
+		response.InternalServerError(ctx, c, "Failed to create interview record: "+err.Error())
+		return
+	}
+	var hasResume bool
+	var resumeID int64
+
+	sm := GetSessionManager()
+	session := sm.CreateSession(userID, recordID, resumeID, hasResume, "", "", req.Domain, req.Difficulty)
+
+	pipeReader, pipeWriter := io.Pipe()
+	c.SetBodyStream(pipeReader, -1)
+
+	go func() {
+		defer pipeWriter.Close()
+
+		sendSSEEvent(pipeWriter, map[string]interface{}{
+			"type":       "session_id",
+			"session_id": session.SessionID,
+			"message":    "Session created successfully",
+		})
+
+		sendSSEEvent(pipeWriter, map[string]interface{}{
+			"type":       "start",
+			"message":    "面试已开始，正在生成第一个问题...",
+			"session_id": session.SessionID,
+		})
+		writer := &SSEWriter{ctx: c, writer: pipeWriter}
+		runInterviewLoopAsyncTool(ctx, userID, writer, session, interviewService)
+	}()
 }

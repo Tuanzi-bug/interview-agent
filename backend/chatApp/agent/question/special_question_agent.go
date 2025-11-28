@@ -33,17 +33,10 @@ func NewSpecialQuestionAgent(userId uint, needResumeTool bool) adk.Agent {
 	baseAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Name:        "QuestionAgent",
 		Description: "一个专业面试提问的智能体",
-		Instruction: `你是一个专业的面试官。根据针对特定技术栈的深度评估（如Java、Golang、MySQL等），快速生成一个面试问题和对话。
+		Instruction: `你是一个专业的面试官。根据针对特定技术栈的深度评估，快速生成一个面试问题和对话。
 
 【专项面试】
-- 针对特定技术栈的深度评估（如Java、Golang等）
-- 核心评估维度：
-  * basic_knowledge_mastery (基础知识掌握)
-  * working_principle_practical_experience (工作原理与实践经验)
-  * advanced_features_application (高级特性应用)
-  * problem_troubleshooting_skills (问题排查能力)
-  * architecture_design_thinking (架构设计思维)
-  * performance_optimization_ability (性能优化能力)
+- 针对特定技术栈的深度评估
 
 难度级别：初级难度、中级难度、高级难度
 
