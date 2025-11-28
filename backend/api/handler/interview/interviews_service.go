@@ -235,7 +235,6 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 	followUpCount := 0
 
 	for {
-
 		select {
 		case <-ctx.Done():
 			log.Printf("[Interview Loop] Context cancelled, sessionID: %s", session.SessionID)
@@ -254,10 +253,10 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 				break
 			}
 
-			if answer == "quit" {
-				sendCompleteEvent(writer)
-				break
-			}
+			//if answer == "quit" {
+			//	sendCompleteEvent(writer)
+			//	break
+			//}
 
 			session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
 				"speaker_type":  "candidate",
@@ -273,7 +272,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 				questionIndex++
 				if dimensionIndex >= len(dimensions) {
 					sendTopicCompleteEvent(writer)
-					sendCompleteEvent(writer)
+					//sendCompleteEvent(writer)
 					break
 				}
 			}
@@ -321,11 +320,11 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 			break
 		}
 
-		if len(result.Questions) == 0 {
-			sendTopicCompleteEvent(writer)
-			sendCompleteEvent(writer)
-			break
-		}
+		//if len(result.Questions) == 0 {
+		//	sendTopicCompleteEvent(writer)
+		//	sendCompleteEvent(writer)
+		//	break
+		//}
 
 		if questionIndex == 1 {
 			resumeContent = session.Query
