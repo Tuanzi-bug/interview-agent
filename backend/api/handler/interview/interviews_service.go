@@ -314,7 +314,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 
 		// 只有第一个问题才需要简历解析工具
 		isFirstQuestion := questionIndex == 1 && followUpCount == 0
-		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId, isFirstQuestion)
+		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId, isFirstQuestion, session.Type)
 		if err != nil {
 			sendErrorEvent(writer, "Failed to generate question: "+err.Error())
 			sendCompleteEvent(writer)
@@ -570,7 +570,12 @@ func SubmitInterviewAnswer(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
-
+	if req.Action != nil {
+		log.Println("*req.Action:", *req.Action)
+		log.Println("req.Action:", req.Action)
+	} else {
+		log.Println("req.Action nil")
+	}
 	// 验证必填字段
 	if req.SessionID == "" {
 		response.BadRequest(ctx, c, "session_id is required")

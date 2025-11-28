@@ -204,13 +204,17 @@ JSON格式：
 // GenerateInterviewQuestions 调用智能体生成面试问题
 // 返回生成的问题列表和对话列表
 // isFirstQuestion: 是否是第一个问题（决定是否需要简历解析工具）
-func GenerateInterviewQuestions(ctx context.Context, prompt string, userId uint, isFirstQuestion bool) (*QuestionGeneratorResult, error) {
+func GenerateInterviewQuestions(ctx context.Context, prompt string, userId uint, isFirstQuestion bool, interview_type string) (*QuestionGeneratorResult, error) {
 	// 添加 30分钟 超时，防止无限等待（API 响应可能需要较长时间）
 	timeoutCtx, cancel := context.WithTimeout(ctx, 1800*time.Second)
 	defer cancel()
 
-	// 创建问题生成智能体（仅第一个问题需要简历工具）
+	//根据面试类型，使用不同的智能体
 	agent := question.NewQuestionAgent(userId, isFirstQuestion)
+	if interview_type != "综合面试" {
+		//专项面试
+		agent = question.NewSpecialQuestionAgent(userId, isFirstQuestion)
+	}
 
 	// 创建 runner
 	runner := adk.NewRunner(timeoutCtx, adk.RunnerConfig{
@@ -447,16 +451,16 @@ func BuildPromptFromSessionContext(ctx context.Context, questionIndex int, query
 
 // GenerateInterviewQuestionsWithSessionContext 使用会话值生成面试问题
 // 优化版本：从会话值获取参数，减少参数传递
-func GenerateInterviewQuestionsWithSessionContext(ctx context.Context, questionIndex int,
-	query string, dimension string, followUpCount int, userId uint) (*QuestionGeneratorResult, error) {
-
-	// 从会话值构建提示词
-	prompt, err := BuildPromptFromSessionContext(ctx, questionIndex, query, dimension, followUpCount)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build prompt from session context: %w", err)
-	}
-
-	// 只有第一个问题才需要简历解析工具
-	isFirstQuestion := questionIndex == 1 && followUpCount == 0
-	return GenerateInterviewQuestions(ctx, prompt, userId, isFirstQuestion)
-}
+//func GenerateInterviewQuestionsWithSessionContext(ctx context.Context, questionIndex int,
+//	query string, dimension string, followUpCount int, userId uint) (*QuestionGeneratorResult, error) {
+//
+//	// 从会话值构建提示词
+//	prompt, err := BuildPromptFromSessionContext(ctx, questionIndex, query, dimension, followUpCount)
+//	if err != nil {
+//		return nil, fmt.Errorf("failed to build prompt from session context: %w", err)
+//	}
+//
+//	// 只有第一个问题才需要简历解析工具
+//	isFirstQuestion := questionIndex == 1 && followUpCount == 0
+//	return GenerateInterviewQuestions(ctx, prompt, userId, isFirstQuestion, "")
+//}
