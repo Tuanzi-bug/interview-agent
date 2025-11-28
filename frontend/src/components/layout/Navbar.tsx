@@ -92,9 +92,9 @@ const Navbar: FC = () => {
       <div className="container mx-auto px-4 flex items-center justify-between h-full">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-white text-lg">牛</span>
+            <span className="text-white text-lg">面</span>
           </div>
-          <Title level={3} className="m-0">牛面</Title>
+          <Title level={3} className="m-0">面试吧</Title>
         </div>
 
         <nav className="hidden md:flex items-center space-x-6">
