@@ -29,6 +29,11 @@ func NewQuestionAgent(userId uint, needResumeTool bool) adk.Agent {
 		}
 	}
 
+	model, err := chat.CreatOpenAiChatModel(ctx, userId)
+	if err != nil {
+		log.Fatal(fmt.Errorf("failed to create OpenAI chat model: %w", err))
+	}
+
 	baseAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Name:        "QuestionAgent",
 		Description: "一个专业面试提问的智能体",
@@ -86,7 +91,7 @@ func NewQuestionAgent(userId uint, needResumeTool bool) adk.Agent {
   ]
 }`,
 
-		Model:         chat.CreatOpenAiChatModel(ctx, userId),
+		Model:         model,
 		ToolsConfig:   toolsConfig,
 		MaxIterations: 20,
 	})

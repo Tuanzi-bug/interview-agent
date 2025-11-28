@@ -19,17 +19,27 @@ func NewEvaluationAgent(userId uint) adk.Agent {
 	// 构建系统指令
 	instruction := buildEvaluationInstruction()
 
+	model, err := chat.CreatOpenAiChatModel(ctx, userId)
+	if err != nil {
+		log.Fatal(fmt.Errorf("failed to create OpenAI chat model: %w", err))
+	}
+
+	milvusTool, err := tool2.GetMilvusRetrieverTool()
+	if err != nil {
+		log.Fatal(fmt.Errorf("failed to create Milvus retriever tool: %w", err))
+	}
+
 	baseAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Name:        "EvaluationAgent",
 		Description: "一个专业评估面试记录并生成专业报告的智能体",
 		Instruction: instruction,
 
-		Model: chat.CreatOpenAiChatModel(ctx, userId),
+		Model: model,
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: []componenttool.BaseTool{
 					tool2.GetInterviewsDataTool(),
-					tool2.GetMilvusRetrieverTool(),
+					milvusTool,
 				},
 			},
 		},

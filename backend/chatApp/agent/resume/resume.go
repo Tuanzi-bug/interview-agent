@@ -16,6 +16,11 @@ import (
 // 用于解析简历内容，提取关键信息用于面试准备
 func NewResumeParserAgent(userId uint) adk.Agent {
 	ctx := context.Background()
+	model, err := chat.CreatOpenAiChatModel(ctx, userId)
+	if err != nil {
+		log.Fatal(fmt.Errorf("failed to create OpenAI chat model: %w", err))
+	}
+
 	baseAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Name:        "ResumeParserAgent",
 		Description: "一个专业的简历解析智能体，用于提取简历中的关键信息",
@@ -93,7 +98,7 @@ func NewResumeParserAgent(userId uint) adk.Agent {
   "suggested_questions_directions": ["提问方向1", "提问方向2"]
 }`,
 
-		Model: chat.CreatOpenAiChatModel(ctx, userId),
+		Model: model,
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
 				Tools: []componenttool.BaseTool{
