@@ -5,7 +5,7 @@ port: 8888
 # 数据库配置
 database:
   driver: "mysql"
-  dsn: "root:root@tcp(localhost:3306)/interview_agent?charset=utf8mb4&parseTime=True&loc=Local"
+  dsn: "root:111111@tcp(localhost:3306)/interview_agent?charset=utf8mb4&parseTime=True&loc=Local"
   max_open_conns: 100
   max_idle_conns: 10
   conn_max_lifetime: "1h"
@@ -13,7 +13,7 @@ database:
 # Redis配置
 redis:
   addr: "localhost:6379"
-  password: ""
+  password: "root"
   db: 0
   dial_timeout: "5s"
   read_timeout: "3s"
