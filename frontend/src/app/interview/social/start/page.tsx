@@ -308,7 +308,8 @@ export default function SocialInterviewStartPage() {
         headers,
         body: JSON.stringify({
           session_id: sessionId,
-          answer: currentAnswer
+          answer: currentAnswer,
+          action: 'next'
         }),
         mode: 'cors',
       });
