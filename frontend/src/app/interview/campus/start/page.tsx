@@ -50,7 +50,7 @@ export default function CampusInterviewStartPage() {
   const percent = Math.min(100, answeredCount > 0 ? Math.round((answeredCount / Math.max(answeredCount, 1)) * 100) : 0);
   const onSubmit = async (act?: 'next' | 'quit') => {
     if (!sessionId) return;
-    const action = act ? act : (answer.trim() === '结束面试' ? 'quit' : 'next');
+    const action = act || 'next';
     setSubmitting(true);
     try {
       await fetch('http://localhost:8888/api/interview/submit/answer', {
