@@ -320,11 +320,12 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 			break
 		}
 
-		//if len(result.Questions) == 0 {
-		//	sendTopicCompleteEvent(writer)
-		//	sendCompleteEvent(writer)
-		//	break
-		//}
+		if len(result.Questions) == 0 {
+			log.Printf("[Interview Loop] No questions generated, sessionID: %s", session.SessionID)
+			sendErrorEvent(writer, "AI 未能生成有效问题，请稍后重试")
+			sendCompleteEvent(writer)
+			break
+		}
 
 		if questionIndex == 1 {
 			resumeContent = session.Query
