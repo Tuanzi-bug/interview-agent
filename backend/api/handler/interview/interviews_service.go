@@ -5,6 +5,7 @@ package interview
 import (
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
 	"ai-eino-interview-agent/api/response"
+	"ai-eino-interview-agent/chatApp/agent"
 	"ai-eino-interview-agent/chatApp/agent/service"
 	"ai-eino-interview-agent/internal/alert"
 	"ai-eino-interview-agent/internal/middleware"
@@ -45,6 +46,59 @@ func (w *SSEWriter) Write(p []byte) (n int, err error) {
 	n, err = w.ctx.WriteString(string(p))
 	w.ctx.Flush()
 	return
+}
+
+// sendSSEEvent 发送 SSE 事件
+func sendSSEEvent(writer io.Writer, data map[string]interface{}) error {
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	message := fmt.Sprintf("data: %s\n\n", string(jsonData))
+	_, err = writer.Write([]byte(message))
+	return err
+}
+
+// WriteQuestion 发送问题事件
+func (w *SSEWriter) WriteQuestion(question *interviewsapi.QuestionData) error {
+	data := map[string]interface{}{
+		"type":            "question",
+		"question_id":     question.ID,
+		"content":         question.Content,
+		"category":        question.Category,
+		"difficulty":      question.Difficulty,
+		"time_limit":      question.TimeLimit,
+		"keywords":        question.Keywords,
+		"expected_points": question.ExpectedPoints,
+	}
+	return sendSSEEvent(w, data)
+}
+
+// WriteError 发送错误事件
+func (w *SSEWriter) WriteError(message string) error {
+	data := map[string]interface{}{
+		"type":    "error",
+		"message": message,
+	}
+	return sendSSEEvent(w, data)
+}
+
+// WriteHeartbeat 发送心跳事件
+func (w *SSEWriter) WriteHeartbeat() error {
+	data := map[string]interface{}{
+		"type": "heartbeat",
+	}
+	return sendSSEEvent(w, data)
+}
+
+// WriteCompletion 发送完成事件
+func (w *SSEWriter) WriteCompletion(message string) error {
+	data := map[string]interface{}{
+		"type":    "complete",
+		"message": message,
+	}
+	return sendSSEEvent(w, data)
 }
 
 // StartInterviewStream 启动交互式面试流程（SSE + 前端交互模式）
@@ -427,7 +481,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 }
 
 // waitForAnswerWithHeartbeat 等待用户答案，并定期发送心跳保活
-func waitForAnswerWithHeartbeat(sm *SessionManager, sessionID string, timeout time.Duration, heartbeatInterval time.Duration, writer io.Writer) (string, bool) {
+func waitForAnswerWithHeartbeat(sm *SessionManager, sessionID string, timeout time.Duration, heartbeatInterval time.Duration, writer *SSEWriter) (string, bool) {
 	log.Printf("[Wait Answer] Starting, sessionID: %s, timeout: %v, heartbeatInterval: %v", sessionID, timeout, heartbeatInterval)
 
 	heartbeatTicker := time.NewTicker(heartbeatInterval)
@@ -450,7 +504,7 @@ func waitForAnswerWithHeartbeat(sm *SessionManager, sessionID string, timeout ti
 		case <-heartbeatTicker.C:
 			heartbeatCount++
 			log.Printf("[Wait Answer] Sending heartbeat #%d, sessionID: %s", heartbeatCount, sessionID)
-			sendHeartbeatEvent(writer)
+			writer.WriteHeartbeat()
 
 		// 接收用户答案
 		case answer := <-session.AnswerChan:
@@ -489,8 +543,8 @@ func buildPrompt(questionIndex int, query string, resumeID int64, hasResume bool
 	return service.BuildInterviewPrompt(questionIndex, query, resumeID, hasResume, dimension, followUpCount, interviewType, domain, difficulty)
 }
 
-// sendSSEEvent 发送 SSE 事件
-func sendSSEEvent(writer io.Writer, event map[string]interface{}) error {
+// sendSSEEventWithType 发送带类型的 SSE 事件
+func sendSSEEventWithType(writer *SSEWriter, event map[string]interface{}) error {
 	eventJSON, _ := json.Marshal(event)
 
 	// 获取事件类型
@@ -501,24 +555,19 @@ func sendSSEEvent(writer io.Writer, event map[string]interface{}) error {
 
 	// 标准 SSE 格式：event: type\ndata: {...}\n\n
 	message := fmt.Sprintf("event: %s\ndata: %s\n\n", eventType, string(eventJSON))
-	n, err := fmt.Fprint(writer, message)
+	n, err := writer.Write([]byte(message))
 	if err != nil {
 		log.Printf("[SSE] Failed to write event: %v (wrote %d bytes)", err, n)
 		return err
 	}
-
-	// 立即 flush，确保数据发送到客户端
-	if flusher, ok := writer.(http.Flusher); ok {
-		flusher.Flush()
-	}
 	return nil
 }
 
-func sendErrorEvent(writer io.Writer, message string) {
+func sendErrorEvent(writer *SSEWriter, message string) {
 	sendSSEEvent(writer, map[string]interface{}{"type": "error", "message": message})
 }
 
-func sendCompleteEvent(writer io.Writer) {
+func sendCompleteEvent(writer *SSEWriter) {
 	sendSSEEvent(writer, map[string]interface{}{"type": "complete", "message": "面试已结束"})
 }
 func sendQuestionEvent(writer io.Writer, questionIndex int, q service.QuestionData) {
@@ -611,6 +660,160 @@ func SubmitInterviewAnswer(ctx context.Context, c *app.RequestContext) {
 	if err := sm.SubmitAnswer(req.SessionID, answerToSubmit); err != nil {
 		response.InternalServerError(ctx, c, err.Error())
 		return
+	}
+
+	// 专项面试回答处理
+	if strings.ToLower(session.Type) == "专项面试" && req.Action != nil && *req.Action == "answer" {
+		// 保存答案记录
+		answerDTO := &interviewsapi.AnswerRecordDTO{
+			InterviewRecordID: session.RecordID,
+			QuestionID:        req.QuestionID,
+			UserID:            int32(userID),
+			Answer:            req.Answer,
+			AnswerTime:        time.Now().Unix(),
+			Status:            "submitted",
+		}
+
+		interviewService := interviewservice.NewInterviewService()
+		answerID, err := interviewService.CreateAnswerRecord(ctx, answerDTO)
+		if err != nil {
+			log.Printf("Failed to save answer record: %v", err)
+			// 记录错误但继续执行，不影响主要流程
+		}
+
+		// 使用专项Agent评估答案
+		var specializedAgent agent.SpecializedAgent
+		if strings.ToLower(session.Domain) == "go" {
+			// 创建Go专项面试Agent
+			specializedAgent, err = agent.NewGoInterviewAgent(ctx, session.Difficulty, session.Domain)
+			if err != nil {
+				log.Printf("Failed to create Go interview agent: %v", err)
+				// 记录错误但继续执行
+			} else {
+				// 异步评估答案并生成下一个问题
+				go func() {
+					evalCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+					defer cancel()
+
+					// 1. 评估当前答案
+					evaluationResult, err := specializedAgent.EvaluateAnswer(evalCtx, &agent.EvaluateRequest{
+						QuestionID: req.QuestionID,
+						Answer:     req.Answer,
+						Category:   session.CurrentQuestionCategory,
+					})
+					if err != nil {
+						log.Printf("Failed to evaluate answer: %v", err)
+						return
+					}
+
+					// 2. 创建评估DTO并保存
+					evaluation := &interviewsapi.EvaluationDTO{
+						AnswerID:    answerID,
+						Score:       evaluationResult.Score,
+						Comments:    evaluationResult.Comments,
+						Strengths:   evaluationResult.Strengths,
+						Weaknesses:  evaluationResult.Weaknesses,
+						Suggestions: evaluationResult.ImprovementSuggestions,
+					}
+
+					evaluationID, err := interviewService.CreateEvaluation(evalCtx, evaluation)
+					if err != nil {
+						log.Printf("Failed to save evaluation: %v", err)
+					}
+
+					// 3. 构建评估结果SSE事件数据
+					evaluationEvent := map[string]interface{}{
+						"type":          "evaluation",
+						"session_id":    req.SessionID,
+						"question_id":   req.QuestionID,
+						"evaluation_id": evaluationID,
+						"score":         evaluationResult.Score,
+						"comments":      evaluationResult.Comments,
+						"strengths":     evaluationResult.Strengths,
+						"weaknesses":    evaluationResult.Weaknesses,
+						"suggestions":   evaluationResult.ImprovementSuggestions,
+					}
+
+					// 4. 发送评估结果到对应的SSE连接
+					if evaluationJSON, err := json.Marshal(evaluationEvent); err == nil {
+						evaluationMessage := string(evaluationJSON)
+						sseWriter := sm.GetSSEWriter(req.SessionID)
+						if sseWriter != nil {
+							if err := sendSSEEventWithType(sseWriter, map[string]interface{}{"type": "evaluation", "data": evaluationMessage}); err != nil {
+								log.Printf("Failed to send evaluation SSE event: %v", err)
+							}
+						}
+					}
+					log.Printf("Evaluation completed for session %s, question %s: Score %d",
+						req.SessionID, req.QuestionID, evaluationResult.Score)
+
+					// 5. 生成下一个问题（如果面试未结束）
+					// 检查是否需要结束面试（例如已达到最大问题数）
+					if session.QuestionCount >= 5 { // 假设最大5个问题
+						// 发送面试结束事件
+						endEvent := map[string]interface{}{
+							"type":        "end",
+							"session_id":  req.SessionID,
+							"message":     "面试已完成，感谢参与！",
+							"final_score": evaluationResult.FinalScore, // 如果有总分
+						}
+						// 发送面试结束事件到对应的SSE连接
+						if endJSON, err := json.Marshal(endEvent); err == nil {
+							endMessage := string(endJSON)
+							sseWriter := sm.GetSSEWriter(req.SessionID)
+							if sseWriter != nil {
+								if err := sendSSEEventWithType(sseWriter, map[string]interface{}{"type": "end", "data": endMessage}); err != nil {
+									log.Printf("Failed to send interview end SSE event: %v", err)
+								}
+							}
+						}
+						log.Printf("Interview ended for session %s", req.SessionID)
+
+						// 更新面试状态为已完成
+						interviewService.UpdateInterviewStatus(evalCtx, session.RecordID, "completed")
+					} else {
+						// 生成下一个问题
+						nextQuestion, err := specializedAgent.GenerateNextQuestion(evalCtx, &agent.NextQuestionRequest{
+							PreviousQuestionID: req.QuestionID,
+							PreviousAnswer:     req.Answer,
+							EvaluationResult:   evaluationResult,
+							CurrentCategory:    session.CurrentQuestionCategory,
+						})
+						if err != nil {
+							log.Printf("Failed to generate next question: %v", err)
+							return
+						}
+
+						// 更新会话信息
+						sm.UpdateSessionQuestionInfo(req.SessionID, nextQuestion.ID, nextQuestion.Category)
+						sm.IncrementQuestionCount(req.SessionID)
+
+						// 构建下一个问题SSE事件数据
+						questionEvent := map[string]interface{}{
+							"type":        "question",
+							"session_id":  req.SessionID,
+							"question_id": nextQuestion.ID,
+							"content":     nextQuestion.Content,
+							"category":    nextQuestion.Category,
+							"difficulty":  nextQuestion.Difficulty,
+							"time_limit":  nextQuestion.TimeLimit,
+						}
+
+						// 发送下一个问题到对应的SSE连接
+						if questionJSON, err := json.Marshal(questionEvent); err == nil {
+							questionMessage := string(questionJSON)
+							sseWriter := sm.GetSSEWriter(req.SessionID)
+							if sseWriter != nil {
+								if err := sendSSEEventWithType(sseWriter, map[string]interface{}{"type": "question", "data": questionMessage}); err != nil {
+									log.Printf("Failed to send next question SSE event: %v", err)
+								}
+							}
+						}
+						log.Printf("Next question generated for session %s", req.SessionID)
+					}
+				}()
+			}
+		}
 	}
 
 	// 返回成功响应
@@ -1050,17 +1253,19 @@ func StartSpecialInterviewStream(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	userID := middleware.GetUserID(c)
-	if userID == 0 {
+	// 获取用户ID并转换为uint类型
+	userIDInt := middleware.GetUserID(c)
+	if userIDInt == 0 {
 		response.Unauthorized(ctx, c, "Authorization token is required")
 		return
 	}
+	userID := uint(userIDInt)
 
 	setupSSEResponse(c)
 
 	interviewService := interviewservice.NewInterviewService()
 	recordDTO := &interviewsapi.InterviewRecordDTO{
-		UserID:     int32(userID),
+		UserID:     int32(userIDInt),
 		Difficulty: req.Difficulty,
 		Domain:     req.Domain,
 		Status:     "pending",
@@ -1075,6 +1280,7 @@ func StartSpecialInterviewStream(ctx context.Context, c *app.RequestContext) {
 	var resumeID int64
 
 	sm := GetSessionManager()
+	// 创建InterviewSession类型的会话，确保包含AnswerChan通道
 	session := sm.CreateSession(userID, recordID, resumeID, hasResume, req.Domain, "专项面试", req.Domain, req.Difficulty)
 
 	pipeReader, pipeWriter := io.Pipe()
@@ -1083,18 +1289,154 @@ func StartSpecialInterviewStream(ctx context.Context, c *app.RequestContext) {
 	go func() {
 		defer pipeWriter.Close()
 
-		sendSSEEvent(pipeWriter, map[string]interface{}{
+		writer := &SSEWriter{ctx: c, writer: pipeWriter}
+
+		// 发送会话ID事件
+		sendSSEEvent(writer, map[string]interface{}{
 			"type":       "session_id",
 			"session_id": session.SessionID,
 			"message":    "Session created successfully",
 		})
 
-		sendSSEEvent(pipeWriter, map[string]interface{}{
+		// 发送开始面试事件
+		sendSSEEvent(writer, map[string]interface{}{
 			"type":       "start",
 			"message":    "面试已开始，正在生成第一个问题...",
 			"session_id": session.SessionID,
 		})
-		//writer := &SSEWriter{ctx: c, writer: pipeWriter}
-		//runSpecialInterviewLoop(ctx, userID, writer, session, interviewService)
+
+		// 调用专项面试循环，确保参数类型匹配
+		runSpecialInterviewLoop(ctx, userID, writer, session, interviewService)
+	}()
+}
+
+// runSpecialInterviewLoop 运行专项面试循环
+func runSpecialInterviewLoop(ctx context.Context, userID uint, writer *SSEWriter, session *InterviewSession, interviewService *interviewservice.InterviewService) {
+	// 更新面试状态为进行中
+	err := interviewService.UpdateInterviewStatus(ctx, session.RecordID, "in_progress")
+	if err != nil {
+		log.Printf("Failed to update interview status: %v", err)
+	}
+
+	// 根据领域创建对应的专项Agent
+	var specializedAgent agent.SpecializedAgent
+	if strings.ToLower(session.Domain) == "go" {
+		// 创建Go专项面试Agent
+		specializedAgent, err = agent.NewGoInterviewAgent(ctx, session.Difficulty, session.Domain)
+		if err != nil {
+			log.Printf("Failed to create Go interview agent: %v", err)
+			writer.WriteError("无法初始化Go专项面试Agent，请稍后再试")
+			return
+		}
+	} else {
+		// 这里可以扩展其他领域的Agent
+		writer.WriteError(fmt.Sprintf("暂不支持 %s 领域的专项面试", session.Domain))
+		return
+	}
+
+	// 面试循环，最多5个问题
+	maxQuestions := 5
+	sm := GetSessionManager()
+
+	for session.QuestionCount < maxQuestions {
+		// 生成问题
+		var question *agent.Question
+		var err error
+
+		if session.QuestionCount == 0 {
+			// 生成第一个问题
+			question, err = specializedAgent.GenerateFirstQuestion(ctx)
+		} else {
+			// 基于之前的交互生成下一个问题
+			question, err = specializedAgent.GenerateNextQuestion(ctx, &agent.NextQuestionRequest{
+				PreviousQuestionID: session.CurrentQuestionID,
+				PreviousAnswer:     session.UserAnswer,
+				CurrentCategory:    session.CurrentQuestionCategory,
+			})
+		}
+
+		if err != nil {
+			log.Printf("Failed to generate question: %v", err)
+			writer.WriteError("无法生成面试问题，请稍后再试")
+			break
+		}
+
+		// 构造问题数据
+		questionData := &interviewsapi.QuestionData{
+			ID:             question.ID,
+			Content:        question.Content,
+			Category:       question.Category,
+			Keywords:       question.Keywords,
+			TimeLimit:      question.TimeLimit,
+			Difficulty:     question.Difficulty,
+			ExpectedPoints: question.ExpectedPoints,
+		}
+
+		// 发送问题
+		if err := writer.WriteQuestion(questionData); err != nil {
+			log.Printf("Failed to send question: %v", err)
+			break
+		}
+
+		// 更新会话状态
+		sm.UpdateSessionQuestionInfo(session.SessionID, question.ID, question.Category)
+
+		// 增加问题计数
+		sm.IncrementQuestionCount(session.SessionID)
+
+		// 等待用户回答（使用带心跳的等待机制）
+		answer, received := waitForAnswerWithHeartbeat(sm, session.SessionID, 5*time.Minute, 10*time.Second, writer)
+		if !received {
+			log.Printf("No answer received for question %s", question.ID)
+			writer.WriteError("等待答案超时")
+			break
+		}
+
+		// 更新用户答案
+		session.UserAnswer = answer
+
+		// 发送心跳确认收到答案
+		writer.WriteHeartbeat()
+
+		// 处理用户答案：评估答案并生成反馈
+		evalReq := &agent.EvaluateRequest{
+			QuestionID: question.ID,
+			Answer:     answer,
+			Category:   question.Category,
+		}
+
+		// 使用专项Agent评估答案
+		evaluationResult, err := specializedAgent.EvaluateAnswer(ctx, evalReq)
+		if err != nil {
+			log.Printf("Failed to evaluate answer: %v", err)
+			// 即使评估失败也继续面试
+		} else {
+			// 发送评估结果
+			evalEvent := map[string]interface{}{
+				"type":        "evaluation",
+				"question_id": question.ID,
+				"score":       evaluationResult.Score,
+				"comments":    evaluationResult.Comments,
+				"suggestions": evaluationResult.Suggestions,
+			}
+			sendSSEEvent(writer, evalEvent)
+		}
+
+		// 检查是否达到最大问题数
+		if session.QuestionCount >= maxQuestions {
+			break
+		}
+	}
+
+	// 标记面试完成
+	writer.WriteCompletion("专项面试已完成，感谢参与！")
+
+	// 更新面试状态为已完成
+	interviewService.UpdateInterviewStatus(ctx, session.RecordID, "completed")
+
+	// 延迟删除会话，给前端充足时间来获取最后的数据
+	go func() {
+		time.Sleep(10 * time.Second)
+		sm.DeleteSession(session.SessionID)
 	}()
 }

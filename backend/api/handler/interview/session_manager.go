@@ -17,26 +17,29 @@ var (
 
 // InterviewSession 面试会话
 type InterviewSession struct {
-	SessionID       string        // 会话ID
-	UserID          uint          // 用户ID
-	RecordID        uint64        // 面试记录ID
-	CurrentQuestion int           // 当前问题索引
-	AllQuestions    []interface{} // 所有问题
-	AllDialogues    []interface{} // 所有对话
-	UserAnswer      string        // 用户的答案
-	AnswerReceived  bool          // 是否收到答案
-	CreatedAt       time.Time     // 创建时间
-	StartTime       time.Time     // 面试开始时间
-	LastActivity    time.Time     // 最后活动时间
-	ResumeId        int64         // 简历id
-	HasResume       bool          // 是否有简历
-	Query           string        // 用户查询
-	AnswerChan      chan string   // 答案通道
-	Done            bool          // 面试是否完成
-	Type            string        // 面试类型（综合面试/专项面试）
-	Domain          string        // 面试领域
-	Difficulty      string        // 难度级别
-	mu              sync.Mutex    // 锁
+	SessionID               string        // 会话ID
+	UserID                  uint          // 用户ID
+	RecordID                uint64        // 面试记录ID
+	CurrentQuestion         int           // 当前问题索引
+	CurrentQuestionID       string        // 当前问题ID
+	CurrentQuestionCategory string        // 当前问题类别
+	QuestionCount           int           // 问题计数
+	AllQuestions            []interface{} // 所有问题
+	AllDialogues            []interface{} // 所有对话
+	UserAnswer              string        // 用户的答案
+	AnswerReceived          bool          // 是否收到答案
+	CreatedAt               time.Time     // 创建时间
+	StartTime               time.Time     // 面试开始时间
+	LastActivity            time.Time     // 最后活动时间
+	ResumeId                int64         // 简历id
+	HasResume               bool          // 是否有简历
+	Query                   string        // 用户查询
+	AnswerChan              chan string   // 答案通道
+	Done                    bool          // 面试是否完成
+	Type                    string        // 面试类型（综合面试/专项面试）
+	Domain                  string        // 面试领域
+	Difficulty              string        // 难度级别
+	mu                      sync.Mutex    // 锁
 }
 
 // SessionManager 会话管理器
@@ -69,23 +72,26 @@ func (sm *SessionManager) CreateSession(userID uint, recordID uint64, resumeId i
 	sessionID := generateSessionID()
 	now := time.Now()
 	session := &InterviewSession{
-		SessionID:       sessionID,
-		UserID:          userID,
-		RecordID:        recordID,
-		CurrentQuestion: 0,
-		AllQuestions:    []interface{}{},
-		AllDialogues:    []interface{}{},
-		CreatedAt:       now,
-		StartTime:       now,
-		LastActivity:    now,
-		ResumeId:        resumeId,
-		HasResume:       hasResume,
-		Query:           query,
-		Type:            interviewType,
-		Domain:          domain,
-		Difficulty:      difficulty,
-		AnswerChan:      make(chan string, 1),
-		Done:            false,
+		SessionID:               sessionID,
+		UserID:                  userID,
+		RecordID:                recordID,
+		CurrentQuestion:         0,
+		CurrentQuestionID:       "",
+		CurrentQuestionCategory: "",
+		QuestionCount:           0,
+		AllQuestions:            []interface{}{},
+		AllDialogues:            []interface{}{},
+		CreatedAt:               now,
+		StartTime:               now,
+		LastActivity:            now,
+		ResumeId:                resumeId,
+		HasResume:               hasResume,
+		Query:                   query,
+		Type:                    interviewType,
+		Domain:                  domain,
+		Difficulty:              difficulty,
+		AnswerChan:              make(chan string, 1),
+		Done:                    false,
 	}
 
 	sm.sessions[sessionID] = session
@@ -209,6 +215,41 @@ func (sm *SessionManager) cleanupExpiredSessions() {
 			delete(sm.sessions, sessionID)
 		}
 	}
+}
+
+// UpdateSessionQuestionInfo 更新会话当前问题信息
+func (sm *SessionManager) UpdateSessionQuestionInfo(sessionID string, questionID string, category string) {
+	sm.mu.RLock()
+	session, ok := sm.sessions[sessionID]
+	sm.mu.RUnlock()
+
+	if !ok {
+		return
+	}
+
+	session.mu.Lock()
+	defer session.mu.Unlock()
+
+	session.CurrentQuestionID = questionID
+	session.CurrentQuestionCategory = category
+	session.LastActivity = time.Now()
+}
+
+// IncrementQuestionCount 增加问题计数
+func (sm *SessionManager) IncrementQuestionCount(sessionID string) {
+	sm.mu.RLock()
+	session, ok := sm.sessions[sessionID]
+	sm.mu.RUnlock()
+
+	if !ok {
+		return
+	}
+
+	session.mu.Lock()
+	defer session.mu.Unlock()
+
+	session.QuestionCount++
+	session.LastActivity = time.Now()
 }
 
 // GetSessionManager 获取会话管理器实例
