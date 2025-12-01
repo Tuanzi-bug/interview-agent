@@ -211,10 +211,9 @@ func GenerateInterviewQuestions(ctx context.Context, prompt string, userId uint,
 
 	//根据面试类型，使用不同的智能体
 	agent := question.NewQuestionAgent(userId, isFirstQuestion)
-	//if interview_type != "综合面试" {
-	//	//专项面试
-	//	agent = question.NewSpecialQuestionAgent(userId, isFirstQuestion)
-	//}
+	if interview_type == "专项面试" {
+		agent = question.NewSpecialQuestionAgent(userId)
+	}
 
 	// 创建 runner
 	runner := adk.NewRunner(timeoutCtx, adk.RunnerConfig{

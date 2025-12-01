@@ -1075,7 +1075,7 @@ func StartSpecialInterviewStream(ctx context.Context, c *app.RequestContext) {
 	var resumeID int64
 
 	sm := GetSessionManager()
-	session := sm.CreateSession(userID, recordID, resumeID, hasResume, "", "", req.Domain, req.Difficulty)
+	session := sm.CreateSession(userID, recordID, resumeID, hasResume, req.Domain, "专项面试", req.Domain, req.Difficulty)
 
 	pipeReader, pipeWriter := io.Pipe()
 	c.SetBodyStream(pipeReader, -1)
@@ -1094,7 +1094,7 @@ func StartSpecialInterviewStream(ctx context.Context, c *app.RequestContext) {
 			"message":    "面试已开始，正在生成第一个问题...",
 			"session_id": session.SessionID,
 		})
-		writer := &SSEWriter{ctx: c, writer: pipeWriter}
-		runInterviewLoopAsyncTool(ctx, userID, writer, session, interviewService)
+		//writer := &SSEWriter{ctx: c, writer: pipeWriter}
+		//runSpecialInterviewLoop(ctx, userID, writer, session, interviewService)
 	}()
 }
