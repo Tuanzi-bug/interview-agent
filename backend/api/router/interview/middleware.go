@@ -249,3 +249,63 @@ func _uploadresumeMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _mianshiMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _answerMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _submitinterviewanswer0Mw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _interview0Mw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _endinterviewMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _sessionMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getsessionMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _streamMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _startinterviewstream0Mw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _submitmianshianswerMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _endmianshiMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _startmianshistreamMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}

@@ -4,6 +4,7 @@ package interview
 
 import (
 	"ai-eino-interview-agent/api/model/interviews"
+	"ai-eino-interview-agent/api/model/mianshi"
 	"ai-eino-interview-agent/api/model/user"
 	"github.com/apache/thrift/lib/go/thrift"
 )
@@ -60,6 +61,32 @@ func NewInterviewsServiceClient(c thrift.TClient) *InterviewsServiceClient {
 	}
 }
 
+type MianshiService interface {
+	mianshi.MianshiService
+}
+
+type MianshiServiceClient struct {
+	*mianshi.MianshiServiceClient
+}
+
+func NewMianshiServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *MianshiServiceClient {
+	return &MianshiServiceClient{
+		MianshiServiceClient: mianshi.NewMianshiServiceClientFactory(t, f),
+	}
+}
+
+func NewMianshiServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *MianshiServiceClient {
+	return &MianshiServiceClient{
+		MianshiServiceClient: mianshi.NewMianshiServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewMianshiServiceClient(c thrift.TClient) *MianshiServiceClient {
+	return &MianshiServiceClient{
+		MianshiServiceClient: mianshi.NewMianshiServiceClient(c),
+	}
+}
+
 type UserServiceProcessor struct {
 	*user.UserServiceProcessor
 }
@@ -75,5 +102,14 @@ type InterviewsServiceProcessor struct {
 
 func NewInterviewsServiceProcessor(handler InterviewsService) *InterviewsServiceProcessor {
 	self := &InterviewsServiceProcessor{interviews.NewInterviewsServiceProcessor(handler)}
+	return self
+}
+
+type MianshiServiceProcessor struct {
+	*mianshi.MianshiServiceProcessor
+}
+
+func NewMianshiServiceProcessor(handler MianshiService) *MianshiServiceProcessor {
+	self := &MianshiServiceProcessor{mianshi.NewMianshiServiceProcessor(handler)}
 	return self
 }
