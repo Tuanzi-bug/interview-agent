@@ -15,8 +15,8 @@ func InterviewSupervisorAgent(userId uint) adk.Agent {
 
 	// 步骤1：创建所有增强子Agent（传入Supervisor名称）
 	resumeAgent := ResumeParsingAgent(supervisorName, userId)
-	questionAgent := QuestionGeneratorAgent(supervisorName, userId)
-	SchoolQuestionGeneratorAgent := SchoolQuestionGeneratorAgent(supervisorName, userId)
+	// questionAgent := QuestionGeneratorAgent(supervisorName, userId)
+	// SchoolQuestionGeneratorAgent := SchoolQuestionGeneratorAgent(supervisorName, userId)
 
 	// 步骤2：配置Supervisor核心逻辑
 	// 面试调度中心提示词模板
@@ -143,8 +143,8 @@ func InterviewSupervisorAgent(userId uint) adk.Agent {
 	// 步骤4：注册子Agent到Supervisor（关键：让Supervisor能找到子Agent）
 	registeredSupervisor, err := adk.SetSubAgents(context.Background(), supervisor, []adk.Agent{
 		resumeAgent,
-		questionAgent,
-		SchoolQuestionGeneratorAgent,
+		// questionAgent,
+		// SchoolQuestionGeneratorAgent,
 	})
 	if err != nil {
 		log.Fatalf("子Agent注册失败：%v", err)
