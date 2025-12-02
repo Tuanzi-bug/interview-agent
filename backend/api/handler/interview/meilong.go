@@ -154,7 +154,7 @@ func StartInterviewMeilong(ctx context.Context, c *app.RequestContext) {
 			return
 		}
 		messageHistory = append(messageHistory, schema.UserMessage(userMessage))
-
+		log.Printf("messageHistory:%s", messageHistory)
 		// 运行 Agent
 		iter := runner.Run(ctx, messageHistory)
 
