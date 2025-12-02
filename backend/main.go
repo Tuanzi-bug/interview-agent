@@ -1,6 +1,7 @@
 package main
 
 import (
+	interviewHandler "ai-eino-interview-agent/api/handler/interview"
 	"ai-eino-interview-agent/api/router"
 	interviewRouter "ai-eino-interview-agent/api/router/interview"
 	"ai-eino-interview-agent/internal/config"
@@ -121,6 +122,21 @@ func main() {
 
 	s.Use(appMiddleware.JWTMiddlewareWithSkipper(interviewRouter.AuthSkipper()))
 	router.GeneratedRegister(s)
+
+	// ========== 持久面试会话路由 ==========
+	// 这些路由提供持久SSE连接，保持面试会话不断开
+	persistentGroup := s.Group("/api/interview/persistent")
+	{
+		// 开始持久面试会话（SSE长连接）
+		persistentGroup.POST("/start", interviewHandler.StartPersistentInterview)
+		// 发送面试消息
+		persistentGroup.POST("/message", interviewHandler.SendInterviewMessage)
+		// 结束面试
+		persistentGroup.POST("/end", interviewHandler.EndInterview)
+		// 获取当前用户的活跃会话
+		persistentGroup.GET("/session", interviewHandler.GetInterviewSession)
+	}
+	log.Println("Persistent interview routes registered")
 
 	// 创建一个通道来监听中断信号
 	quit := make(chan os.Signal, 1)
