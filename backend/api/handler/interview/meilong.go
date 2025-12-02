@@ -70,11 +70,14 @@ func StartPersistentInterview(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// 2. 获取用户ID
+	// 2. 获取用户ID（优先使用JWT，其次使用请求体）
 	jwtUserID := middleware.GetUserID(c)
+	log.Printf("[PersistentInterview] JWT解析的UserID=%d, 请求体中的UserID=%d", jwtUserID, req.UserID)
+
 	userID := jwtUserID
 	if userID == 0 {
 		userID = req.UserID
+		log.Printf("[PersistentInterview] JWT未获取到用户ID，使用请求体中的UserID: %d", userID)
 	}
 	if userID == 0 {
 		c.JSON(consts.StatusUnauthorized, TestAgentResponse{
@@ -84,7 +87,7 @@ func StartPersistentInterview(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	log.Printf("[PersistentInterview] 开始持久面试: userID=%d", userID)
+	log.Printf("[PersistentInterview] 最终使用的UserID=%d", userID)
 
 	// 3. 创建新会话（支持多会话，每个会话独立上下文）
 	mgr := GetPersistentSessionManager()

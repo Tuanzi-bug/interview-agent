@@ -224,6 +224,15 @@ func (s *PersistentSession) processMessages() {
 
 // handleUserMessage 处理用户消息
 func (s *PersistentSession) handleUserMessage(msg UserMessageReq) {
+	// 添加 panic 恢复，防止服务崩溃
+	defer func() {
+		if r := recover(); r != nil {
+			errMsg := fmt.Sprintf("处理消息时发生错误: %v (请检查是否已配置AI模型)", r)
+			log.Printf("[PersistentSession] panic recovered: %v", r)
+			s.ResponseChan <- SSEResponse{EventType: "error", Data: errMsg}
+		}
+	}()
+
 	userMessage := msg.Message
 
 	// 处理简历相关逻辑（如需要可扩展）
