@@ -1,7 +1,7 @@
 package service
 
 import (
-	"ai-eino-interview-agent/chatApp/agent/question"
+	"ai-eino-interview-agent/chatApp/agent/bearAgent"
 	"ai-eino-interview-agent/chatApp/agent/session"
 	"context"
 	"encoding/json"
@@ -38,7 +38,25 @@ type QuestionGeneratorResult struct {
 // interviewType: "综合面试" 或 "专项面试"
 // domain: 面试领域（综合面试：校招/社招；专项面试：java/golang等）
 // difficulty: 难度级别（简单/中等/困难）
-func BuildInterviewPrompt(questionIndex int, query string, resumeID int64, hasResume bool, dimension string, followUpCount int, interviewType string, domain string, difficulty string) string {
+func BuildInterviewPrompt(difficulty string) string {
+	// 构建面试类型和难度的描述
+	difficultyDesc := ""
+	switch difficulty {
+	case "简单":
+		difficultyDesc = "初级难度"
+	case "中等":
+		difficultyDesc = "中级难度"
+	case "困难":
+		difficultyDesc = "高级难度"
+	default:
+		difficultyDesc = "中级难度"
+	}
+
+	//todo 优化提示词
+	return "请你根据" + difficultyDesc + "生成对应的面试题问题，或者追问"
+}
+
+func BuildInterviewPromptBackup(questionIndex int, query string, resumeID int64, hasResume bool, dimension string, followUpCount int, interviewType string, domain string, difficulty string) string {
 	// 根据面试类型选择维度
 	var dimensionMap map[string]string
 	if interviewType == "综合面试" {
@@ -203,14 +221,13 @@ JSON格式：
 
 // GenerateInterviewQuestions 调用智能体生成面试问题
 // 返回生成的问题列表和对话列表
-// isFirstQuestion: 是否是第一个问题（决定是否需要简历解析工具）
-func GenerateInterviewQuestions(ctx context.Context, prompt string, userId uint, isFirstQuestion bool, interview_type string) (*QuestionGeneratorResult, error) {
+func GenerateInterviewQuestions(ctx context.Context, prompt string, userId uint, interview_type string) (*QuestionGeneratorResult, error) {
 	// 添加 30分钟 超时，防止无限等待（API 响应可能需要较长时间）
 	timeoutCtx, cancel := context.WithTimeout(ctx, 1800*time.Second)
 	defer cancel()
 
 	//根据面试类型，使用不同的智能体
-	agent := question.NewQuestionAgent(userId, isFirstQuestion)
+	agent := bearAgent.SchoolQuestionGeneratorAgent(userId)
 	//if interview_type != "综合面试" {
 	//	//专项面试
 	//	agent = question.NewSpecialQuestionAgent(userId, isFirstQuestion)
