@@ -6,7 +6,6 @@ import (
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
 	"ai-eino-interview-agent/api/response"
 	"ai-eino-interview-agent/chatApp/agent/service"
-	"ai-eino-interview-agent/internal/alert"
 	"ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/model"
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
@@ -273,7 +272,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 	const heartbeatInterval = 15 * time.Second
 
 	// 标记是否是第一个问题
-	//isFirstQuestion := true
+	isFirstQuestion := true
 
 	for {
 		select {
@@ -283,10 +282,36 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 		default:
 		}
 
-		// 生成问题
-		prompt := buildPrompt(session.Difficulty)
+		// 检查session是否为nil
+		if session == nil {
+			log.Printf("[Interview Loop] ERROR: Session is nil, sessionID: %s", "unknown")
+			sendErrorEvent(writer, "会话异常，请重新开始面试")
+			sendCompleteEvent(writer)
+			break
+		}
+		log.Printf("session:%v, SessionID: %s", session, session.SessionID)
+		query := ""
+		if isFirstQuestion {
+			//系统向大模型提问，把用户的简历投喂给大模型，让大模型结合简历内容回答问题
+			query = "# 个人简历\n\n## 基本信息\n- 姓名：张三\n- 工作年限：3年\n- 求职意向：Go后端开发工程师\n\n## 教育背景\n- 2018.09 - 2022.06  XX大学  计算机科学与技术  本科\n\n## 工作经历\n\n### 某科技有限公司 | 后端开发工程师 | 2022.07 - 至今\n\n**项目一：电商订单系统重构**\n- 项目背景：负责公司核心订单系统的技术重构，将单体应用拆分为微服务架构\n- 技术栈：Go、Gin、gRPC、MySQL、Redis、Kafka、Docker、K8s\n- 主要职责：\n  - 设计并实现订单服务、库存服务、支付服务的微服务拆分方案\n  - 使用Redis实现分布式锁解决库存超卖问题\n  - 基于Kafka实现订单状态变更的异步通知机制\n- 项目成果：系统QPS从500提升至3000，订单处理延迟从200ms降低至50ms\n\n**项目二：实时数据分析平台**\n- 技术栈：Go、ClickHouse、Elasticsearch、Grafana\n- 主要职责：设计高性能数据采集服务，支持每秒10万条数据写入\n\n## 技术技能\n- 编程语言：Go（精通）、Python（熟练）\n- 数据库：MySQL、Redis、ClickHouse\n- 中间件：Kafka、Elasticsearch\n- 云原生：Docker、Kubernetes 请你结合简历内容向用户提问。"
+		} else {
+			// 更新会话状态，确保从SessionManager中获取最新的会话信息
+			session = sm.GetSession(session.SessionID)
+			if session == nil {
+				log.Printf("[Interview Loop] ERROR: Session not found, sessionID: %s", session.SessionID)
+				sendErrorEvent(writer, "会话已过期，请重新开始面试")
+				sendCompleteEvent(writer)
+				break
+			}
+			query = session.UserAnswer
+			log.Printf("这是用户的回答: %s", query)
+			// 确保及时更新会话最后活动时间
+			sm.UpdateSession(session)
+		}
+
 		log.Printf("[Interview Loop] Generating question, sessionID: %s", session.SessionID)
-		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId, session.Type, session.Domain)
+		//生成问题
+		result, err := service.GenerateInterviewQuestions(ctx, query, userId, session.Type, session.Domain)
 		if err != nil {
 			sendErrorEvent(writer, "Failed to generate question: "+err.Error())
 			sendCompleteEvent(writer)
@@ -345,65 +370,65 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 		})
 
 		// 清除答案标记，准备下一轮
-		sm.ClearAnswer(session.SessionID)
+		//sm.ClearAnswer(session.SessionID)
 
 		// 更新标记，后续不是第一个问题
-		//isFirstQuestion = false
+		isFirstQuestion = false
 	}
 
 	log.Printf("[Interview Loop] Saving dialogues, sessionID: %s", session.SessionID)
 	// 保存面试对话，带重试机制
-	const maxRetries = 3
-	var saveErr error
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		saveErr = interviewService.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, session.AllQuestions, session.AllDialogues)
-		if saveErr == nil {
-			break
-		}
-
-		// 判断是否为可重试的错误
-		if !IsRetryableError(saveErr) {
-			// 上下文取消/超时通常是用户主动中断或请求生命周期结束，不发送告警
-			if !errors.Is(saveErr, context.Canceled) && !errors.Is(saveErr, context.DeadlineExceeded) {
-				alert.SendDatabaseErrorAlert(
-					fmt.Sprintf("SaveInterviewDialogues (不可重试) - UserID: %d, RecordID: %d", session.UserID, session.RecordID),
-					saveErr,
-					attempt+1,
-				)
-			}
-			break
-		}
-
-		// 最后一次尝试失败（所有重试机会耗尽）
-		if attempt == maxRetries-1 {
-			alert.SendDatabaseErrorAlert(
-				fmt.Sprintf("SaveInterviewDialogues (重试耗尽) - UserID: %d, RecordID: %d", session.UserID, session.RecordID),
-				saveErr,
-				maxRetries,
-			)
-			break
-		}
-
-		// 指数退避：等待 100ms * 2^attempt
-		backoffDuration := time.Duration(100*(1<<uint(attempt))) * time.Millisecond
-		time.Sleep(backoffDuration)
-	}
-
-	duration := int64(time.Since(session.StartTime).Seconds())
-
-	updateDTO := &interviewsapi.InterviewRecordDTO{
-		ID:       int64(session.RecordID),
-		UserID:   int32(session.UserID),
-		Status:   "completed",
-		Duration: &duration,
-	}
-
-	log.Printf("[Interview Loop] Updating interview record, sessionID: %s, duration: %d seconds", session.SessionID, duration)
-	if err := interviewService.UpdateInterviewRecord(ctx, updateDTO); err != nil {
-		// 记录更新失败，但不中断流程
-		log.Printf("[Interview Loop] Failed to update interview record: %v, sessionID: %s", err, session.SessionID)
-		_ = err
-	}
+	//const maxRetries = 3
+	//var saveErr error
+	//for attempt := 0; attempt < maxRetries; attempt++ {
+	//	saveErr = interviewService.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, session.AllQuestions, session.AllDialogues)
+	//	if saveErr == nil {
+	//		break
+	//	}
+	//
+	//	// 判断是否为可重试的错误
+	//	if !IsRetryableError(saveErr) {
+	//		// 上下文取消/超时通常是用户主动中断或请求生命周期结束，不发送告警
+	//		if !errors.Is(saveErr, context.Canceled) && !errors.Is(saveErr, context.DeadlineExceeded) {
+	//			alert.SendDatabaseErrorAlert(
+	//				fmt.Sprintf("SaveInterviewDialogues (不可重试) - UserID: %d, RecordID: %d", session.UserID, session.RecordID),
+	//				saveErr,
+	//				attempt+1,
+	//			)
+	//		}
+	//		break
+	//	}
+	//
+	//	// 最后一次尝试失败（所有重试机会耗尽）
+	//	if attempt == maxRetries-1 {
+	//		alert.SendDatabaseErrorAlert(
+	//			fmt.Sprintf("SaveInterviewDialogues (重试耗尽) - UserID: %d, RecordID: %d", session.UserID, session.RecordID),
+	//			saveErr,
+	//			maxRetries,
+	//		)
+	//		break
+	//	}
+	//
+	//	// 指数退避：等待 100ms * 2^attempt
+	//	backoffDuration := time.Duration(100*(1<<uint(attempt))) * time.Millisecond
+	//	time.Sleep(backoffDuration)
+	//}
+	//
+	//duration := int64(time.Since(session.StartTime).Seconds())
+	//
+	//updateDTO := &interviewsapi.InterviewRecordDTO{
+	//	ID:       int64(session.RecordID),
+	//	UserID:   int32(session.UserID),
+	//	Status:   "completed",
+	//	Duration: &duration,
+	//}
+	//
+	//log.Printf("[Interview Loop] Updating interview record, sessionID: %s, duration: %d seconds", session.SessionID, duration)
+	//if err := interviewService.UpdateInterviewRecord(ctx, updateDTO); err != nil {
+	//	// 记录更新失败，但不中断流程
+	//	log.Printf("[Interview Loop] Failed to update interview record: %v, sessionID: %s", err, session.SessionID)
+	//	_ = err
+	//}
 
 	//todo debug结束后解除注释
 	//// 面试完成后，发送 MQ 消息触发评估报告生成

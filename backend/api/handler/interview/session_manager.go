@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 )
@@ -131,6 +132,7 @@ func (sm *SessionManager) SubmitAnswer(sessionID, answer string) error {
 	defer session.mu.Unlock()
 
 	session.UserAnswer = answer
+	log.Println("这是session的UserAnswer：" + answer)
 	session.AnswerReceived = true
 	session.LastActivity = time.Now()
 

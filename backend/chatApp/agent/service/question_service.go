@@ -221,7 +221,7 @@ JSON格式：
 }
 
 // GenerateInterviewQuestions 生成面试问题
-func GenerateInterviewQuestions(ctx context.Context, prompt string, userId uint, interview_type string, domain string) (string, error) {
+func GenerateInterviewQuestions(ctx context.Context, query string, userId uint, interview_type string, domain string) (string, error) {
 	log.Printf("[DEBUG] 开始生成面试问题，用户ID: %d，面试类型: %s，领域: %s", userId, interview_type, domain)
 
 	// 添加 30分钟 超时，防止无限等待（API 响应可能需要较长时间）
@@ -248,11 +248,7 @@ func GenerateInterviewQuestions(ctx context.Context, prompt string, userId uint,
 	runner := adk.NewRunner(timeoutCtx, adk.RunnerConfig{
 		Agent: agent,
 	})
-	log.Printf("[DEBUG] 构建用户消息，提示词长度: %d", len(prompt))
-
-	//构建查询消息 todo 这里传用户的回答
-	query := fmt.Sprintf(`用户的回答: %s`, prompt)
-	log.Printf("[DEBUG] GenerateInterviewQuestions prompt: %s\n", prompt)
+	log.Printf("[DEBUG] 构建用户消息，提示词长度: %d", len(query))
 
 	// 创建用户消息
 	userMsg := &schema.Message{
