@@ -41,6 +41,25 @@ func Register(r *server.Hertz) {
 			}
 		}
 		{
+			_mianshi := _api.Group("/mianshi", _mianshiMw()...)
+			{
+				_answer := _mianshi.Group("/answer", _answerMw()...)
+				_answer.POST("/submit", append(_submitmianshianswerMw(), interview.SubmitMianshiAnswer)...)
+			}
+			{
+				_interview0 := _mianshi.Group("/interview", _interview0Mw()...)
+				_interview0.POST("/end", append(_endmianshiMw(), interview.EndMianshi)...)
+			}
+			{
+				_session := _mianshi.Group("/session", _sessionMw()...)
+				_session.GET("/info", append(_getsessionMw(), interview.GetSession)...)
+			}
+			{
+				_stream := _mianshi.Group("/stream", _streamMw()...)
+				_stream.POST("/start", append(_startmianshistreamMw(), interview.StartMianshiStream)...)
+			}
+		}
+		{
 			_resume := _api.Group("/resume", _resumeMw()...)
 			_resume.GET("/default", append(_getdefaultresumeMw(), interview.GetDefaultResume)...)
 			_resume.GET("/list", append(_getuserresumesMw(), interview.GetUserResumes)...)
