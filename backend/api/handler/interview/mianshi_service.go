@@ -66,6 +66,10 @@ func StartMianshiStream(ctx context.Context, c *app.RequestContext) {
 	}
 	session := sm.CreateSessionWithDetails(userID, recordID, resumeID, hasResume, "", req.Type, req.Domain, req.Difficulty, companyName, positionName)
 
+	// 创建可取消的 context
+	cancelCtx, cancelFunc := context.WithCancel(ctx)
+	session.CancelFunc = cancelFunc
+
 	// 设置 SSE 响应头（必须在发送任何响应之前）
 	mianshi.SetupSSEResponse(c)
 
@@ -104,7 +108,7 @@ func StartMianshiStream(ctx context.Context, c *app.RequestContext) {
 		}
 		// 创建面试引擎并运行
 		engine := mianshi.NewInterviewEngine(sm, interviewSvc, pipeWriter)
-		engine.RunInterviewLoop(ctx, session)
+		engine.RunInterviewLoop(cancelCtx, session)
 	}()
 }
 
@@ -264,6 +268,11 @@ func EndMianshi(ctx context.Context, c *app.RequestContext) {
 	endTimeMs := endTime.UnixMilli()
 	totalQuestions := int32(len(session.AllQuestions))
 	answeredQuestions := int32(len(session.AllDialogues) / 2)
+
+	// 取消面试循环，立即关闭 SSE 连接
+	if session.CancelFunc != nil {
+		session.CancelFunc()
+	}
 
 	// 延迟删除会话
 	go func() {

@@ -10,7 +10,7 @@ import (
 )
 
 // WaitForAnswerWithHeartbeat 等待用户答案，并定期发送心跳保活
-func WaitForAnswerWithHeartbeat(sm *SessionManager, sessionID string, timeout time.Duration, heartbeatInterval time.Duration, writer io.Writer) (string, bool) {
+func WaitForAnswerWithHeartbeat(ctx context.Context, sm *SessionManager, sessionID string, timeout time.Duration, heartbeatInterval time.Duration, writer io.Writer) (string, bool) {
 	log.Printf("[Wait Answer] Starting, sessionID: %s, timeout: %v, heartbeatInterval: %v", sessionID, timeout, heartbeatInterval)
 
 	heartbeatTicker := time.NewTicker(heartbeatInterval)
@@ -29,6 +29,11 @@ func WaitForAnswerWithHeartbeat(sm *SessionManager, sessionID string, timeout ti
 	heartbeatCount := 0
 	for {
 		select {
+		// 监听 context 取消信号
+		case <-ctx.Done():
+			log.Printf("[Wait Answer] Context cancelled, sessionID: %s", sessionID)
+			return "", false
+
 		// 定期发送心跳保活
 		case <-heartbeatTicker.C:
 			heartbeatCount++

@@ -55,7 +55,7 @@ func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *Intervi
 		// 等待用户答案（除了第一个问题）
 		if questionIndex > 0 {
 			log.Printf("[Interview Engine] Waiting for answer, sessionID: %s, questionIndex: %d", session.SessionID, questionIndex)
-			answer, received := WaitForAnswerWithHeartbeat(e.sessionManager, session.SessionID, answerTimeout, heartbeatInterval, e.writer)
+			answer, received := WaitForAnswerWithHeartbeat(ctx, e.sessionManager, session.SessionID, answerTimeout, heartbeatInterval, e.writer)
 			if !received {
 				log.Printf("[Interview Engine] Answer timeout, sessionID: %s", session.SessionID)
 				SendErrorEvent(e.writer, "等待答案超时，面试已结束")

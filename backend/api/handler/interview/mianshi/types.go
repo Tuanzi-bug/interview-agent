@@ -1,6 +1,7 @@
 package mianshi
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -28,6 +29,7 @@ type InterviewSession struct {
 	AllQuestions []map[string]interface{}
 	AllDialogues []map[string]interface{}
 	AnswerChan   chan string
+	CancelFunc   context.CancelFunc // 用于取消面试循环
 	StartTime    time.Time
 	LastActivity time.Time
 }
