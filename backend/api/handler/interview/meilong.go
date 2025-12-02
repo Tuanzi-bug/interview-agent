@@ -3,15 +3,17 @@ package interview
 import (
 	"ai-eino-interview-agent/chatApp/agent/bearAgent"
 	"ai-eino-interview-agent/internal/middleware"
+	"ai-eino-interview-agent/internal/model"
+	"io"
+	"log"
+	"strings"
+	"time"
+
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"golang.org/x/net/context"
-	"io"
-	"log"
-	"strings"
-	"time"
 )
 
 // TestAgentRequest 测试请求结构
@@ -19,7 +21,8 @@ type TestAgentRequest struct {
 	UserID    uint          `json:"user_id,omitempty"`          // 可选用户ID（优先使用JWT中的用户ID）
 	Message   string        `json:"message" binding:"required"` // 用户输入消息
 	History   []ChatMessage `json:"history,omitempty"`          // 可选的对话历史
-	UseResume bool          `json:"use_resume,omitempty"`       // 是否使用测试简历
+	UseResume bool          `json:"use_resume,omitempty"`       // 是否使用简历
+	ResumeID  uint64        `json:"resume_id,omitempty"`        // 简历ID（前端传入）
 }
 
 // ChatMessage 对话消息结构
@@ -36,41 +39,41 @@ type TestAgentResponse struct {
 	Duration string `json:"duration,omitempty"`
 }
 
-// 测试用简历
-const testResume = `
-# 个人简历
-
-## 基本信息
-- 姓名：张三
-- 工作年限：3年
-- 求职意向：Go后端开发工程师
-
-## 教育背景
-- 2018.09 - 2022.06  XX大学  计算机科学与技术  本科
-
-## 工作经历
-
-### 某科技有限公司 | 后端开发工程师 | 2022.07 - 至今
-
-**项目一：电商订单系统重构**
-- 项目背景：负责公司核心订单系统的技术重构，将单体应用拆分为微服务架构
-- 技术栈：Go、Gin、gRPC、MySQL、Redis、Kafka、Docker、K8s
-- 主要职责：
-  - 设计并实现订单服务、库存服务、支付服务的微服务拆分方案
-  - 使用Redis实现分布式锁解决库存超卖问题
-  - 基于Kafka实现订单状态变更的异步通知机制
-- 项目成果：系统QPS从500提升至3000，订单处理延迟从200ms降低至50ms
-
-**项目二：实时数据分析平台**
-- 技术栈：Go、ClickHouse、Elasticsearch、Grafana
-- 主要职责：设计高性能数据采集服务，支持每秒10万条数据写入
-
-## 技术技能
-- 编程语言：Go（精通）、Python（熟练）
-- 数据库：MySQL、Redis、ClickHouse
-- 中间件：Kafka、Elasticsearch
-- 云原生：Docker、Kubernetes
-`
+// 测试用简历（已弃用，改为从数据库获取）
+// const testResume = `
+// # 个人简历
+//
+// ## 基本信息
+// - 姓名：张三
+// - 工作年限：3年
+// - 求职意向：Go后端开发工程师
+//
+// ## 教育背景
+// - 2018.09 - 2022.06  XX大学  计算机科学与技术  本科
+//
+// ## 工作经历
+//
+// ### 某科技有限公司 | 后端开发工程师 | 2022.07 - 至今
+//
+// **项目一：电商订单系统重构**
+// - 项目背景：负责公司核心订单系统的技术重构，将单体应用拆分为微服务架构
+// - 技术栈：Go、Gin、gRPC、MySQL、Redis、Kafka、Docker、K8s
+// - 主要职责：
+//   - 设计并实现订单服务、库存服务、支付服务的微服务拆分方案
+//   - 使用Redis实现分布式锁解决库存超卖问题
+//   - 基于Kafka实现订单状态变更的异步通知机制
+// - 项目成果：系统QPS从500提升至3000，订单处理延迟从200ms降低至50ms
+//
+// **项目二：实时数据分析平台**
+// - 技术栈：Go、ClickHouse、Elasticsearch、Grafana
+// - 主要职责：设计高性能数据采集服务，支持每秒10万条数据写入
+//
+// ## 技术技能
+// - 编程语言：Go（精通）、Python（熟练）
+// - 数据库：MySQL、Redis、ClickHouse
+// - 中间件：Kafka、Elasticsearch
+// - 云原生：Docker、Kubernetes
+// `
 
 // StartInterviewMeilong .
 // @router /api/interview/meilong/stream [POST]
@@ -145,7 +148,28 @@ func StartInterviewMeilong(ctx context.Context, c *app.RequestContext) {
 		// 处理当前消息
 		userMessage := req.Message
 		if req.UseResume {
-			userMessage = "请分析以下简历并开始面试：\n" + testResume
+			// 原先使用硬编码简历的代码（已注释）
+			// userMessage = "请分析以下简历并开始面试：\n" + testResume
+
+			// 通过前端传的简历ID从数据库获取简历
+			// TODO: 目前写死 resumeID=4 用于测试，后续改为使用 req.ResumeID
+			resumeID := uint64(4) // 写死用于测试
+			// resumeID := req.ResumeID // 正式使用前端传参时启用这行
+			log.Printf("[TestAgentStream] 请求的ResumeID: %d (写死测试值: 4)", req.ResumeID)
+
+			resume, err := model.ResumeDao.GetResumeByID(resumeID)
+			if err != nil {
+				log.Printf("[TestAgentStream] 获取简历失败: resumeID=%d, err=%v", resumeID, err)
+				writeSSEEvent(pipeWriter, "error", "获取简历失败，简历不存在")
+				return
+			}
+			if resume.Content == "" {
+				log.Printf("[TestAgentStream] 简历内容为空: resumeID=%d", resumeID)
+				writeSSEEvent(pipeWriter, "error", "简历内容为空，请重新上传简历")
+				return
+			}
+			log.Printf("[TestAgentStream] 获取简历成功: resumeID=%d, userID=%d", resume.ID, resume.UserID)
+			userMessage = "请分析以下简历并开始面试：\n" + resume.Content
 		}
 
 		// 确保用户消息不为空，避免 "missing messages.content" 错误
