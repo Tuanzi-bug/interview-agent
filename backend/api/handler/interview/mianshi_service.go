@@ -4,72 +4,281 @@ package interview
 
 import (
 	"context"
+	"io"
+	"log"
+	"time"
 
-	mianshi "ai-eino-interview-agent/api/model/mianshi"
+	"ai-eino-interview-agent/api/handler/interview/mianshi"
+	interviewsapi "ai-eino-interview-agent/api/model/interviews"
+	mianshiapi "ai-eino-interview-agent/api/model/mianshi"
+	"ai-eino-interview-agent/api/response"
+	"ai-eino-interview-agent/internal/middleware"
+	interviewservice "ai-eino-interview-agent/internal/service/interviews"
+
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
 
-// StartMianshiStream .
+// StartMianshiStream 启动面试流程（SSE 模式）
 // @router /api/mianshi/stream/start [POST]
 func StartMianshiStream(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req mianshi.MianshiStartInterviewRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	var req mianshiapi.MianshiStartInterviewRequest
+	if err := c.BindAndValidate(&req); err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
-	resp := new(mianshi.MianshiStartInterviewResponse)
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Authorization token is required")
+		return
+	}
+	// 创建面试记录
+	interviewSvc := interviewservice.NewInterviewService()
+	recordDTO := &interviewsapi.InterviewRecordDTO{
+		UserID:       int32(userID),
+		Type:         req.Type,
+		Difficulty:   req.Difficulty,
+		Domain:       req.Domain,
+		PositionName: req.PositionName,
+		CompanyName:  req.CompanyName,
+		Status:       "pending",
+	}
+	recordID, err := interviewSvc.CreateInterviewRecord(ctx, recordDTO)
+	if err != nil {
+		response.InternalServerError(ctx, c, "Failed to create interview record: "+err.Error())
+		return
+	}
+	// 处理简历参数
+	var hasResume bool
+	var resumeID int64
+	if req.ResumeID != nil && *req.ResumeID > 0 {
+		hasResume = true
+		resumeID = *req.ResumeID
+	}
+	// 获取全局会话管理器并创建会话
+	sm := mianshi.GetGlobalSessionManager()
+	var companyName, positionName string
+	if req.CompanyName != nil {
+		companyName = *req.CompanyName
+	}
+	if req.PositionName != nil {
+		positionName = *req.PositionName
+	}
+	session := sm.CreateSessionWithDetails(userID, recordID, resumeID, hasResume, "", req.Type, req.Domain, req.Difficulty, companyName, positionName)
 
-	c.JSON(consts.StatusOK, resp)
+	// 设置 SSE 响应头（必须在发送任何响应之前）
+	mianshi.SetupSSEResponse(c)
+
+	// 建立 SSE 连接
+	pipeReader, pipeWriter := io.Pipe()
+	c.SetBodyStream(pipeReader, -1)
+
+	// 启动异步面试循环（处理整个 SSE 流程）
+	go func() {
+		defer func(pipeWriter *io.PipeWriter) {
+			err = pipeWriter.Close()
+			if err != nil {
+
+			}
+		}(pipeWriter)
+		// 发送会话ID事件（作为初始响应）
+		startTime := session.StartTime.UnixMilli()
+		err = mianshi.SendSSEEvent(pipeWriter, map[string]interface{}{
+			"type":       "session_id",
+			"session_id": session.SessionID,
+			"record_id":  recordID,
+			"message":    "Interview started successfully",
+			"start_time": startTime,
+		})
+		if err != nil {
+			return
+		}
+		// 发送开始事件
+		err = mianshi.SendSSEEvent(pipeWriter, map[string]interface{}{
+			"type":       "start",
+			"message":    "面试已开始，正在生成第一个问题...",
+			"session_id": session.SessionID,
+		})
+		if err != nil {
+			return
+		}
+		// 创建面试引擎并运行
+		engine := mianshi.NewInterviewEngine(sm, interviewSvc, pipeWriter)
+		engine.RunInterviewLoop(ctx, session)
+	}()
 }
 
-// SubmitMianshiAnswer .
+// SubmitMianshiAnswer 提交面试答案
 // @router /api/mianshi/answer/submit [POST]
 func SubmitMianshiAnswer(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req mianshi.MianshiSubmitInterviewAnswerRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	var req mianshiapi.MianshiSubmitInterviewAnswerRequest
+	if err := c.BindAndValidate(&req); err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
+	if req.SessionID == "" {
+		response.BadRequest(ctx, c, "session_id is required")
+		return
+	}
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+	// 获取全局会话管理器
+	sm := mianshi.GetGlobalSessionManager()
+	session := sm.GetSession(req.SessionID)
+	if session == nil {
+		response.NotFound(ctx, c, "Session not found")
+		return
+	}
+	if session.UserID != userID {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+	answerToSubmit := req.Answer
+	if req.Action != nil && (*req.Action == "quit" || *req.Action == "continue") {
+		answerToSubmit = *req.Action
+	}
+	if err := sm.SubmitAnswer(req.SessionID, answerToSubmit); err != nil {
+		response.InternalServerError(ctx, c, err.Error())
+		return
+	}
+	// 计算问题索引和是否为最后一个问题
+	questionIndex := int32(len(session.AllQuestions))
+	isLastQuestion := false // 这个值由引擎在完成时设置
 
-	resp := new(mianshi.MianshiSubmitInterviewAnswerResponse)
+	resp := &mianshiapi.MianshiSubmitInterviewAnswerResponse{
+		Status:         "received",
+		Message:        &req.Answer,
+		SessionID:      &req.SessionID,
+		QuestionIndex:  &questionIndex,
+		IsLastQuestion: &isLastQuestion,
+	}
 
-	c.JSON(consts.StatusOK, resp)
+	response.Success(ctx, c, resp)
 }
 
-// GetSession .
+// GetSession 获取会话信息
 // @router /api/mianshi/session/info [GET]
 func GetSession(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req mianshi.MianshiGetSessionRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	var req mianshiapi.MianshiGetSessionRequest
+	if err := c.BindAndValidate(&req); err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
-	resp := new(mianshi.MianshiGetSessionResponse)
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
 
-	c.JSON(consts.StatusOK, resp)
+	sm := mianshi.GetGlobalSessionManager()
+	session := sm.GetSession(req.SessionID)
+	if session == nil {
+		response.NotFound(ctx, c, "Session not found")
+		return
+	}
+
+	if session.UserID != userID {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+
+	// 构建返回的会话信息
+	interviewSession := &mianshiapi.InterviewSession{
+		SessionID:  session.SessionID,
+		UserID:     int32(session.UserID),
+		RecordID:   int64(session.RecordID),
+		Type:       session.Type,
+		Domain:     session.Domain,
+		Difficulty: session.Difficulty,
+		ResumeID:   &session.ResumeId,
+		HasResume:  &session.HasResume,
+		StartTime:  session.StartTime.UnixMilli(),
+		Status:     session.Status,
+	}
+
+	if session.StartTime != (time.Time{}) {
+		endTime := session.LastActivity.UnixMilli()
+		interviewSession.EndTime = &endTime
+	}
+
+	elapsedTime := int64(time.Since(session.StartTime).Seconds())
+	currentQuestionIndex := int32(len(session.AllQuestions))
+	answeredCount := int32(len(session.AllDialogues) / 2)
+	totalCount := int32(len(session.AllQuestions))
+
+	resp := &mianshiapi.MianshiGetSessionResponse{
+		Session:              interviewSession,
+		CurrentQuestionIndex: &currentQuestionIndex,
+		AnsweredCount:        &answeredCount,
+		TotalCount:           &totalCount,
+		ElapsedTime:          &elapsedTime,
+	}
+
+	response.Success(ctx, c, resp)
 }
 
-// EndMianshi .
+// EndMianshi 结束面试
 // @router /api/mianshi/interview/end [POST]
 func EndMianshi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req mianshi.MianshiEndInterviewRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	var req mianshiapi.MianshiEndInterviewRequest
+	if err := c.BindAndValidate(&req); err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
 		return
 	}
 
-	resp := new(mianshi.MianshiEndInterviewResponse)
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
 
-	c.JSON(consts.StatusOK, resp)
+	sm := mianshi.GetGlobalSessionManager()
+	session := sm.GetSession(req.SessionID)
+	if session == nil {
+		response.NotFound(ctx, c, "Session not found")
+		return
+	}
+
+	if session.UserID != userID {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+
+	// 更新会话状态
+	session.Status = "completed"
+	endTime := time.Now()
+	session.LastActivity = endTime
+
+	// 保存面试数据
+	interviewSvc := interviewservice.NewInterviewService()
+	if err := interviewSvc.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, mianshi.ConvertToInterfaceSlice(session.AllQuestions), mianshi.ConvertToInterfaceSlice(session.AllDialogues)); err != nil {
+		log.Printf("[EndMianshi] Failed to save interview dialogues: %v, sessionID: %s", err, req.SessionID)
+	}
+
+	// 计算面试时长
+	duration := int64(endTime.Sub(session.StartTime).Seconds())
+	endTimeMs := endTime.UnixMilli()
+	totalQuestions := int32(len(session.AllQuestions))
+	answeredQuestions := int32(len(session.AllDialogues) / 2)
+
+	// 延迟删除会话
+	go func() {
+		time.Sleep(1 * time.Second)
+		sm.DeleteSession(req.SessionID)
+	}()
+	log.Printf("[EndMianshi] Interview ended, sessionID: %s, userID: %d, duration: %d seconds", req.SessionID, userID, duration)
+	msg := "Interview ended successfully"
+	resp := &mianshiapi.MianshiEndInterviewResponse{
+		Status:            "success",
+		Message:           &msg,
+		Duration:          &duration,
+		EndTime:           &endTimeMs,
+		TotalQuestions:    &totalQuestions,
+		AnsweredQuestions: &answeredQuestions,
+	}
+	response.Success(ctx, c, resp)
 }

@@ -42,9 +42,10 @@ struct InterviewSession {
     8: optional bool has_resume         // 是否有简历
     9: required i64 start_time          // 开始时间戳
     10: optional i64 end_time           // 结束时间戳
-    11: optional list<QuestionData> questions  // 问题列表
-    12: optional list<DialogueRecord> dialogues  // 对话列表
-    13: optional map<string, string> metadata   // 扩展元数据
+    11: required string status          // 会话状态：active, paused, completed, failed
+    12: optional list<QuestionData> questions  // 问题列表
+    13: optional list<DialogueRecord> dialogues  // 对话列表
+    14: optional map<string, string> metadata   // 扩展元数据
 }
 
 // ==================== 请求和响应结构 ====================
@@ -65,7 +66,8 @@ struct MianshiStartInterviewResponse {
     1: required string session_id       // 会话ID
     2: required i64 record_id           // 面试记录ID
     3: required string message          // 响应消息
-    4: optional map<string, string> metadata  // 扩展数据
+    4: required i64 start_time          // 面试开始时间戳（毫秒）
+    5: optional map<string, string> metadata  // 扩展数据
 }
 
 // 提交面试答案请求
@@ -81,7 +83,9 @@ struct MianshiSubmitInterviewAnswerResponse {
     1: required string status           // 状态：received, error
     2: optional string message          // 消息说明
     3: optional string session_id       // 会话ID
-    4: optional map<string, string> metadata  // 扩展数据
+    4: optional i32 question_index      // 当前问题索引
+    5: optional bool is_last_question   // 是否为最后一个问题
+    6: optional map<string, string> metadata  // 扩展数据
 }
 
 // 获取会话信息请求
@@ -92,6 +96,12 @@ struct MianshiGetSessionRequest {
 // 获取会话信息响应
 struct MianshiGetSessionResponse {
     1: required InterviewSession session  // 会话信息
+    2: optional i32 current_question_index  // 当前问题索引
+    3: optional string current_question_text  // 当前问题文本
+    4: optional i32 answered_count       // 已回答问题数
+    5: optional i32 total_count          // 总问题数
+    6: optional i64 elapsed_time         // 已用时间（秒）
+    7: optional map<string, string> metadata  // 扩展数据
 }
 
 // 结束面试请求
@@ -106,7 +116,10 @@ struct MianshiEndInterviewResponse {
     1: required string status           // 状态
     2: optional string message          // 消息说明
     3: optional i64 duration            // 面试时长（秒）
-    4: optional map<string, string> metadata  // 扩展数据
+    4: optional i64 end_time            // 面试结束时间戳（毫秒）
+    5: optional i32 total_questions     // 总问题数
+    6: optional i32 answered_questions  // 已回答问题数
+    7: optional map<string, string> metadata  // 扩展数据
 }
 
 // ==================== 面试记录相关结构 ====================
@@ -122,9 +135,15 @@ struct MianshiInterviewRecordDTO {
     7: optional string position_name    // 岗位名称
     8: required string status           // 面试状态
     9: optional i64 duration            // 面试耗时（秒）
-    10: optional i64 created_at         // 创建时间
-    11: optional i64 updated_at         // 更新时间
-    12: optional map<string, string> metadata  // 扩展元数据
+    10: optional i64 resume_id          // 简历ID
+    11: optional double score           // 面试评分
+    12: optional string report          // 面试报告
+    13: optional i64 created_at         // 创建时间
+    14: optional i64 updated_at         // 更新时间
+    15: optional i64 completed_at       // 完成时间
+    16: optional i32 total_questions    // 总问题数
+    17: optional i32 answered_questions // 已回答问题数
+    18: optional map<string, string> metadata  // 扩展元数据
 }
 
 
