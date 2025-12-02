@@ -122,7 +122,8 @@ func SchoolQuestionGeneratorAgent(UserId uint) adk.Agent {
 - 鼓励候选人展示思考过程，而非只看结果
 - 根据简历分析报告的技术掌握程度评估，动态调整问题难度
 
-开始面试时，先仔细阅读简历分析报告，然后从报告推荐的开场问题或候选人最有信心的领域开始提问，帮助候选人建立信心。`
+开始面试时，先仔细阅读简历分析报告，然后从报告推荐的开场问题或候选人最有信心的领域开始提问，帮助候选人建立信心。
+`
 
 	//配置agent
 	agentconfig, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{

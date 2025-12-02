@@ -9,7 +9,6 @@ import (
 	"ai-eino-interview-agent/internal/alert"
 	"ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/model"
-	"ai-eino-interview-agent/internal/mq"
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
 	"context"
 	"encoding/json"
@@ -256,6 +255,7 @@ func setupSSEResponse(c *app.RequestContext) {
 
 // runInterviewLoopAsync 异步运行面试循环
 func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, session *InterviewSession, interviewService interviewservice.InterviewManager) {
+
 	defer func() {
 		if r := recover(); r != nil {
 			sendErrorEvent(writer, fmt.Sprintf("面试异常: %v", r))
@@ -268,9 +268,12 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 	}()
 
 	sm := GetSessionManager()
-	//var resumeContent string
+	// var resumeContent string
 	const answerTimeout = 30 * time.Minute
 	const heartbeatInterval = 15 * time.Second
+
+	// 标记是否是第一个问题
+	//isFirstQuestion := true
 
 	for {
 		select {
@@ -280,6 +283,51 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 		default:
 		}
 
+		// 生成问题
+		prompt := buildPrompt(session.Difficulty)
+		log.Printf("[Interview Loop] Generating question, sessionID: %s", session.SessionID)
+		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId, session.Type, session.Domain)
+		if err != nil {
+			sendErrorEvent(writer, "Failed to generate question: "+err.Error())
+			sendCompleteEvent(writer)
+			break
+		}
+
+		//if len(result.Questions) == 0 {
+		//	log.Printf("[Interview Loop] No questions generated, sessionID: %s", session.SessionID)
+		//	sendErrorEvent(writer, "AI 未能生成有效问题，请稍后重试")
+		//	sendCompleteEvent(writer)
+		//	break
+		//}
+
+		// 发送问题给用户
+		//q := result.Questions[0]
+		sendQuestionEvent(writer, result)
+
+		//// 记录问题到会话
+		//session.AllQuestions = append(session.AllQuestions, map[string]interface{}{
+		//	"question_text":  q.QuestionText,
+		//	"eval_dimension": q.EvalDimension,
+		//	"order":          q.Order,
+		//})
+		//
+		//// 记录面试官对话到会话
+		//if len(result.Dialogues) > 0 {
+		//	for _, d := range result.Dialogues {
+		//		if d.SpeakerType == "interviewer" {
+		//			session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
+		//				"speaker_type": "interviewer",
+		//				"content":      d.Content,
+		//			})
+		//			break
+		//		}
+		//	}
+		//}
+
+		// 发送就绪事件
+		sendReadyEventWithSession(writer, session.SessionID)
+
+		// 等待用户回答（第一个问题之后开始）
 		log.Printf("[Interview Loop] Waiting for answer, sessionID: %s", session.SessionID)
 		answer, received := waitForAnswerWithHeartbeat(sm, session.SessionID, answerTimeout, heartbeatInterval, writer)
 		log.Printf("[Interview Loop] Answer received: %v, sessionID: %s", received, session.SessionID)
@@ -290,50 +338,17 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 			break
 		}
 
+		// 记录用户回答
 		session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
 			"speaker_type": "candidate", //候选人
 			"content":      answer,
 		})
 
-		prompt := buildPrompt(session.Difficulty)
-
-		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId, session.Type, session.Domain)
-		if err != nil {
-			sendErrorEvent(writer, "Failed to generate question: "+err.Error())
-			sendCompleteEvent(writer)
-			break
-		}
-
-		if len(result.Questions) == 0 {
-			log.Printf("[Interview Loop] No questions generated, sessionID: %s", session.SessionID)
-			sendErrorEvent(writer, "AI 未能生成有效问题，请稍后重试")
-			sendCompleteEvent(writer)
-			break
-		}
-
-		q := result.Questions[0]
-		sendQuestionEvent(writer, q)
-
-		session.AllQuestions = append(session.AllQuestions, map[string]interface{}{
-			"question_text":  q.QuestionText,
-			"eval_dimension": q.EvalDimension,
-			"order":          q.Order,
-		})
-
-		if len(result.Dialogues) > 0 {
-			for _, d := range result.Dialogues {
-				if d.SpeakerType == "interviewer" {
-					session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
-						"speaker_type": "interviewer",
-						"content":      d.Content,
-					})
-					break
-				}
-			}
-		}
-
-		sendReadyEventWithSession(writer, session.SessionID)
+		// 清除答案标记，准备下一轮
 		sm.ClearAnswer(session.SessionID)
+
+		// 更新标记，后续不是第一个问题
+		//isFirstQuestion = false
 	}
 
 	log.Printf("[Interview Loop] Saving dialogues, sessionID: %s", session.SessionID)
@@ -390,21 +405,21 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 		_ = err
 	}
 
-	// 面试完成后，发送 MQ 消息触发评估报告生成
-	log.Printf("[Interview Loop] Publishing evaluation messages, sessionID: %s, userID: %d, recordID: %d", session.SessionID, session.UserID, session.RecordID)
-
-	// 发布评估报告生成消息
-	if err := mq.PublishEvaluationReport(ctx, session.UserID, session.RecordID); err != nil {
-		log.Printf("[Interview Loop] Failed to publish evaluation report message: %v, sessionID: %s", err, session.SessionID)
-	}
-
-	// 发布主题评估消息
-	if err := mq.PublishTopicEvaluation(ctx, session.UserID, session.RecordID); err != nil {
-		log.Printf("[Interview Loop] Failed to publish topic evaluation message: %v, sessionID: %s", err, session.SessionID)
-	}
-
-	log.Printf("[Interview Loop] Interview completed, sessionID: %s", session.SessionID)
-
+	//todo debug结束后解除注释
+	//// 面试完成后，发送 MQ 消息触发评估报告生成
+	//log.Printf("[Interview Loop] Publishing evaluation messages, sessionID: %s, userID: %d, recordID: %d", session.SessionID, session.UserID, session.RecordID)
+	//
+	//// 发布评估报告生成消息
+	//if err := mq.PublishEvaluationReport(ctx, session.UserID, session.RecordID); err != nil {
+	//	log.Printf("[Interview Loop] Failed to publish evaluation report message: %v, sessionID: %s", err, session.SessionID)
+	//}
+	//
+	//// 发布主题评估消息
+	//if err := mq.PublishTopicEvaluation(ctx, session.UserID, session.RecordID); err != nil {
+	//	log.Printf("[Interview Loop] Failed to publish topic evaluation message: %v, sessionID: %s", err, session.SessionID)
+	//}
+	//
+	//log.Printf("[Interview Loop] Interview completed, sessionID: %s", session.SessionID)
 }
 
 //func runInterviewLoopAsyncBackup(ctx context.Context, userId uint, writer io.Writer, session *InterviewSession, interviewService interviewservice.InterviewManager) {
@@ -740,13 +755,13 @@ func sendErrorEvent(writer io.Writer, message string) {
 func sendCompleteEvent(writer io.Writer) {
 	sendSSEEvent(writer, map[string]interface{}{"type": "complete", "message": "面试已结束"})
 }
-func sendQuestionEvent(writer io.Writer, q service.QuestionData) {
+func sendQuestionEvent(writer io.Writer, question string) {
 	sendSSEEvent(writer, map[string]interface{}{
 		"type": "question",
 		"data": map[string]interface{}{
-			"question_text":  q.QuestionText,
-			"eval_dimension": q.EvalDimension,
-			"order":          q.Order,
+			"question_text":  question,
+			"eval_dimension": "后面删除",
+			"order":          1,
 		},
 	})
 }
