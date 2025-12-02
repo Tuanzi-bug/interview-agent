@@ -82,71 +82,12 @@ func StartInterviewStream(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	//todo 简历内容从数据库中获得
-
-	sm := GetSessionManager()
-	session := sm.CreateSession(userID, recordID, 1, 1, "", req.Type, req.Domain, req.Difficulty)
-
-	pipeReader, pipeWriter := io.Pipe()
-	c.SetBodyStream(pipeReader, -1)
-
-	go func() {
-		defer pipeWriter.Close()
-
-		sendSSEEvent(pipeWriter, map[string]interface{}{
-			"type":       "session_id",
-			"session_id": session.SessionID,
-			"message":    "Session created successfully",
-		})
-
-		sendSSEEvent(pipeWriter, map[string]interface{}{
-			"type":       "start",
-			"message":    "面试已开始，正在生成第一个问题...",
-			"session_id": session.SessionID,
-		})
-		writer := &SSEWriter{ctx: c, writer: pipeWriter}
-		runInterviewLoopAsync(ctx, userID, writer, session, interviewService)
-	}()
-}
-
-func StartInterviewStreamBackup(ctx context.Context, c *app.RequestContext) {
-	// 1. 解析请求（必须在设置 SSE 响应头之前）
-	var req interviewsapi.StartInterviewRequest
-	if err := c.BindAndValidate(&req); err != nil {
-		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
-		return
-	}
-
-	userID := middleware.GetUserID(c)
-	if userID == 0 {
-		response.Unauthorized(ctx, c, "Authorization token is required")
-		return
-	}
-
-	setupSSEResponse(c)
-
-	interviewService := interviewservice.NewInterviewService()
-	recordDTO := &interviewsapi.InterviewRecordDTO{
-		UserID:       int32(userID),
-		Type:         req.Type,
-		Difficulty:   req.Difficulty,
-		Domain:       req.Domain,
-		PositionName: req.PositionName,
-		CompanyName:  req.CompanyName,
-		Status:       "pending",
-	}
-
-	recordID, err := interviewService.CreateInterviewRecord(ctx, recordDTO)
-	if err != nil {
-		response.InternalServerError(ctx, c, "Failed to create interview record: "+err.Error())
-		return
-	}
-	var hasResume bool
+	//根据简历id做判断
 	var resumeID int64
-
-	if req.ResumeID != nil && *req.ResumeID > 0 {
-		hasResume = true
+	hasResume := false
+	if req.ResumeID != nil {
 		resumeID = *req.ResumeID
+		hasResume = true
 	}
 	sm := GetSessionManager()
 	session := sm.CreateSession(userID, recordID, resumeID, hasResume, "", req.Type, req.Domain, req.Difficulty)
@@ -168,18 +109,82 @@ func StartInterviewStreamBackup(ctx context.Context, c *app.RequestContext) {
 			"message":    "面试已开始，正在生成第一个问题...",
 			"session_id": session.SessionID,
 		})
-		//初始化会话值：存储简历、配置等信息供 Agent 使用
-		//这样工具可以直接从会话值获取数据，无需参数传递
-		//if err := agent.InitializeQuestionGeneratorContext(ctx, session.Query,
-		//	req.Type, req.Domain, req.Difficulty); err != nil {
-		//	sendErrorEvent(pipeWriter, "Failed to initialize session context: "+err.Error())
-		//	sendCompleteEvent(pipeWriter)
-		//	return
-		//}
 		writer := &SSEWriter{ctx: c, writer: pipeWriter}
 		runInterviewLoopAsync(ctx, userID, writer, session, interviewService)
 	}()
 }
+
+//func StartInterviewStreamBackup(ctx context.Context, c *app.RequestContext) {
+//	// 1. 解析请求（必须在设置 SSE 响应头之前）
+//	var req interviewsapi.StartInterviewRequest
+//	if err := c.BindAndValidate(&req); err != nil {
+//		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
+//		return
+//	}
+//
+//	userID := middleware.GetUserID(c)
+//	if userID == 0 {
+//		response.Unauthorized(ctx, c, "Authorization token is required")
+//		return
+//	}
+//
+//	setupSSEResponse(c)
+//
+//	interviewService := interviewservice.NewInterviewService()
+//	recordDTO := &interviewsapi.InterviewRecordDTO{
+//		UserID:       int32(userID),
+//		Type:         req.Type,
+//		Difficulty:   req.Difficulty,
+//		Domain:       req.Domain,
+//		PositionName: req.PositionName,
+//		CompanyName:  req.CompanyName,
+//		Status:       "pending",
+//	}
+//
+//	recordID, err := interviewService.CreateInterviewRecord(ctx, recordDTO)
+//	if err != nil {
+//		response.InternalServerError(ctx, c, "Failed to create interview record: "+err.Error())
+//		return
+//	}
+//	var hasResume bool
+//	var resumeID int64
+//
+//	if req.ResumeID != nil && *req.ResumeID > 0 {
+//		hasResume = true
+//		resumeID = *req.ResumeID
+//	}
+//	sm := GetSessionManager()
+//	session := sm.CreateSession(userID, recordID, resumeID, hasResume, "", req.Type, req.Domain, req.Difficulty)
+//
+//	pipeReader, pipeWriter := io.Pipe()
+//	c.SetBodyStream(pipeReader, -1)
+//
+//	go func() {
+//		defer pipeWriter.Close()
+//
+//		sendSSEEvent(pipeWriter, map[string]interface{}{
+//			"type":       "session_id",
+//			"session_id": session.SessionID,
+//			"message":    "Session created successfully",
+//		})
+//
+//		sendSSEEvent(pipeWriter, map[string]interface{}{
+//			"type":       "start",
+//			"message":    "面试已开始，正在生成第一个问题...",
+//			"session_id": session.SessionID,
+//		})
+//		//初始化会话值：存储简历、配置等信息供 Agent 使用
+//		//这样工具可以直接从会话值获取数据，无需参数传递
+//		//if err := agent.InitializeQuestionGeneratorContext(ctx, session.Query,
+//		//	req.Type, req.Domain, req.Difficulty); err != nil {
+//		//	sendErrorEvent(pipeWriter, "Failed to initialize session context: "+err.Error())
+//		//	sendCompleteEvent(pipeWriter)
+//		//	return
+//		//}
+//		writer := &SSEWriter{ctx: c, writer: pipeWriter}
+//		runInterviewLoopAsync(ctx, userID, writer, session, interviewService)
+//	}()
+//}
 
 // handleResumeUpload 处理简历文件上传
 func handleResumeUpload(c *app.RequestContext) (string, error) {
@@ -263,7 +268,7 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 	}()
 
 	sm := GetSessionManager()
-	var resumeContent string
+	//var resumeContent string
 	const answerTimeout = 30 * time.Minute
 	const heartbeatInterval = 15 * time.Second
 
@@ -290,9 +295,9 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 			"content":      answer,
 		})
 
-		prompt = buildPrompt(session.Difficulty)
+		prompt := buildPrompt(session.Difficulty)
 
-		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId, session.Type)
+		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId, session.Type, session.Domain)
 		if err != nil {
 			sendErrorEvent(writer, "Failed to generate question: "+err.Error())
 			sendCompleteEvent(writer)
@@ -306,12 +311,8 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 			break
 		}
 
-		if questionIndex == 1 {
-			resumeContent = session.Query
-		}
-
 		q := result.Questions[0]
-		sendQuestionEvent(writer, questionIndex, q)
+		sendQuestionEvent(writer, q)
 
 		session.AllQuestions = append(session.AllQuestions, map[string]interface{}{
 			"question_text":  q.QuestionText,
@@ -323,16 +324,15 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 			for _, d := range result.Dialogues {
 				if d.SpeakerType == "interviewer" {
 					session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
-						"speaker_type":  "interviewer",
-						"content":       d.Content,
-						"display_order": uint32(questionIndex)*100 + uint32(followUpCount),
+						"speaker_type": "interviewer",
+						"content":      d.Content,
 					})
 					break
 				}
 			}
 		}
 
-		sendReadyEventWithSession(writer, questionIndex, session.SessionID)
+		sendReadyEventWithSession(writer, session.SessionID)
 		sm.ClearAnswer(session.SessionID)
 	}
 
@@ -407,243 +407,243 @@ func runInterviewLoopAsync(ctx context.Context, userId uint, writer io.Writer, s
 
 }
 
-func runInterviewLoopAsyncBackup(ctx context.Context, userId uint, writer io.Writer, session *InterviewSession, interviewService interviewservice.InterviewManager) {
-	defer func() {
-		if r := recover(); r != nil {
-			sendErrorEvent(writer, fmt.Sprintf("面试异常: %v", r))
-		}
-		// 延迟删除会话，给前端充足时间来获取最后的数据
-		go func() {
-			time.Sleep(10 * time.Second)
-			GetSessionManager().DeleteSession(session.SessionID)
-		}()
-	}()
-
-	questionIndex := 0
-	sm := GetSessionManager()
-	var resumeContent string
-	const maxFollowUps = 2
-	const answerTimeout = 30 * time.Minute
-	const heartbeatInterval = 15 * time.Second
-
-	// 根据面试类型选择维度
-	var dimensions []string
-	if session.Type == "综合面试" {
-		dimensions = []string{
-			"professional_field",
-			"project_experience",
-			"technical_depth",
-			"technical_foundation",
-			"team_collaboration",
-			"system_architecture_design",
-		}
-	} else {
-		// 专项面试
-		dimensions = []string{
-			"basic_knowledge_mastery",
-			"working_principle_practical_experience",
-			"advanced_features_application",
-			"problem_troubleshooting_skills",
-			"architecture_design_thinking",
-			"performance_optimization_ability",
-		}
-	}
-	dimensionIndex := 0
-	followUpCount := 0
-
-	for {
-		select {
-		case <-ctx.Done():
-			log.Printf("[Interview Loop] Context cancelled, sessionID: %s", session.SessionID)
-			return
-		default:
-		}
-
-		if questionIndex > 0 {
-			log.Printf("[Interview Loop] Waiting for answer, sessionID: %s, questionIndex: %d", session.SessionID, questionIndex)
-			answer, received := waitForAnswerWithHeartbeat(sm, session.SessionID, answerTimeout, heartbeatInterval, writer)
-			log.Printf("[Interview Loop] Answer received: %v, sessionID: %s", received, session.SessionID)
-			if !received {
-				log.Printf("[Interview Loop] Answer timeout, sessionID: %s", session.SessionID)
-				sendErrorEvent(writer, "等待答案超时，面试已结束")
-				sendCompleteEvent(writer)
-				break
-			}
-
-			//if answer == "quit" {
-			//	sendCompleteEvent(writer)
-			//	break
-			//}
-
-			session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
-				"speaker_type":  "candidate",
-				"content":       answer,
-				"display_order": uint32(questionIndex)*100 + uint32(followUpCount),
-			})
-
-			if followUpCount < maxFollowUps {
-				followUpCount++
-			} else {
-				dimensionIndex++
-				followUpCount = 0
-				questionIndex++
-				if dimensionIndex >= len(dimensions) {
-					sendTopicCompleteEvent(writer)
-					//sendCompleteEvent(writer)
-					break
-				}
-			}
-		}
-
-		if questionIndex == 0 {
-			questionIndex++
-		}
-
-		var prompt string
-		if questionIndex == 1 {
-			prompt = buildPrompt(questionIndex, session.Query, session.ResumeId, session.HasResume, dimensions[dimensionIndex], 0, session.Type, session.Domain, session.Difficulty)
-		} else if followUpCount > 0 {
-			lastAnswer := ""
-			displayOrder := uint32(questionIndex)*100 + uint32(followUpCount-1)
-			for _, dialogue := range session.AllDialogues {
-				d := dialogue.(map[string]interface{})
-				if d["speaker_type"] == "candidate" && d["display_order"] == displayOrder {
-					lastAnswer = toString(d["content"])
-					break
-				}
-			}
-			prompt = buildPrompt(questionIndex, lastAnswer, 0, false, dimensions[dimensionIndex], followUpCount, session.Type, session.Domain, session.Difficulty)
-		} else {
-			userAnswers := ""
-			for i := 1; i < questionIndex; i++ {
-				displayOrder := uint32(i) * 100
-				for _, dialogue := range session.AllDialogues {
-					d := dialogue.(map[string]interface{})
-					if d["speaker_type"] == "candidate" && d["display_order"] == displayOrder {
-						userAnswers += fmt.Sprintf("问题 %d 的回答：%s\n", i, d["content"])
-						break
-					}
-				}
-			}
-			prompt = buildPrompt(questionIndex, resumeContent+"\n\n用户已回答的问题：\n"+userAnswers, 0, false, dimensions[dimensionIndex], 0, session.Type, session.Domain, session.Difficulty)
-		}
-
-		// 只有第一个问题才需要简历解析工具
-		isFirstQuestion := questionIndex == 1 && followUpCount == 0
-		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId, isFirstQuestion, session.Type)
-		if err != nil {
-			sendErrorEvent(writer, "Failed to generate question: "+err.Error())
-			sendCompleteEvent(writer)
-			break
-		}
-
-		if len(result.Questions) == 0 {
-			log.Printf("[Interview Loop] No questions generated, sessionID: %s", session.SessionID)
-			sendErrorEvent(writer, "AI 未能生成有效问题，请稍后重试")
-			sendCompleteEvent(writer)
-			break
-		}
-
-		if questionIndex == 1 {
-			resumeContent = session.Query
-		}
-
-		q := result.Questions[0]
-		sendQuestionEvent(writer, questionIndex, q)
-
-		session.AllQuestions = append(session.AllQuestions, map[string]interface{}{
-			"question_text":  q.QuestionText,
-			"eval_dimension": q.EvalDimension,
-			"order":          q.Order,
-		})
-
-		if len(result.Dialogues) > 0 {
-			for _, d := range result.Dialogues {
-				if d.SpeakerType == "interviewer" {
-					session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
-						"speaker_type":  "interviewer",
-						"content":       d.Content,
-						"display_order": uint32(questionIndex)*100 + uint32(followUpCount),
-					})
-					break
-				}
-			}
-		}
-
-		sendReadyEventWithSession(writer, questionIndex, session.SessionID)
-		sm.ClearAnswer(session.SessionID)
-	}
-
-	log.Printf("[Interview Loop] Saving dialogues, sessionID: %s", session.SessionID)
-	// 保存面试对话，带重试机制
-	const maxRetries = 3
-	var saveErr error
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		saveErr = interviewService.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, session.AllQuestions, session.AllDialogues)
-		if saveErr == nil {
-			break
-		}
-
-		// 判断是否为可重试的错误
-		if !IsRetryableError(saveErr) {
-			// 上下文取消/超时通常是用户主动中断或请求生命周期结束，不发送告警
-			if !errors.Is(saveErr, context.Canceled) && !errors.Is(saveErr, context.DeadlineExceeded) {
-				alert.SendDatabaseErrorAlert(
-					fmt.Sprintf("SaveInterviewDialogues (不可重试) - UserID: %d, RecordID: %d", session.UserID, session.RecordID),
-					saveErr,
-					attempt+1,
-				)
-			}
-			break
-		}
-
-		// 最后一次尝试失败（所有重试机会耗尽）
-		if attempt == maxRetries-1 {
-			alert.SendDatabaseErrorAlert(
-				fmt.Sprintf("SaveInterviewDialogues (重试耗尽) - UserID: %d, RecordID: %d", session.UserID, session.RecordID),
-				saveErr,
-				maxRetries,
-			)
-			break
-		}
-
-		// 指数退避：等待 100ms * 2^attempt
-		backoffDuration := time.Duration(100*(1<<uint(attempt))) * time.Millisecond
-		time.Sleep(backoffDuration)
-	}
-
-	duration := int64(time.Since(session.StartTime).Seconds())
-
-	updateDTO := &interviewsapi.InterviewRecordDTO{
-		ID:       int64(session.RecordID),
-		UserID:   int32(session.UserID),
-		Status:   "completed",
-		Duration: &duration,
-	}
-
-	log.Printf("[Interview Loop] Updating interview record, sessionID: %s, duration: %d seconds", session.SessionID, duration)
-	if err := interviewService.UpdateInterviewRecord(ctx, updateDTO); err != nil {
-		// 记录更新失败，但不中断流程
-		log.Printf("[Interview Loop] Failed to update interview record: %v, sessionID: %s", err, session.SessionID)
-		_ = err
-	}
-
-	// 面试完成后，发送 MQ 消息触发评估报告生成
-	log.Printf("[Interview Loop] Publishing evaluation messages, sessionID: %s, userID: %d, recordID: %d", session.SessionID, session.UserID, session.RecordID)
-
-	// 发布评估报告生成消息
-	if err := mq.PublishEvaluationReport(ctx, session.UserID, session.RecordID); err != nil {
-		log.Printf("[Interview Loop] Failed to publish evaluation report message: %v, sessionID: %s", err, session.SessionID)
-	}
-
-	// 发布主题评估消息
-	if err := mq.PublishTopicEvaluation(ctx, session.UserID, session.RecordID); err != nil {
-		log.Printf("[Interview Loop] Failed to publish topic evaluation message: %v, sessionID: %s", err, session.SessionID)
-	}
-
-	log.Printf("[Interview Loop] Interview completed, sessionID: %s", session.SessionID)
-
-}
+//func runInterviewLoopAsyncBackup(ctx context.Context, userId uint, writer io.Writer, session *InterviewSession, interviewService interviewservice.InterviewManager) {
+//	defer func() {
+//		if r := recover(); r != nil {
+//			sendErrorEvent(writer, fmt.Sprintf("面试异常: %v", r))
+//		}
+//		// 延迟删除会话，给前端充足时间来获取最后的数据
+//		go func() {
+//			time.Sleep(10 * time.Second)
+//			GetSessionManager().DeleteSession(session.SessionID)
+//		}()
+//	}()
+//
+//	questionIndex := 0
+//	sm := GetSessionManager()
+//	var resumeContent string
+//	const maxFollowUps = 2
+//	const answerTimeout = 30 * time.Minute
+//	const heartbeatInterval = 15 * time.Second
+//
+//	// 根据面试类型选择维度
+//	var dimensions []string
+//	if session.Type == "综合面试" {
+//		dimensions = []string{
+//			"professional_field",
+//			"project_experience",
+//			"technical_depth",
+//			"technical_foundation",
+//			"team_collaboration",
+//			"system_architecture_design",
+//		}
+//	} else {
+//		// 专项面试
+//		dimensions = []string{
+//			"basic_knowledge_mastery",
+//			"working_principle_practical_experience",
+//			"advanced_features_application",
+//			"problem_troubleshooting_skills",
+//			"architecture_design_thinking",
+//			"performance_optimization_ability",
+//		}
+//	}
+//	dimensionIndex := 0
+//	followUpCount := 0
+//
+//	for {
+//		select {
+//		case <-ctx.Done():
+//			log.Printf("[Interview Loop] Context cancelled, sessionID: %s", session.SessionID)
+//			return
+//		default:
+//		}
+//
+//		if questionIndex > 0 {
+//			log.Printf("[Interview Loop] Waiting for answer, sessionID: %s, questionIndex: %d", session.SessionID, questionIndex)
+//			answer, received := waitForAnswerWithHeartbeat(sm, session.SessionID, answerTimeout, heartbeatInterval, writer)
+//			log.Printf("[Interview Loop] Answer received: %v, sessionID: %s", received, session.SessionID)
+//			if !received {
+//				log.Printf("[Interview Loop] Answer timeout, sessionID: %s", session.SessionID)
+//				sendErrorEvent(writer, "等待答案超时，面试已结束")
+//				sendCompleteEvent(writer)
+//				break
+//			}
+//
+//			//if answer == "quit" {
+//			//	sendCompleteEvent(writer)
+//			//	break
+//			//}
+//
+//			session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
+//				"speaker_type":  "candidate",
+//				"content":       answer,
+//				"display_order": uint32(questionIndex)*100 + uint32(followUpCount),
+//			})
+//
+//			if followUpCount < maxFollowUps {
+//				followUpCount++
+//			} else {
+//				dimensionIndex++
+//				followUpCount = 0
+//				questionIndex++
+//				if dimensionIndex >= len(dimensions) {
+//					sendTopicCompleteEvent(writer)
+//					//sendCompleteEvent(writer)
+//					break
+//				}
+//			}
+//		}
+//
+//		if questionIndex == 0 {
+//			questionIndex++
+//		}
+//
+//		var prompt string
+//		if questionIndex == 1 {
+//			prompt = buildPrompt(questionIndex, session.Query, session.ResumeId, session.HasResume, dimensions[dimensionIndex], 0, session.Type, session.Domain, session.Difficulty)
+//		} else if followUpCount > 0 {
+//			lastAnswer := ""
+//			displayOrder := uint32(questionIndex)*100 + uint32(followUpCount-1)
+//			for _, dialogue := range session.AllDialogues {
+//				d := dialogue.(map[string]interface{})
+//				if d["speaker_type"] == "candidate" && d["display_order"] == displayOrder {
+//					lastAnswer = toString(d["content"])
+//					break
+//				}
+//			}
+//			prompt = buildPrompt(questionIndex, lastAnswer, 0, false, dimensions[dimensionIndex], followUpCount, session.Type, session.Domain, session.Difficulty)
+//		} else {
+//			userAnswers := ""
+//			for i := 1; i < questionIndex; i++ {
+//				displayOrder := uint32(i) * 100
+//				for _, dialogue := range session.AllDialogues {
+//					d := dialogue.(map[string]interface{})
+//					if d["speaker_type"] == "candidate" && d["display_order"] == displayOrder {
+//						userAnswers += fmt.Sprintf("问题 %d 的回答：%s\n", i, d["content"])
+//						break
+//					}
+//				}
+//			}
+//			prompt = buildPrompt(questionIndex, resumeContent+"\n\n用户已回答的问题：\n"+userAnswers, 0, false, dimensions[dimensionIndex], 0, session.Type, session.Domain, session.Difficulty)
+//		}
+//
+//		// 只有第一个问题才需要简历解析工具
+//		isFirstQuestion := questionIndex == 1 && followUpCount == 0
+//		result, err := service.GenerateInterviewQuestions(ctx, prompt, userId, isFirstQuestion, session.Type)
+//		if err != nil {
+//			sendErrorEvent(writer, "Failed to generate question: "+err.Error())
+//			sendCompleteEvent(writer)
+//			break
+//		}
+//
+//		if len(result.Questions) == 0 {
+//			log.Printf("[Interview Loop] No questions generated, sessionID: %s", session.SessionID)
+//			sendErrorEvent(writer, "AI 未能生成有效问题，请稍后重试")
+//			sendCompleteEvent(writer)
+//			break
+//		}
+//
+//		if questionIndex == 1 {
+//			resumeContent = session.Query
+//		}
+//
+//		q := result.Questions[0]
+//		sendQuestionEvent(writer, questionIndex, q)
+//
+//		session.AllQuestions = append(session.AllQuestions, map[string]interface{}{
+//			"question_text":  q.QuestionText,
+//			"eval_dimension": q.EvalDimension,
+//			"order":          q.Order,
+//		})
+//
+//		if len(result.Dialogues) > 0 {
+//			for _, d := range result.Dialogues {
+//				if d.SpeakerType == "interviewer" {
+//					session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
+//						"speaker_type":  "interviewer",
+//						"content":       d.Content,
+//						"display_order": uint32(questionIndex)*100 + uint32(followUpCount),
+//					})
+//					break
+//				}
+//			}
+//		}
+//
+//		sendReadyEventWithSession(writer, questionIndex, session.SessionID)
+//		sm.ClearAnswer(session.SessionID)
+//	}
+//
+//	log.Printf("[Interview Loop] Saving dialogues, sessionID: %s", session.SessionID)
+//	// 保存面试对话，带重试机制
+//	const maxRetries = 3
+//	var saveErr error
+//	for attempt := 0; attempt < maxRetries; attempt++ {
+//		saveErr = interviewService.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, session.AllQuestions, session.AllDialogues)
+//		if saveErr == nil {
+//			break
+//		}
+//
+//		// 判断是否为可重试的错误
+//		if !IsRetryableError(saveErr) {
+//			// 上下文取消/超时通常是用户主动中断或请求生命周期结束，不发送告警
+//			if !errors.Is(saveErr, context.Canceled) && !errors.Is(saveErr, context.DeadlineExceeded) {
+//				alert.SendDatabaseErrorAlert(
+//					fmt.Sprintf("SaveInterviewDialogues (不可重试) - UserID: %d, RecordID: %d", session.UserID, session.RecordID),
+//					saveErr,
+//					attempt+1,
+//				)
+//			}
+//			break
+//		}
+//
+//		// 最后一次尝试失败（所有重试机会耗尽）
+//		if attempt == maxRetries-1 {
+//			alert.SendDatabaseErrorAlert(
+//				fmt.Sprintf("SaveInterviewDialogues (重试耗尽) - UserID: %d, RecordID: %d", session.UserID, session.RecordID),
+//				saveErr,
+//				maxRetries,
+//			)
+//			break
+//		}
+//
+//		// 指数退避：等待 100ms * 2^attempt
+//		backoffDuration := time.Duration(100*(1<<uint(attempt))) * time.Millisecond
+//		time.Sleep(backoffDuration)
+//	}
+//
+//	duration := int64(time.Since(session.StartTime).Seconds())
+//
+//	updateDTO := &interviewsapi.InterviewRecordDTO{
+//		ID:       int64(session.RecordID),
+//		UserID:   int32(session.UserID),
+//		Status:   "completed",
+//		Duration: &duration,
+//	}
+//
+//	log.Printf("[Interview Loop] Updating interview record, sessionID: %s, duration: %d seconds", session.SessionID, duration)
+//	if err := interviewService.UpdateInterviewRecord(ctx, updateDTO); err != nil {
+//		// 记录更新失败，但不中断流程
+//		log.Printf("[Interview Loop] Failed to update interview record: %v, sessionID: %s", err, session.SessionID)
+//		_ = err
+//	}
+//
+//	// 面试完成后，发送 MQ 消息触发评估报告生成
+//	log.Printf("[Interview Loop] Publishing evaluation messages, sessionID: %s, userID: %d, recordID: %d", session.SessionID, session.UserID, session.RecordID)
+//
+//	// 发布评估报告生成消息
+//	if err := mq.PublishEvaluationReport(ctx, session.UserID, session.RecordID); err != nil {
+//		log.Printf("[Interview Loop] Failed to publish evaluation report message: %v, sessionID: %s", err, session.SessionID)
+//	}
+//
+//	// 发布主题评估消息
+//	if err := mq.PublishTopicEvaluation(ctx, session.UserID, session.RecordID); err != nil {
+//		log.Printf("[Interview Loop] Failed to publish topic evaluation message: %v, sessionID: %s", err, session.SessionID)
+//	}
+//
+//	log.Printf("[Interview Loop] Interview completed, sessionID: %s", session.SessionID)
+//
+//}
 
 // waitForAnswerWithHeartbeat 等待用户答案，并定期发送心跳保活
 func waitForAnswerWithHeartbeat(sm *SessionManager, sessionID string, timeout time.Duration, heartbeatInterval time.Duration, writer io.Writer) (string, bool) {
@@ -740,10 +740,9 @@ func sendErrorEvent(writer io.Writer, message string) {
 func sendCompleteEvent(writer io.Writer) {
 	sendSSEEvent(writer, map[string]interface{}{"type": "complete", "message": "面试已结束"})
 }
-func sendQuestionEvent(writer io.Writer, questionIndex int, q service.QuestionData) {
+func sendQuestionEvent(writer io.Writer, q service.QuestionData) {
 	sendSSEEvent(writer, map[string]interface{}{
-		"type":  "question",
-		"index": questionIndex,
+		"type": "question",
 		"data": map[string]interface{}{
 			"question_text":  q.QuestionText,
 			"eval_dimension": q.EvalDimension,
@@ -753,12 +752,11 @@ func sendQuestionEvent(writer io.Writer, questionIndex int, q service.QuestionDa
 }
 
 // sendReadyEventWithSession 发送就绪事件
-func sendReadyEventWithSession(writer io.Writer, questionIndex int, sessionID string) {
+func sendReadyEventWithSession(writer io.Writer, sessionID string) {
 	sendSSEEvent(writer, map[string]interface{}{
-		"type":           "ready_for_answer",
-		"message":        "请回答上述问题",
-		"question_index": questionIndex,
-		"session_id":     sessionID,
+		"type":       "ready_for_answer",
+		"message":    "请回答上述问题",
+		"session_id": sessionID,
 	})
 }
 
@@ -800,10 +798,10 @@ func SubmitInterviewAnswer(ctx context.Context, c *app.RequestContext) {
 	}
 
 	// 如果 action 是 answer，则 answer 必填；如果是 quit 或 continue，answer 可以为空
-	if req.Action != nil && *req.Action == "answer" && req.Answer == "" {
-		response.BadRequest(ctx, c, "answer is required when action is 'answer'")
-		return
-	}
+	//if req.Action != nil && *req.Action == "answer" && req.Answer == "" {
+	//	response.BadRequest(ctx, c, "answer is required when action is 'answer'")
+	//	return
+	//}
 
 	// 获取会话
 	sm := GetSessionManager()
@@ -822,12 +820,12 @@ func SubmitInterviewAnswer(ctx context.Context, c *app.RequestContext) {
 
 	// 提交答案或操作
 	// 如果 action 是 quit 或 continue，提交对应的 action；否则提交 answer
-	answerToSubmit := req.Answer
-	if req.Action != nil && (*req.Action == "quit" || *req.Action == "continue") {
-		answerToSubmit = *req.Action
-	}
+	//answerToSubmit := req.Answer
+	//if req.Action != nil && (*req.Action == "quit" || *req.Action == "continue") {
+	//	answerToSubmit = *req.Action
+	//}
 
-	if err := sm.SubmitAnswer(req.SessionID, answerToSubmit); err != nil {
+	if err := sm.SubmitAnswer(req.SessionID, req.Answer); err != nil {
 		response.InternalServerError(ctx, c, err.Error())
 		return
 	}

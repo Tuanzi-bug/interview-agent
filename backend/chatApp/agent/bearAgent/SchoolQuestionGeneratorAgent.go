@@ -12,7 +12,7 @@ import (
 )
 
 func SchoolQuestionGeneratorAgent(UserId uint) adk.Agent {
-
+	log.Println("-----------agent start")
 	ctx := context.Background()
 
 	//创建大模型
@@ -143,7 +143,7 @@ func SchoolQuestionGeneratorAgent(UserId uint) adk.Agent {
 	if err != nil {
 		log.Fatal(fmt.Errorf("failed to create chatmodel: %w", err))
 	}
-
+	log.Println("-----------agent end")
 	// 增强：完成后自动回调Supervisor
 	return agentconfig
 

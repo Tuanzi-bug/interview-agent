@@ -2,7 +2,7 @@ package service
 
 import (
 	"ai-eino-interview-agent/chatApp/agent/bearAgent"
-	"ai-eino-interview-agent/chatApp/agent/session"
+	"ai-eino-interview-agent/chatApp/chat"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -53,7 +53,9 @@ func BuildInterviewPrompt(difficulty string) string {
 	}
 
 	//todo 优化提示词
-	return "请你根据" + difficultyDesc + "生成对应的面试题问题，或者追问"
+	prompt := "请你根据" + difficultyDesc + "生成对应的面试题问题，或者追问"
+	log.Printf("[DEBUG] 构建面试提示词完成，难度: %s，提示词长度: %d 字符", difficulty, len(prompt))
+	return prompt
 }
 
 func BuildInterviewPromptBackup(questionIndex int, query string, resumeID int64, hasResume bool, dimension string, followUpCount int, interviewType string, domain string, difficulty string) string {
@@ -219,53 +221,52 @@ JSON格式：
 }`, interviewTypeDesc, domainDesc, difficultyDesc, dimensionCN, query, dimensionCN, difficultyDesc, followUpCount, dimension, questionIndex)
 }
 
-// GenerateInterviewQuestions 调用智能体生成面试问题
-// 返回生成的问题列表和对话列表
-func GenerateInterviewQuestions(ctx context.Context, prompt string, userId uint, interview_type string) (*QuestionGeneratorResult, error) {
+// GenerateInterviewQuestions 生成面试问题
+func GenerateInterviewQuestions(ctx context.Context, prompt string, userId uint, interview_type string, domain string) (*QuestionGeneratorResult, error) {
+	log.Printf("[DEBUG] 开始生成面试问题，用户ID: %d，面试类型: %s，领域: %s", userId, interview_type, domain)
+
 	// 添加 30分钟 超时，防止无限等待（API 响应可能需要较长时间）
+	log.Printf("[DEBUG] 创建30分钟超时上下文")
 	timeoutCtx, cancel := context.WithTimeout(ctx, 1800*time.Second)
 	defer cancel()
 
-	//根据面试类型，使用不同的智能体
-	agent := bearAgent.SchoolQuestionGeneratorAgent(userId)
-	//if interview_type != "综合面试" {
-	//	//专项面试
-	//	agent = question.NewSpecialQuestionAgent(userId, isFirstQuestion)
-	//}
+	// 根据领域选择合适的Agent
+	var agent adk.Agent
+	if domain == "社招" {
+		log.Printf("[DEBUG] 检测到社招领域，创建社招面试Agent，用户ID: %d", userId)
+		// 创建社招版本的Agent（使用现有Agent但修改提示词）
+		agent = createSocialRecruitmentAgent(userId)
+		log.Printf("[DEBUG] 成功创建社招面试Agent实例")
+	} else {
+		log.Printf("[DEBUG] 准备调用 bearAgent.SchoolQuestionGeneratorAgent，用户ID: %d", userId)
+		agent = bearAgent.SchoolQuestionGeneratorAgent(userId)
+		log.Printf("[DEBUG] 成功获取 SchoolQuestionGeneratorAgent 实例")
+	}
 
 	// 创建 runner
+	log.Printf("[DEBUG] 创建Agent运行器")
 	runner := adk.NewRunner(timeoutCtx, adk.RunnerConfig{
 		Agent: agent,
 	})
+	log.Printf("[DEBUG] 构建用户消息，提示词长度: %d", len(prompt))
 
-	// 构建查询消息
-	query := fmt.Sprintf(`根据以下提示词内容生成面试问题。
-
-提示词内容：
-%s
-
-要求：
-1. 只返回JSON格式
-2. 只生成面试官的提问，不要生成用户回答
-3. dialogues数组中只包含speaker_type为"interviewer"的提问
-
-JSON格式：
-{
-  "questions": [{"question_text": "问题内容", "eval_dimension": "professional_field|project_experience|technical_depth|technical_foundation|team_collaboration|system_architecture_design", "order": 1}],
-  "dialogues": [{"speaker_type": "interviewer", "content": "提问内容", "display_order": 1}]
-}`, prompt)
+	//构建查询消息 todo 这里传用户的回答
+	query := fmt.Sprintf(`用户的回答: %s`, prompt)
+	log.Printf("[DEBUG] GenerateInterviewQuestions prompt: %s\n", prompt)
 
 	// 创建用户消息
 	userMsg := &schema.Message{
 		Role:    schema.User,
 		Content: query,
 	}
+	log.Printf("[DEBUG] 用户消息构建完成")
 
 	messages := []adk.Message{
 		userMsg,
 	}
 
 	// 运行智能体
+	log.Printf("[DEBUG] 开始运行Agent")
 	iter := runner.Run(timeoutCtx, messages)
 
 	var lastMessage string
@@ -288,10 +289,12 @@ JSON格式：
 		// 收集最后一条消息
 		if event.Output != nil && event.Output.MessageOutput != nil {
 			lastMessage = event.Output.MessageOutput.Message.Content
+			log.Printf("[DEBUG] Agent响应内容长度: %d", len(lastMessage))
 		}
 	}
 
 	// 解析 JSON 结果
+	log.Printf("[DEBUG] 开始从Agent响应中提取并解析JSON数据")
 	result := &QuestionGeneratorResult{}
 
 	if err := json.Unmarshal([]byte(lastMessage), result); err != nil {
@@ -311,6 +314,7 @@ JSON格式：
 			var questions []QuestionData
 			if err := json.Unmarshal([]byte(jsonStr), &questions); err == nil {
 				result.Questions = questions
+				log.Printf("[DEBUG] 成功解析问题数组，共 %d 个问题", len(questions))
 				logQuestionResult(result)
 				return result, nil
 			}
@@ -326,9 +330,11 @@ JSON格式：
 							EvalDimension: "professional_field",
 							Order:         1,
 						})
+						log.Printf("[DEBUG] 从对话中提取问题成功")
 						break
 					}
 				}
+				log.Printf("[DEBUG] 成功解析对话数组，共 %d 个对话", len(dialogues))
 				logQuestionResult(result)
 				return result, nil
 			}
@@ -336,12 +342,96 @@ JSON格式：
 
 		// 尝试解析为对象
 		if err := json.Unmarshal([]byte(jsonStr), result); err != nil {
+			log.Printf("[ERROR] 解析提取的JSON失败: %v，JSON内容: %s", err, jsonStr)
 			return nil, fmt.Errorf("failed to parse extracted JSON: %w", err)
 		}
+		log.Printf("[DEBUG] 成功解析JSON对象")
 	}
 
 	logQuestionResult(result)
+	log.Printf("[DEBUG] 问题生成完成，共生成 %d 个问题和 %d 个对话", len(result.Questions), len(result.Dialogues))
 	return result, nil
+}
+
+// createSocialRecruitmentAgent 创建社招面试Agent
+func createSocialRecruitmentAgent(userId uint) adk.Agent {
+	log.Println("[DEBUG] -----------社招agent start")
+	ctx := context.Background()
+
+	//创建大模型
+	llmModel := chat.CreatOpenAiChatModel(ctx, userId)
+
+	// 社招面试智能体提示词模板
+	socialInstruction := `# 角色定义
+你是一位经验丰富的社招技术面试官，专注于考察候选人的专业能力、项目经验和技术深度。
+
+# 核心职责
+**你只负责提问，不负责回答技术问题。** 你的任务是通过专业的问题评估候选人的技术水平和岗位匹配度。
+
+# 简历分析报告使用指南
+你会收到用户简历结构化分析报告，请充分利用以下信息制定面试策略：
+
+## 必须关注的内容
+1. **候选人画像**：快速了解候选人背景和经验水平
+2. **技术能力图谱**：
+   - 深入评估候选人掌握的技术栈
+   - 根据掌握程度和工作年限调整问题难度
+   - 对核心技能进行深入考察
+3. **项目经历解析**：
+   - 详细了解项目复杂度、技术架构和候选人贡献
+   - 关注候选人在项目中的技术决策和解决问题的能力
+   - 评估候选人的实际工程能力
+4. **亮点总结**：发掘候选人的技术优势和专业深度
+5. **面试建议**：
+   - 根据岗位要求设计针对性问题
+   - 参考「建议考察的重点领域」规划面试
+
+## 面试维度
+请从以下维度多角度考察候选人：
+1. **专业知识**：编程语言深度、框架原理、架构设计能力、性能优化经验
+2. **项目经验**：项目复杂度、技术选型理由、遇到的挑战及解决方案
+3. **编码能力**：代码质量、设计模式应用、代码组织能力
+4. **技术视野**：对新技术的了解、技术趋势判断、学习能力
+5. **综合素质**：沟通表达、团队协作、问题解决思路、压力应对
+
+# 提问风格
+- 问题具有针对性和专业性，注重考察实际经验
+- 根据岗位要求和候选人背景调整问题难度
+- 对于关键技术点进行深入追问
+- 关注候选人解决实际问题的能力
+- 鼓励候选人展示技术深度和广度
+
+# 输出格式【极其重要】
+**每次回复只能包含一个问题！** 绝对不能一次性提出多个问题。
+
+规则：
+- 每次只问一个问题，然后等待候选人回答
+- 候选人回答后，你再决定是追问还是问下一个新问题
+- 新主问题时：直接提出一个问题
+- 追问时：先简短回应（1句话），再提出一个追问
+- 引导时：先说明期望方向，再请候选人补充一个点
+
+**禁止行为：**
+- 禁止一次性列出多个问题让候选人选择
+- 禁止用"第一...第二...第三..."的方式提多个问题
+- 禁止在一条消息中包含多个问号的独立问题
+
+开始面试时，先仔细阅读简历分析报告，然后从候选人的核心技术栈或最近的项目经历开始提问，逐步深入考察技术深度和实际能力。`
+
+	//配置agent
+	agentconfig, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
+		Name:          "SocialRecruitmentInterviewAgent",
+		Description:   "社招面试智能体，负责考察候选人的专业能力和技术深度，支持专业问题和深入追问",
+		Instruction:   socialInstruction,
+		Model:         llmModel,
+		MaxIterations: 8,
+	})
+
+	if err != nil {
+		log.Fatal(fmt.Errorf("failed to create social recruitment agent: %w", err))
+	}
+	log.Println("[DEBUG] -----------社招agent end")
+	return agentconfig
 }
 
 // logQuestionResult 输出 AI 生成的问题内容到终端控制台
@@ -449,22 +539,22 @@ func cleanJSON(jsonStr string) string {
 
 // BuildPromptFromSessionContext 从会话值构建提示词
 // 优化版本：直接从会话值获取所需信息，无需参数传递
-func BuildPromptFromSessionContext(ctx context.Context, questionIndex int, query string,
-	dimension string, followUpCount int) (string, error) {
-	scm := session.NewSessionContextManager(ctx)
-
-	// 从会话值获取配置
-	interviewType, domain, difficulty, err := scm.GetInterviewConfig()
-	if err != nil {
-		return "", fmt.Errorf("failed to get interview config: %w", err)
-	}
-
-	// 调用原有的 BuildInterviewPrompt 函数
-	prompt := BuildInterviewPrompt(questionIndex, query, 0, false, dimension,
-		followUpCount, interviewType, domain, difficulty)
-
-	return prompt, nil
-}
+//func BuildPromptFromSessionContext(ctx context.Context, questionIndex int, query string,
+//	dimension string, followUpCount int) (string, error) {
+//	scm := session.NewSessionContextManager(ctx)
+//
+//	// 从会话值获取配置
+//	interviewType, domain, difficulty, err := scm.GetInterviewConfig()
+//	if err != nil {
+//		return "", fmt.Errorf("failed to get interview config: %w", err)
+//	}
+//
+//	// 调用原有的 BuildInterviewPrompt 函数
+//	prompt := BuildInterviewPrompt(questionIndex, query, 0, false, dimension,
+//		followUpCount, interviewType, domain, difficulty)
+//
+//	return prompt, nil
+//}
 
 // GenerateInterviewQuestionsWithSessionContext 使用会话值生成面试问题
 // 优化版本：从会话值获取参数，减少参数传递
