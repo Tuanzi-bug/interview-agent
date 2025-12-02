@@ -252,6 +252,15 @@ struct DeleteResumeResponse {
     1: required string message  // 消息说明
 }
 
+// 美龙测试请求
+struct TestAgentRequest {
+    1: required string message (api.body="message")
+}
+
+// 美龙测试响应
+struct TestAgentResponse {
+    1: required string message  // 消息说明
+}
 
 // ==================== 服务定义 ====================
 
@@ -259,6 +268,13 @@ service InterviewsService {
     // 启动面试流程（流式）
     StartInterviewResponse StartInterviewStream(1: StartInterviewRequest request) (
         api.post="/api/interview/start/stream",
+        api.category="interviews",
+        api.gen_path="interviews"
+    )
+
+    // 启动面试流程（美龙）
+    TestAgentResponse StartInterviewMeilong(1: TestAgentRequest request) (
+        api.post="/api/interview/meilong/stream",
         api.category="interviews",
         api.gen_path="interviews"
     )

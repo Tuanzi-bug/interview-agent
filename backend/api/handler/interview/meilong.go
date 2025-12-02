@@ -1,18 +1,17 @@
-package test
+package interview
 
 import (
 	"ai-eino-interview-agent/chatApp/agent/bearAgent"
 	"ai-eino-interview-agent/internal/middleware"
-	"context"
-	"io"
-	"log"
-	"strings"
-	"time"
-
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"golang.org/x/net/context"
+	"io"
+	"log"
+	"strings"
+	"time"
 )
 
 // TestAgentRequest 测试请求结构
@@ -73,131 +72,9 @@ const testResume = `
 - 云原生：Docker、Kubernetes
 `
 
-// TestAgentChat 测试面试智能体接口
-// @router /api/test/agent/chat [POST]
-func TestAgentChat(ctx context.Context, c *app.RequestContext) {
-	// 1. 解析请求
-	var req TestAgentRequest
-	if err := c.BindAndValidate(&req); err != nil {
-		c.JSON(consts.StatusBadRequest, TestAgentResponse{
-			Success: false,
-			Message: "请求参数错误: " + err.Error(),
-		})
-		return
-	}
-
-	// 2. 获取用户ID（优先从JWT获取，否则使用请求体中的user_id）
-	jwtUserID := middleware.GetUserID(c)
-	log.Printf("[TestAgent] JWT中的UserID: %d, 请求体中的UserID: %d", jwtUserID, req.UserID)
-
-	userID := jwtUserID
-	if userID == 0 {
-		userID = req.UserID
-		log.Printf("[TestAgent] JWT未获取到用户ID，使用请求体中的UserID: %d", userID)
-	}
-	if userID == 0 {
-		c.JSON(consts.StatusUnauthorized, TestAgentResponse{
-			Success: false,
-			Message: "未登录或未提供user_id，请在Header中添加 Authorization: Bearer {token}",
-		})
-		return
-	}
-
-	log.Printf("[TestAgent] 最终使用的UserID: %d, Message: %s", userID, truncateString(req.Message, 50))
-
-	//测试强制使用
-	userID = 2
-
-	// 3. 创建面试智能体
-	startTime := time.Now()
-	agent := bearAgent.QuestionGeneratorAgent(userID)
-
-	// 4. 创建 Runner
-	runner := adk.NewRunner(ctx, adk.RunnerConfig{
-		Agent: agent,
-	})
-
-	// 5. 构建消息历史
-	// 注意：LLM API 要求每条消息的 content 字段不能为空，否则会返回 400 错误
-	var messageHistory []adk.Message
-
-	// 添加历史消息（过滤掉空内容的消息，避免 API 报错）
-	for _, msg := range req.History {
-		// 跳过空内容的消息，防止 "missing messages.content" 错误
-		if strings.TrimSpace(msg.Content) == "" {
-			log.Printf("[TestAgent] 跳过空内容的历史消息, Role: %s", msg.Role)
-			continue
-		}
-		if msg.Role == "user" {
-			messageHistory = append(messageHistory, schema.UserMessage(msg.Content))
-		} else if msg.Role == "assistant" {
-			messageHistory = append(messageHistory, schema.AssistantMessage(msg.Content, nil))
-		}
-	}
-
-	// 处理当前消息
-	userMessage := req.Message
-	if req.UseResume {
-		userMessage = "请分析以下简历并开始面试：\n" + testResume
-	}
-
-	// 确保用户消息不为空，避免 "missing messages.content" 错误
-	if strings.TrimSpace(userMessage) == "" {
-		c.JSON(consts.StatusBadRequest, TestAgentResponse{
-			Success: false,
-			Message: "消息内容不能为空",
-		})
-		return
-	}
-	messageHistory = append(messageHistory, schema.UserMessage(userMessage))
-
-	// 6. 运行 Agent
-	log.Println("[TestAgent] 开始处理请求...")
-	iter := runner.Run(ctx, messageHistory)
-
-	var fullResponse strings.Builder
-	eventCount := 0
-
-	for {
-		event, ok := iter.Next()
-		if !ok {
-			break
-		}
-		eventCount++
-
-		if event.Err != nil {
-			log.Printf("[TestAgent] Agent执行出错: %v", event.Err)
-			c.JSON(consts.StatusInternalServerError, TestAgentResponse{
-				Success: false,
-				Message: "Agent执行出错: " + event.Err.Error(),
-			})
-			return
-		}
-
-		// 获取消息输出
-		if event.Output != nil && event.Output.MessageOutput != nil {
-			content := event.Output.MessageOutput.Message.Content
-			if content != "" {
-				fullResponse.WriteString(content)
-			}
-		}
-	}
-
-	// 7. 返回响应
-	elapsed := time.Since(startTime)
-	log.Printf("[TestAgent] 处理完成 - 耗时: %v, 事件数: %d", elapsed, eventCount)
-
-	c.JSON(consts.StatusOK, TestAgentResponse{
-		Success:  true,
-		Message:  "处理成功",
-		Response: fullResponse.String(),
-		Duration: elapsed.String(),
-	})
-}
-
-// TestAgentChatStream 测试面试智能体接口 (SSE流式响应)
-// @router /api/test/agent/chat/stream [POST]
-func TestAgentChatStream(ctx context.Context, c *app.RequestContext) {
+// StartInterviewMeilong .
+// @router /api/interview/meilong/stream [POST]
+func StartInterviewMeilong(ctx context.Context, c *app.RequestContext) {
 	// 1. 解析请求
 	var req TestAgentRequest
 	if err := c.BindAndValidate(&req); err != nil {
