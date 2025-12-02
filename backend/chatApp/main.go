@@ -66,9 +66,9 @@ func main() {
 	var userId uint = 2
 
 	// 1. 创建面试调度智能体
-	log.Println("[Agent] 正在创建面试调度智能体...")
+	log.Println("[Agent] 正在创建面试智能体...")
 	startTime := time.Now()
-	agent := bearAgent.InterviewSupervisorAgent(userId)
+	agent := bearAgent.QuestionGeneratorAgent(userId)
 	log.Printf("[Agent] 智能体创建完成，耗时: %v", time.Since(startTime))
 
 	// 2. 创建 Runner

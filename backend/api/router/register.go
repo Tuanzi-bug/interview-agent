@@ -4,6 +4,7 @@ package router
 
 import (
 	interview "ai-eino-interview-agent/api/router/interview"
+	testRouter "ai-eino-interview-agent/api/router/test"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 )
@@ -12,4 +13,5 @@ import (
 func GeneratedRegister(r *server.Hertz) {
 	//INSERT_POINT: DO NOT DELETE THIS LINE!
 	interview.Register(r)
+	testRouter.Register(r) // 注册测试路由
 }
