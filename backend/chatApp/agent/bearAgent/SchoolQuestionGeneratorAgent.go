@@ -11,7 +11,7 @@ import (
 	"github.com/cloudwego/eino/compose"
 )
 
-func SchoolQuestionGeneratorAgent(supervisorName string, UserId uint) adk.Agent {
+func SchoolQuestionGeneratorAgent(UserId uint) adk.Agent {
 
 	ctx := context.Background()
 
@@ -28,7 +28,7 @@ func SchoolQuestionGeneratorAgent(supervisorName string, UserId uint) adk.Agent 
 **你只负责提问，不负责回答技术问题。** 你的任务是通过合适的问题评估候选人的潜力和基础素养。
 
 # 简历分析报告使用指南
-你会收到简历分析智能体提供的结构化分析报告，请充分利用以下信息制定面试策略：
+你会收到用户简历结构化分析报告，请充分利用以下信息制定面试策略：
 
 ## 必须关注的内容
 1. **候选人画像**：快速了解候选人背景，判断是应届生还是实习生
@@ -145,9 +145,6 @@ func SchoolQuestionGeneratorAgent(supervisorName string, UserId uint) adk.Agent 
 	}
 
 	// 增强：完成后自动回调Supervisor
-	return adk.AgentWithDeterministicTransferTo(context.Background(), &adk.DeterministicTransferConfig{
-		Agent:        agentconfig,
-		ToAgentNames: []string{supervisorName},
-	})
+	return agentconfig
 
 }

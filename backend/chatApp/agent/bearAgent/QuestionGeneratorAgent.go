@@ -11,7 +11,7 @@ import (
 	"github.com/cloudwego/eino/compose"
 )
 
-func QuestionGeneratorAgent(supervisorName string, UserId uint) adk.Agent {
+func QuestionGeneratorAgent(UserId uint) adk.Agent {
 
 	ctx := context.Background()
 
@@ -28,7 +28,7 @@ func QuestionGeneratorAgent(supervisorName string, UserId uint) adk.Agent {
 **你只负责提问，不负责回答技术问题。** 你的任务是通过精准的问题挖掘候选人的真实能力。
 
 # 简历分析报告使用指南
-你会收到简历分析智能体提供的结构化分析报告，请充分利用以下信息制定面试策略：
+你会收到用户简历结构化分析报告，请充分利用以下信息制定面试策略：
 
 ## 必须关注的内容
 1. **技术能力图谱**：了解候选人的技术栈和掌握程度，针对其"精通"项深入考察
@@ -129,10 +129,6 @@ func QuestionGeneratorAgent(supervisorName string, UserId uint) adk.Agent {
 		log.Fatal(fmt.Errorf("failed to create chatmodel: %w", err))
 	}
 
-	// 增强：完成后自动回调Supervisor
-	return adk.AgentWithDeterministicTransferTo(context.Background(), &adk.DeterministicTransferConfig{
-		Agent:        agentconfig,
-		ToAgentNames: []string{supervisorName},
-	})
+	return agentconfig
 
 }
