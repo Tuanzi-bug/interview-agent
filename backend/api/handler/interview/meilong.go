@@ -86,16 +86,10 @@ func StartPersistentInterview(ctx context.Context, c *app.RequestContext) {
 
 	log.Printf("[PersistentInterview] 开始持久面试: userID=%d", userID)
 
-	// 3. 检查是否已有活跃会话
+	// 3. 创建新会话（支持多会话，每个会话独立上下文）
 	mgr := GetPersistentSessionManager()
-	existingSession := mgr.GetSessionByUserID(userID)
-	if existingSession != nil {
-		// 结束旧会话
-		mgr.EndSession(existingSession.SessionID)
-		log.Printf("[PersistentInterview] 结束旧会话: sessionID=%s", existingSession.SessionID)
-	}
 
-	// 4. 创建新会话
+	// 注意：不再自动结束旧会话，允许用户同时拥有多个独立会话
 	session := mgr.CreateSession(userID)
 
 	// 5. 设置SSE响应头
@@ -220,7 +214,7 @@ func EndInterview(ctx context.Context, c *app.RequestContext) {
 	})
 }
 
-// GetInterviewSession 获取当前用户的活跃会话
+// GetInterviewSession 获取当前用户的所有活跃会话
 // @router /api/interview/persistent/session [GET]
 func GetInterviewSession(ctx context.Context, c *app.RequestContext) {
 	jwtUserID := middleware.GetUserID(c)
@@ -233,21 +227,33 @@ func GetInterviewSession(ctx context.Context, c *app.RequestContext) {
 	}
 
 	mgr := GetPersistentSessionManager()
-	session := mgr.GetSessionByUserID(jwtUserID)
-	if session == nil {
+	sessions := mgr.GetAllSessionsByUserID(jwtUserID)
+
+	if len(sessions) == 0 {
 		c.JSON(consts.StatusOK, map[string]interface{}{
 			"success":    true,
 			"has_active": false,
+			"sessions":   []interface{}{},
 			"message":    "无活跃会话",
 		})
 		return
 	}
 
+	// 构建会话列表
+	sessionList := make([]map[string]interface{}, 0, len(sessions))
+	for _, session := range sessions {
+		sessionList = append(sessionList, map[string]interface{}{
+			"session_id":       session.SessionID,
+			"last_active_time": session.LastActiveTime.Format(time.RFC3339),
+			"message_count":    len(session.MessageHistory),
+		})
+	}
+
 	c.JSON(consts.StatusOK, map[string]interface{}{
-		"success":          true,
-		"has_active":       true,
-		"session_id":       session.SessionID,
-		"last_active_time": session.LastActiveTime.Format(time.RFC3339),
+		"success":    true,
+		"has_active": true,
+		"count":      len(sessions),
+		"sessions":   sessionList,
 	})
 }
 

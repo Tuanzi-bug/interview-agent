@@ -3,6 +3,7 @@ package interview
 import (
 	"ai-eino-interview-agent/chatApp/agent/bearAgent"
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"strings"
@@ -97,7 +98,7 @@ func (m *PersistentSessionManager) GetSession(sessionID string) *PersistentSessi
 	return m.sessions[sessionID]
 }
 
-// GetSessionByUserID 通过用户ID获取活跃会话
+// GetSessionByUserID 通过用户ID获取活跃会话（返回第一个找到的）
 func (m *PersistentSessionManager) GetSessionByUserID(userID uint) *PersistentSession {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -108,6 +109,20 @@ func (m *PersistentSessionManager) GetSessionByUserID(userID uint) *PersistentSe
 		}
 	}
 	return nil
+}
+
+// GetAllSessionsByUserID 获取用户的所有活跃会话
+func (m *PersistentSessionManager) GetAllSessionsByUserID(userID uint) []*PersistentSession {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var sessions []*PersistentSession
+	for _, session := range m.sessions {
+		if session.UserID == userID && !session.IsEnded {
+			sessions = append(sessions, session)
+		}
+	}
+	return sessions
 }
 
 // EndSession 结束会话
@@ -324,5 +339,6 @@ func (s *PersistentSession) StreamResponses(w io.Writer) {
 
 // generatePersistentSessionID 生成持久会话ID
 func generatePersistentSessionID(userID uint) string {
-	return "ps_" + time.Now().Format("20060102150405") + "_" + string(rune(userID+'0'))
+	// 使用纳秒级时间戳确保唯一性
+	return fmt.Sprintf("ps_%d_%d", userID, time.Now().UnixNano())
 }
