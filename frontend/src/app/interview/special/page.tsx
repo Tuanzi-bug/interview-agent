@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Typography, Row, Col, Card as AntCard, Form, Select, Button, Tag } from 'antd';
+import { useRouter } from 'next/navigation';
+import { Typography, Row, Col, Card as AntCard, Form, Select, Button, Tag, message } from 'antd';
 import { CheckCircleOutlined, VideoCameraOutlined } from '@ant-design/icons';
 
 const { Title, Paragraph } = Typography;
@@ -35,7 +36,31 @@ const GROUPED_OPTIONS = [
 
 export default function SpecialInterviewPage() {
   const [stack, setStack] = useState<string>('Go');
+  const [starting, setStarting] = useState(false);
   const [form] = Form.useForm();
+  const router = useRouter();
+
+  const handleStart = async () => {
+    try {
+      const values = await form.validateFields();
+      setStarting(true);
+      
+      const params = {
+        type: '专项面试',
+        domain: values.stack,
+        difficulty: values.level
+      };
+      
+      (window as any).__interviewParams = { ...params };
+      try { sessionStorage.setItem('interviewParams', JSON.stringify(params)); } catch {}
+      
+      router.push('/interview/special/start');
+    } catch (e) {
+      message.error('请选择专项类别和难度等级');
+    } finally {
+      setStarting(false);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4">
@@ -74,7 +99,14 @@ export default function SpecialInterviewPage() {
                 <Select options={[{ value: '入门', label: '入门' }, { value: '中级', label: '中级' }, { value: '进阶', label: '进阶' }]} />
               </Form.Item>
               <div className="mt-2">
-                <Button type="primary" className="bg-green-500 w-full h-12 text-base">首次专项面试免费</Button>
+                <Button 
+                  type="primary" 
+                  className="bg-green-500 w-full h-12 text-base" 
+                  onClick={handleStart}
+                  loading={starting}
+                >
+                  首次专项面试免费
+                </Button>
                 <div className="text-center text-gray-500 text-sm mt-2">单次专项面试约30-60分钟，系统自动续集题目链路</div>
               </div>
             </Form>
