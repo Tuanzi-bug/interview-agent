@@ -39,7 +39,7 @@ func NewGoSocialAgent(userId uint, needResumeTool bool) adk.Agent {
 		Instruction:   GoSocialAgentInstruction,
 		Model:         model,
 		ToolsConfig:   toolsConfig,
-		MaxIterations: 20,
+		MaxIterations: 15,
 	})
 	if err != nil {
 		log.Fatal(fmt.Errorf("failed to create Go social agent: %w", err))
