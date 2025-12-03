@@ -2,16 +2,22 @@ package mianshi
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"time"
 
-	"ai-eino-interview-agent/chatApp/agent/service"
-	"ai-eino-interview-agent/internal/alert"
-	"ai-eino-interview-agent/internal/mq"
+	"ai-eino-interview-agent/chatApp/agent_service/interview"
+	"ai-eino-interview-agent/internal/model"
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
 )
+
+// InterviewDialogueData 对话数据结构
+type InterviewDialogueData struct {
+	Question string
+	Answer   string
+}
 
 // InterviewEngine 面试引擎 - 处理核心面试逻辑
 type InterviewEngine struct {
@@ -31,18 +37,27 @@ func NewInterviewEngine(sessionManager *SessionManager, interviewSvc interviewse
 
 // RunInterviewLoop 运行面试循环
 func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *InterviewSession) {
-	defer e.cleanup(session)
 
 	questionIndex := 0
-	var resumeContent string
-	const maxFollowUps = 2
 	const answerTimeout = 30 * time.Minute
 	const heartbeatInterval = 15 * time.Second
 
-	// 根据面试类型选择维度
-	dimensions := e.getDimensions(session.Type)
-	dimensionIndex := 0
-	followUpCount := 0
+	// 用于存储主问题及其追问
+	var mainQuestion *InterviewDialogueData
+	var followUpQuestions []*InterviewDialogueData
+
+	// 用于存储历史问题和回答
+	type QuestionAnswer struct {
+		Question string
+		Answer   string
+	}
+	var questionHistory []QuestionAnswer
+
+	// 创建智能体服务（在循环外创建一次，避免重复实例化）
+	agentSvc := interview.NewInterviewAgentService(session.UserID)
+
+	// 确定智能体类型（根据面试类型和领域选择）
+	agentType := e.selectAgentType(session)
 
 	for {
 		select {
@@ -63,211 +78,266 @@ func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *Intervi
 				break
 			}
 
-			if answer == "quit" {
-				SendCompleteEvent(e.writer)
-				break
+			//if answer == "quit" {
+			//	SendCompleteEvent(e.writer)
+			//	break
+			//}
+
+			// 保存用户回答到当前主问题或追问
+			if mainQuestion != nil {
+				if len(followUpQuestions) == 0 {
+					// 回答主问题
+					mainQuestion.Answer = answer
+				} else if len(followUpQuestions) > 0 {
+					// 回答最后一个追问
+					followUpQuestions[len(followUpQuestions)-1].Answer = answer
+				}
 			}
 
-			// 保存用户回答
-			session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
-				"speaker_type":  "candidate",
-				"content":       answer,
-				"display_order": uint32(questionIndex)*100 + uint32(followUpCount),
-			})
-
-			// 决定是否继续追问或进入下一个维度
-			if followUpCount < maxFollowUps {
-				followUpCount++
-			} else {
-				dimensionIndex++
-				followUpCount = 0
-				questionIndex++
-				if dimensionIndex >= len(dimensions) {
-					SendTopicCompleteEvent(e.writer)
-					SendCompleteEvent(e.writer)
+			// 检查是否还有未回答的追问
+			hasUnansweredFollowUp := false
+			for _, followUp := range followUpQuestions {
+				if followUp.Answer == "" {
+					hasUnansweredFollowUp = true
 					break
 				}
 			}
-		}
 
-		if questionIndex == 0 {
+			// 如果还有未回答的追问，继续等待
+			if hasUnansweredFollowUp {
+				// 发送下一个追问事件
+				for i, followUp := range followUpQuestions {
+					if followUp.Answer == "" {
+						errSend := SendSSEEvent(e.writer, map[string]interface{}{
+							"type":  "follow_up_question",
+							"index": questionIndex,
+							"order": i + 1,
+							"data": map[string]interface{}{
+								"question_text": followUp.Question,
+							},
+						})
+						if errSend != nil {
+							return
+						}
+						break
+					}
+				}
+				// 继续等待下一个答案，不重置状态
+				continue
+			}
+
+			// 所有追问都已回答，保存当前主问题及其追问，进入下一个主问题
+			if mainQuestion != nil {
+				e.saveDialogueData(ctx, session, mainQuestion, followUpQuestions)
+				// 将主问题和回答添加到历史记录
+				questionHistory = append(questionHistory, QuestionAnswer{
+					Question: mainQuestion.Question,
+					Answer:   mainQuestion.Answer,
+				})
+			}
+			// 重置追问
+			followUpQuestions = nil
+			mainQuestion = nil
+
 			questionIndex++
 		}
 
-		// 生成问题提示词
-		prompt := e.buildPrompt(questionIndex, session, resumeContent, dimensions[dimensionIndex], followUpCount)
+		// 构建问题提示词
+		var prompt string
+		if questionIndex == 0 {
+			// 第一个问题：只传递简历ID
+			prompt = fmt.Sprintf("请根据简历ID生成一个面试问题。简历ID: %d", session.ResumeId)
+		} else {
+			// 后续问题：包含历史回答，让智能体根据用户的回答调整后续问题
+			historyText := ""
+			for i, qa := range questionHistory {
+				historyText += fmt.Sprintf("问题%d：%s\n回答%d：%s\n\n", i+1, qa.Question, i+1, qa.Answer)
+			}
+			prompt = fmt.Sprintf(`根据简历ID和用户已回答的问题，生成下一个面试问题。
 
-		// 调用智能体生成问题
-		isFirstQuestion := questionIndex == 1 && followUpCount == 0
-		result, err := service.GenerateInterviewQuestions(ctx, prompt, session.UserID, isFirstQuestion)
+简历ID: %d
+
+用户已回答的问题：
+%s
+
+请根据用户的回答情况，生成下一个更有针对性的面试问题。`, session.ResumeId, historyText)
+		}
+
+		// 收集智能体的响应
+		var questionResult map[string]interface{}
+		err := agentSvc.RunInterviewWithCallback(ctx, agentType, session.HasResume, prompt, func(message string) error {
+			// 解析响应
+			var result map[string]interface{}
+			if err := json.Unmarshal([]byte(message), &result); err == nil {
+				questionResult = result
+			}
+			return nil
+		})
+
 		if err != nil {
 			SendErrorEvent(e.writer, "Failed to generate question: "+err.Error())
 			SendCompleteEvent(e.writer)
 			break
 		}
 
-		if len(result.Questions) == 0 {
+		if len(questionResult) == 0 {
 			SendTopicCompleteEvent(e.writer)
 			SendCompleteEvent(e.writer)
 			break
 		}
 
-		// 缓存简历内容（仅第一次）
-		if questionIndex == 1 {
-			resumeContent = session.Query
+		// 提取主问题信息（智能体返回格式：main_question.question_text）
+		var questionText string
+		var mainQ map[string]interface{}
+
+		if mq, ok := questionResult["main_question"].(map[string]interface{}); ok {
+			mainQ = mq
+			if qt, ok := mainQ["question_text"].(string); ok {
+				questionText = qt
+			}
+		}
+
+		if questionText == "" {
+			log.Printf("[Interview Engine] Failed to extract question text from agent response, sessionID: %s", session.SessionID)
+			SendErrorEvent(e.writer, "Failed to extract question from agent response")
+			SendCompleteEvent(e.writer)
+			break
 		}
 
 		// 发送问题事件
-		q := result.Questions[0]
-		SendQuestionEvent(e.writer, questionIndex, q)
-
-		// 保存问题
-		session.AllQuestions = append(session.AllQuestions, map[string]interface{}{
-			"question_text":  q.QuestionText,
-			"eval_dimension": q.EvalDimension,
-			"order":          q.Order,
+		err = SendSSEEvent(e.writer, map[string]interface{}{
+			"type":  "question",
+			"index": questionIndex,
+			"data": map[string]interface{}{
+				"question_text": questionText,
+			},
 		})
+		if err != nil {
+			return
+		}
 
-		// 保存提问对话
-		if len(result.Dialogues) > 0 {
-			for _, d := range result.Dialogues {
-				if d.SpeakerType == "interviewer" {
-					session.AllDialogues = append(session.AllDialogues, map[string]interface{}{
-						"speaker_type":  "interviewer",
-						"content":       d.Content,
-						"display_order": uint32(questionIndex)*100 + uint32(followUpCount),
-					})
-					break
+		// 提取主问题的提问内容
+		var questionContent string
+		if mainQ != nil {
+			if qt, ok := mainQ["question_text"].(string); ok {
+				questionContent = qt
+			}
+		}
+
+		// 创建主问题
+		if mainQuestion == nil {
+			// 这是一个新的主问题
+			mainQuestion = &InterviewDialogueData{
+				Question: questionContent,
+				Answer:   "",
+			}
+			// 清空追问列表，准备接收新的追问
+			followUpQuestions = nil
+		}
+
+		// 提取追问列表（智能体返回格式：follow_up_questions）
+		if followUps, ok := questionResult["follow_up_questions"].([]interface{}); ok {
+			for _, fu := range followUps {
+				if followUpMap, ok := fu.(map[string]interface{}); ok {
+					if questionText, ok := followUpMap["question_text"].(string); ok {
+						followUpQuestions = append(followUpQuestions, &InterviewDialogueData{
+							Question: questionText,
+							Answer:   "",
+						})
+					}
 				}
 			}
 		}
 
+		log.Printf("[Interview Engine] Generated question, sessionID: %s, questionIndex: %d, follow-ups: %d", session.SessionID, questionIndex, len(followUpQuestions))
+
 		// 发送就绪事件
 		SendReadyEventWithSession(e.writer, questionIndex, session.SessionID)
 		e.sessionManager.ClearAnswer(session.SessionID)
+
+		// 更新会话中的问题计数
+		session.QuestionCount = int32(questionIndex)
 	}
 
-	// 保存所有面试数据
-	e.saveInterviewData(ctx, session)
-}
-
-// buildPrompt 构建提示词
-func (e *InterviewEngine) buildPrompt(questionIndex int, session *InterviewSession, resumeContent string, dimension string, followUpCount int) string {
-	return service.BuildInterviewPrompt(questionIndex, session.Query, session.ResumeId, session.HasResume, dimension, followUpCount, session.Type, session.Domain, session.Difficulty)
-}
-
-// ConvertToInterfaceSlice 将 []map[string]interface{} 转换为 []interface{}
-func ConvertToInterfaceSlice(data []map[string]interface{}) []interface{} {
-	result := make([]interface{}, len(data))
-	for i, item := range data {
-		result[i] = item
-	}
-	return result
-}
-
-// getDimensions 根据面试类型获取维度
-func (e *InterviewEngine) getDimensions(interviewType string) []string {
-	if interviewType == "综合面试" {
-		return []string{
-			"professional_field",
-			"project_experience",
-			"technical_depth",
-			"technical_foundation",
-			"team_collaboration",
-			"system_architecture_design",
-		}
-	}
-	// 专项面试
-	return []string{
-		"basic_knowledge_mastery",
-		"working_principle_practical_experience",
-		"advanced_features_application",
-		"problem_troubleshooting_skills",
-		"architecture_design_thinking",
-		"performance_optimization_ability",
+	// 保存最后一个主问题及其追问
+	if mainQuestion != nil {
+		e.saveDialogueData(ctx, session, mainQuestion, followUpQuestions)
+		// 更新最后一个问题的计数
+		session.QuestionCount = int32(questionIndex + 1)
 	}
 }
 
-// saveInterviewData 保存面试数据
-func (e *InterviewEngine) saveInterviewData(ctx context.Context, session *InterviewSession) {
-	log.Printf("[Interview Engine] Saving dialogues, sessionID: %s", session.SessionID)
+// saveDialogueData 保存单个主问题及其追问到数据库
+func (e *InterviewEngine) saveDialogueData(ctx context.Context, session *InterviewSession, mainQuestion *InterviewDialogueData, followUpQuestions []*InterviewDialogueData) {
+	// 构建主问题对象
+	// ParentID 会在 SaveInterviewDialogueWithParent 中设置为 0（表示主问题）
+	mainQ := &model.InterviewDialogue{
+		UserID:   session.UserID,
+		ReportID: session.RecordID,
+		Question: mainQuestion.Question,
+		Answer:   mainQuestion.Answer,
+	}
 
-	// 带重试机制的保存
-	const maxRetries = 3
-	var saveErr error
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		saveErr = e.interviewSvc.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, ConvertToInterfaceSlice(session.AllQuestions), ConvertToInterfaceSlice(session.AllDialogues))
-		if saveErr == nil {
-			break
-		}
+	// 构建追问对象列表
+	// ParentID 会在 SaveInterviewDialogueWithParent 中设置为主问题的 ID
+	var followUps []*model.InterviewDialogue
+	for _, followUp := range followUpQuestions {
+		followUps = append(followUps, &model.InterviewDialogue{
+			UserID:   session.UserID,
+			ReportID: session.RecordID,
+			Question: followUp.Question,
+			Answer:   followUp.Answer,
+		})
+	}
 
-		// 判断是否为可重试的错误
-		if !IsRetryableError(saveErr) {
-			if saveErr != context.Canceled && saveErr != context.DeadlineExceeded {
-				alert.SendDatabaseErrorAlert(
-					fmt.Sprintf("SaveInterviewDialogues (不可重试) - UserID: %d, RecordID: %d", session.UserID, session.RecordID),
-					saveErr,
-					attempt+1,
-				)
+	// 直接保存到数据库
+	// SaveInterviewDialogueWithParent 会自动处理 ParentID：
+	// - 主问题的 ParentID = 0
+	// - 追问的 ParentID = 主问题的 ID
+	if err := e.interviewSvc.SaveInterviewDialogueWithParent(ctx, session.UserID, session.RecordID, mainQ, followUps); err != nil {
+		log.Printf("[Interview Engine] Failed to save dialogue data to database: %v, sessionID: %s", err, session.SessionID)
+		SendErrorEvent(e.writer, "Failed to save interview data: "+err.Error())
+		return
+	}
+
+	log.Printf("[Interview Engine] Saved dialogue data to database, sessionID: %s, main question: %s, follow-ups: %d", session.SessionID, mainQuestion.Question, len(followUpQuestions))
+}
+
+// selectAgentType 根据面试类型和领域选择智能体类型
+func (e *InterviewEngine) selectAgentType(session *InterviewSession) interview.InterviewAgentType {
+	// 综合面试
+	if session.Type == "综合面试" {
+		switch session.Domain {
+		case "Java":
+			// 根据难度选择校招或社招
+			if session.Difficulty == "校招" {
+				return interview.ComprehensiveJavaSchool
 			}
-			break
+			return interview.ComprehensiveJavaSocial
+		case "Go":
+			fallthrough
+		default:
+			// Go 为默认选项
+			if session.Difficulty == "校招" {
+				return interview.ComprehensiveGoSchool
+			}
+			return interview.ComprehensiveGoSocial
 		}
-
-		// 最后一次尝试失败
-		if attempt == maxRetries-1 {
-			alert.SendDatabaseErrorAlert(
-				fmt.Sprintf("SaveInterviewDialogues (重试耗尽) - UserID: %d, RecordID: %d", session.UserID, session.RecordID),
-				saveErr,
-				maxRetries,
-			)
-			break
-		}
-
-		// 指数退避
-		backoffDuration := time.Duration(100*(1<<uint(attempt))) * time.Millisecond
-		time.Sleep(backoffDuration)
 	}
 
-	// 更新面试记录状态
-	duration := int64(time.Since(session.StartTime).Seconds())
-	e.updateInterviewRecord(ctx, session, duration)
-
-	// 发布评估消息
-	e.publishEvaluationMessages(ctx, session)
-
-	log.Printf("[Interview Engine] Interview completed, sessionID: %s", session.SessionID)
-}
-
-// updateInterviewRecord 更新面试记录
-func (e *InterviewEngine) updateInterviewRecord(ctx context.Context, session *InterviewSession, duration int64) {
-	log.Printf("[Interview Engine] Updating interview record, sessionID: %s, duration: %d seconds", session.SessionID, duration)
-	// 实现更新逻辑（可根据需要调用服务）
-	_ = duration
-}
-
-// publishEvaluationMessages 发布评估消息
-func (e *InterviewEngine) publishEvaluationMessages(ctx context.Context, session *InterviewSession) {
-	log.Printf("[Interview Engine] Publishing evaluation messages, sessionID: %s, userID: %d, recordID: %d", session.SessionID, session.UserID, session.RecordID)
-
-	// 发布评估报告生成消息
-	if err := mq.PublishEvaluationReport(ctx, session.UserID, session.RecordID); err != nil {
-		log.Printf("[Interview Engine] Failed to publish evaluation report message: %v, sessionID: %s", err, session.SessionID)
+	// 专项面试
+	switch session.Domain {
+	case "Java":
+		return interview.SpecializedJava
+	case "MQ":
+		return interview.SpecializedMQ
+	case "MySQL":
+		return interview.SpecializedMySQL
+	case "Redis":
+		return interview.SpecializedRedis
+	case "Go":
+		fallthrough
+	default:
+		return interview.SpecializedGo
 	}
-
-	// 发布主题评估消息
-	if err := mq.PublishTopicEvaluation(ctx, session.UserID, session.RecordID); err != nil {
-		log.Printf("[Interview Engine] Failed to publish topic evaluation message: %v, sessionID: %s", err, session.SessionID)
-	}
-}
-
-// cleanup 清理资源
-func (e *InterviewEngine) cleanup(session *InterviewSession) {
-	if r := recover(); r != nil {
-		SendErrorEvent(e.writer, fmt.Sprintf("面试异常: %v", r))
-	}
-	// 延迟删除会话
-	go func() {
-		time.Sleep(10 * time.Second)
-		e.sessionManager.DeleteSession(session.SessionID)
-	}()
 }

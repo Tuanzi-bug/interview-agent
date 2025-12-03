@@ -34,3 +34,43 @@ func (dao *_InterviewDialogue) Create(dialogue *InterviewDialogue) error {
 	}
 	return getDB().Create(dialogue).Error
 }
+
+// GetByReportID 根据报告ID获取所有对话记录
+func (dao *_InterviewDialogue) GetByReportID(reportID uint64) ([]*InterviewDialogue, error) {
+	if getDB == nil {
+		panic("getDB function not initialized, please call model.SetDBGetter first")
+	}
+	var dialogues []*InterviewDialogue
+	err := getDB().Where("report_id = ?", reportID).Order("created_at ASC").Find(&dialogues).Error
+	return dialogues, err
+}
+
+// GetByParentID 根据父ID获取追问记录
+func (dao *_InterviewDialogue) GetByParentID(parentID uint64) ([]*InterviewDialogue, error) {
+	if getDB == nil {
+		panic("getDB function not initialized, please call model.SetDBGetter first")
+	}
+	var dialogues []*InterviewDialogue
+	err := getDB().Where("parent_id = ?", parentID).Order("created_at ASC").Find(&dialogues).Error
+	return dialogues, err
+}
+
+// GetMainQuestions 获取所有主问题（ParentID = 0）
+func (dao *_InterviewDialogue) GetMainQuestions(reportID uint64) ([]*InterviewDialogue, error) {
+	if getDB == nil {
+		panic("getDB function not initialized, please call model.SetDBGetter first")
+	}
+	var dialogues []*InterviewDialogue
+	err := getDB().Where("report_id = ? AND parent_id = 0", reportID).Order("created_at ASC").Find(&dialogues).Error
+	return dialogues, err
+}
+
+// GetFollowUpQuestions 获取所有追问（ParentID != 0）
+func (dao *_InterviewDialogue) GetFollowUpQuestions(reportID uint64) ([]*InterviewDialogue, error) {
+	if getDB == nil {
+		panic("getDB function not initialized, please call model.SetDBGetter first")
+	}
+	var dialogues []*InterviewDialogue
+	err := getDB().Where("report_id = ? AND parent_id != 0", reportID).Order("created_at ASC").Find(&dialogues).Error
+	return dialogues, err
+}

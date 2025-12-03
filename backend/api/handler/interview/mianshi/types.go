@@ -14,24 +14,23 @@ type SessionManager struct {
 
 // InterviewSession 面试会话
 type InterviewSession struct {
-	SessionID    string
-	UserID       uint
-	RecordID     uint64
-	ResumeId     int64
-	HasResume    bool
-	Query        string
-	Type         string
-	Domain       string
-	Difficulty   string
-	Status       string // 会话状态：active, paused, completed, failed
-	CompanyName  string // 公司名称
-	PositionName string // 岗位名称
-	AllQuestions []map[string]interface{}
-	AllDialogues []map[string]interface{}
-	AnswerChan   chan string
-	CancelFunc   context.CancelFunc // 用于取消面试循环
-	StartTime    time.Time
-	LastActivity time.Time
+	SessionID     string
+	UserID        uint
+	RecordID      uint64
+	ResumeId      int64
+	HasResume     bool
+	Query         string
+	Type          string //综合面试，专项面试
+	Domain        string //go，java，中间件
+	Difficulty    string //校招，社招
+	Status        string // 会话状态：active, paused, completed, failed
+	CompanyName   string // 公司名称
+	PositionName  string // 岗位名称
+	AnswerChan    chan string
+	CancelFunc    context.CancelFunc // 用于取消面试循环
+	StartTime     time.Time
+	LastActivity  time.Time
+	QuestionCount int32 // 面试问题总数（用于统计）
 }
 
 // 全局会话管理器单例
@@ -74,8 +73,6 @@ func (sm *SessionManager) CreateSessionWithDetails(userID uint, recordID uint64,
 		Status:       "active",
 		CompanyName:  companyName,
 		PositionName: positionName,
-		AllQuestions: make([]map[string]interface{}, 0),
-		AllDialogues: make([]map[string]interface{}, 0),
 		AnswerChan:   make(chan string, 1),
 		StartTime:    time.Now(),
 		LastActivity: time.Now(),
