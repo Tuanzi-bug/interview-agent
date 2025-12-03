@@ -2,6 +2,7 @@ package interviews
 
 import (
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
+	"ai-eino-interview-agent/internal/model"
 	"ai-eino-interview-agent/internal/service/interviews/impl"
 	"context"
 )
@@ -59,6 +60,15 @@ type InterviewManager interface {
 		userID uint,
 		reportID uint64,
 	) (interface{}, error)
+
+	// SaveInterviewDialogueWithParent 保存面试对话（支持父子关系）
+	SaveInterviewDialogueWithParent(
+		ctx context.Context,
+		userID uint,
+		reportID uint64,
+		mainQuestion *model.InterviewDialogue,
+		followUpQuestions []*model.InterviewDialogue,
+	) error
 }
 
 // ResumeManager 简历管理接口
