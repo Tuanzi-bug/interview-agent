@@ -5,15 +5,15 @@ port: 8888
 # 数据库配置
 database:
   driver: "mysql"
-  dsn: "root:726726@tcp(localhost:3306)/interview_agent?charset=utf8mb4&parseTime=True&loc=Local"
+  dsn: "root:ht123456@tcp(localhost:3306)/interview_agent?charset=utf8mb4&parseTime=True&loc=Local"
   max_open_conns: 100
   max_idle_conns: 10
   conn_max_lifetime: "1h"
 
 # Redis配置
 redis:
-  addr: "localhost:6379"
-  password: ""
+  addr: "redis:6379"
+  password: "root"
   db: 0
   dial_timeout: "5s"
   read_timeout: "3s"
@@ -94,11 +94,7 @@ Milvus:
   Username: "${MILVUS_USERNAME}"            # 从环境变量 MILVUS_USERNAME 读取
   Password: "${MILVUS_PASSWORD}"            # 从环境变量 MILVUS_PASSWORD 读取
   DatabaseName: "default"                   # 数据库名称
-  CollectionName: "feishu_docs_20251126"               # 集合名称
-
-  Collections:
-    feishu : "feishu_docs_20251126"
-    
+  CollectionName: "documents"               # 集合名称
 
   # 检索配置
   TopK: 5                                   # 返回的最相似文档数量
