@@ -85,7 +85,7 @@ export default function SocialInterviewStartPage() {
         console.log('[面试启动] 请求参数:', requestBody);
         
         try {
-          response = await fetch('http://localhost:8888/api/interview/start/stream', {
+          response = await fetch('http://localhost:8888/api/mianshi/stream/start', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -98,7 +98,7 @@ export default function SocialInterviewStartPage() {
         } catch (headerError) {
           // 如果Authorization header方式失败，尝试使用URL参数
           console.log('[面试启动] 方案1失败，尝试方案2: 使用URL参数传递token');
-          const urlWithToken = `http://localhost:8888/api/interview/start/stream?token=${encodeURIComponent(token)}`;
+          const urlWithToken = `http://localhost:8888/api/mianshi/stream/start?token=${encodeURIComponent(token)}`;
           
           response = await fetch(urlWithToken, {
             method: 'POST',
@@ -119,7 +119,7 @@ export default function SocialInterviewStartPage() {
           } else if (response.status === 404) {
             console.error('[面试启动] 404错误 - 接口不存在');
             message.error({
-              content: '接口返回404，请在后端 middleware.go 中将 /api/interview/start/stream 添加到 jwtPublicRoutes',
+              content: '接口返回404，请在后端 middleware.go 中将 /api/mianshi/stream/start 添加到 jwtPublicRoutes',
               duration: 10,
             });
           } else {
@@ -240,7 +240,8 @@ export default function SocialInterviewStartPage() {
         const token = localStorage.getItem('token');
         if (token) {
           // 调用后端接口结束面试
-          await fetch('http://localhost:8888/api/interview/submit/answer', {
+          // 更新为新的结束面试接口
+          await fetch('http://localhost:8888/api/mianshi/interview/end', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -248,8 +249,7 @@ export default function SocialInterviewStartPage() {
             },
             body: JSON.stringify({
               session_id: sessionId,
-              answer: '',
-              action: 'quit',
+              // 结束面试可能不需要answer字段，仅传session_id即可
             }),
             mode: 'cors',
           });
@@ -303,7 +303,8 @@ export default function SocialInterviewStartPage() {
         'Authorization': `Bearer ${token}`
       };
       
-      const response = await fetch('http://localhost:8888/api/interview/submit/answer', {
+      // 更新为新的提交答案接口
+      const response = await fetch('http://localhost:8888/api/mianshi/answer/submit', {
         method: 'POST',
         headers,
         body: JSON.stringify({
