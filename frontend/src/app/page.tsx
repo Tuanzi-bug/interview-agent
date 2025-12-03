@@ -10,41 +10,25 @@ const { Title, Paragraph } = Typography;
 export default function Home() {
   const testimonials = [
     {
-<<<<<<< HEAD
-      text: '非科班出身，自学一年多总感觉基础不扎实。上岸面试通的简历押题功能太神了，针对我的项目经历生成的题目命中率很高，90%都在实际面试中遇到过。特别是Spring框架深度问题、IOC到AOP，从题目的逻辑出发让我能由浅入深串联知识体系，这种从值到到深度的感觉真的很棒。',
-=======
       text: '非科班出身，自学一年多总感觉基础不扎实。面试吧的简历押题功能太神了，针对我的项目经历生成的题目命中率很高，90%都在实际面试中遇到过。特别是Spring框架深度问题、IOC到AOP，从题目的逻辑出发让我能由浅入深串联知识体系，这种从值到到深度的感觉真的很棒。',
->>>>>>> bb1ddb28bbf0712092e05690005f1978bdfc728f
       user: '35岁重启人生',
       title: '社招Java开发',
       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=a',
     },
     {
-<<<<<<< HEAD
-      text: '996的工作节奏根本没时间找人mock interview。上岸面试通24小时随时随地陪练，效率极高。每天晚上坚持练习30分钟，岗位面试官会问到系统架构设计、链路梳理思维，上岸面试通都能覆盖到位。最后还给了提升建议，面完真实的大厂，和正式面试时居然遇到70%相似问题！',
-=======
       text: '996的工作节奏根本没时间找人mock interview。面试吧24小时随时随地陪练，效率极高。每天晚上坚持练习30分钟，岗位面试官会问到系统架构设计、链路梳理思维，面试吧都能覆盖到位。最后还给了提升建议，面完真实的大厂，和正式面试时居然遇到70%相似问题！',
->>>>>>> bb1ddb28bbf0712092e05690005f1978bdfc728f
       user: 'smartbob',
       title: '在职提升-Go开发',
       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=b',
     },
     {
-<<<<<<< HEAD
-      text: '用了上岸面试通模拟面试，追问技术细节的能力大幅提升！模拟面试会根据我的回答深入追问，连Redis AOF、优化这种偏细节都能展开，最后还给了提升建议。面完真实的大厂，和正式面试时居然遇到70%相似问题！',
-=======
       text: '用了面试吧模拟面试，追问技术细节的能力大幅提升！模拟面试会根据我的回答深入追问，连Redis AOF、优化这种偏细节都能展开，最后还给了提升建议。面完真实的大厂，和正式面试时居然遇到70%相似问题！',
->>>>>>> bb1ddb28bbf0712092e05690005f1978bdfc728f
       user: 'Lex',
       title: '架构师',
       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=c',
     },
     {
-<<<<<<< HEAD
-      text: '工作三年想冲击大厂，但系统设计这块一直是短板。上岸面试通详细评估报告+改进建议与题目分析，高效锤炼，不断改进，亲身实战。现在在面试中能条理清晰地讲解方案，拿到满意的薪资。',
-=======
       text: '工作三年想冲击大厂，但系统设计这块一直是短板。面试吧详细评估报告+改进建议与题目分析，高效锤炼，不断改进，亲身实战。现在在面试中能条理清晰地讲解方案，拿到满意的薪资。',
->>>>>>> bb1ddb28bbf0712092e05690005f1978bdfc728f
       user: '静以修身',
       title: '后端开发',
       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=d',
@@ -80,11 +64,7 @@ export default function Home() {
         <Row gutter={[24, 24]} align="middle">
           <Col xs={24} md={14}>
             <Title level={2} className="leading-snug">
-<<<<<<< HEAD
-              <span className="text-primary">上岸面试通 综合面试</span>
-=======
               <span className="text-primary">面试吧 综合面试</span>
->>>>>>> bb1ddb28bbf0712092e05690005f1978bdfc728f
               <br />全维度拷问 真实场景还原
               <br />充分准备 <span className="text-primary">自信</span>迎战！
             </Title>
@@ -113,11 +93,7 @@ export default function Home() {
       
       <section className="py-10">
         <div className="text-center mb-10">
-<<<<<<< HEAD
-          <Title level={2}>通过上岸面试通能得到什么服务？</Title>
-=======
           <Title level={2}>通过面试吧能得到什么服务？</Title>
->>>>>>> bb1ddb28bbf0712092e05690005f1978bdfc728f
         </div>
         <Row gutter={[24, 24]}>
           <Col xs={24} md={8}>
@@ -199,11 +175,7 @@ export default function Home() {
       
       <section className="py-10">
         <div className="text-center mb-8">
-<<<<<<< HEAD
-          <Title level={2}>为什么选择上岸面试通？</Title>
-=======
           <Title level={2}>为什么选择面试吧？</Title>
->>>>>>> bb1ddb28bbf0712092e05690005f1978bdfc728f
         </div>
         <Row gutter={[24, 24]}>
           {[
@@ -234,20 +206,12 @@ export default function Home() {
         <Title level={2} className="mb-6">常见问题</Title>
         <Collapse
           items={[
-<<<<<<< HEAD
-            { key: '1', label: '为什么要用上岸面试通，而不是豆包、ChatGPT这些通用AI？', children: <Paragraph>上岸面试通针对求职面试场景深度定制，真实面试标准、追问逻辑与评估体系都更贴近用人单位的要求。</Paragraph> },
-            { key: '2', label: '上岸面试通到底解决了什么问题', children: <Paragraph>帮助你在真实面试来临前发现薄弱点并针对性训练，输出结构化评估与改进建议。</Paragraph> },
-            { key: '3', label: '上岸面试通适合什么样的人使用？', children: <Paragraph>从校招到社招，从转岗到晋升，皆可使用；支持多岗位面试模拟。</Paragraph> },
-            { key: '5', label: '上岸面试通的AI是否真正理解并回答问题？', children: <Paragraph>基于大厂真题与结构化知识库训练，具备追问能力与场景还原，输出更专业。</Paragraph> },
-            { key: '6', label: '上岸面试通押题效果怎么样？', children: <Paragraph>押题命中率高达95%，覆盖核心技术栈，帮助你在面试中游刃有余。</Paragraph> },
-=======
             { key: '1', label: '为什么要用面试吧，而不是豆包、ChatGPT这些通用AI？', children: <Paragraph>面试吧针对求职面试场景深度定制，真实面试标准、追问逻辑与评估体系都更贴近用人单位的要求。</Paragraph> },
             { key: '2', label: '面试吧到底解决了什么问题', children: <Paragraph>帮助你在真实面试来临前发现薄弱点并针对性训练，输出结构化评估与改进建议。</Paragraph> },
             { key: '3', label: '面试吧适合什么样的人使用？', children: <Paragraph>从校招到社招，从转岗到晋升，皆可使用；支持多岗位面试模拟。</Paragraph> },
             { key: '4', label: '收费标准是什么，性价比如何？', children: <Paragraph>单次体验低成本，会员价格更划算；与线下私教相比成本约为1/10。</Paragraph> },
             { key: '5', label: '面试吧的AI是否真正理解并回答问题？', children: <Paragraph>基于大厂真题与结构化知识库训练，具备追问能力与场景还原，输出更专业。</Paragraph> },
             { key: '6', label: '面试吧押题效果怎么样？', children: <Paragraph>押题命中率高达95%，覆盖核心技术栈，帮助你在面试中游刃有余。</Paragraph> },
->>>>>>> bb1ddb28bbf0712092e05690005f1978bdfc728f
           ]}
         />
       </section>
