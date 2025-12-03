@@ -145,7 +145,11 @@ export default function UserCenterPage() {
                 <Avatar size={64} src="https://api.dicebear.com/7.x/adventurer/svg?seed=LB" />
                 <div>
                   <div className="font-medium text-lg">{profile?.username || '未登录'}</div>
+<<<<<<< HEAD
+                  <Tag color="gold">上岸面试通学员</Tag>
+=======
                   <Tag color="gold">面试吧学员</Tag>
+>>>>>>> bb1ddb28bbf0712092e05690005f1978bdfc728f
                 </div>
               </div>
               
