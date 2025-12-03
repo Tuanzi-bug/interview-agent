@@ -108,7 +108,7 @@ export default function SocialInterviewPage() {
             <Form
               form={form}
               layout="vertical"
-              initialValues={{ job: 'Java后端开发', level: '入门' }}
+              initialValues={{ job: 'Java后端开发', level: '简单' }}
             >
               <Form.Item
                 label="选择简历"
@@ -140,7 +140,7 @@ export default function SocialInterviewPage() {
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item label="难度等级" name="level" rules={[{ required: true, message: '请选择难度等级' }]}> 
-                    <Select options={[{ value: '入门', label: '入门' }, { value: '中级', label: '中级' }, { value: '进阶', label: '进阶' }]} />
+                    <Select options={[{ value: '简单', label: '简单' }, { value: '中等', label: '中等' }, { value: '复杂', label: '复杂' }]} />
                   </Form.Item>
                 </Col>
               </Row>
@@ -186,7 +186,7 @@ export default function SocialInterviewPage() {
                     const values = form.getFieldsValue();
                     const params = {
                       type: '综合面试',
-                      domain: '社招',
+                      domain: '社招简历面试',
                       difficulty: values.level,
                       position_name: values.job || '',
                       company_name: String(values.company_name || ''),

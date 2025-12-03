@@ -45,8 +45,8 @@ export default function CampusInterviewStartPage() {
     const sanitize = (s: string) => s.replace(/[<>&"'`]/g, '');
     const requestBody = {
       type: String(params.type || '综合面试'),
-      domain: String(params.domain || '校招'),
-      difficulty: String(params.difficulty || 'easy'),
+      domain: String(params.domain || '校招简历面试'),
+      difficulty: String(params.difficulty || '简单'),
       position_name: String(params.position_name || ''),
       company_name: sanitize(String(params.company_name || '')),
       resume_id: Number(params.resume_id),

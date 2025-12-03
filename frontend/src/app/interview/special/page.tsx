@@ -86,7 +86,7 @@ export default function SpecialInterviewPage() {
           </div>
 
           <AntCard className="rounded-2xl">
-            <Form form={form} layout="vertical" initialValues={{ stack: stack, level: '入门' }}>
+            <Form form={form} layout="vertical" initialValues={{ stack: stack, level: '简单' }}>
               <Form.Item label="专项类别" name="stack">
                 <Select
                   popupMatchSelectWidth={false}
@@ -96,7 +96,7 @@ export default function SpecialInterviewPage() {
                 />
               </Form.Item>
               <Form.Item label="难度等级" name="level">
-                <Select options={[{ value: '入门', label: '入门' }, { value: '中级', label: '中级' }, { value: '进阶', label: '进阶' }]} />
+                <Select options={[{ value: '简单', label: '简单' }, { value: '中等', label: '中等' }, { value: '复杂', label: '复杂' }]} />
               </Form.Item>
               <div className="mt-2">
                 <Button 
