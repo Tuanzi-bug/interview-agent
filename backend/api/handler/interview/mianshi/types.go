@@ -22,7 +22,7 @@ type InterviewSession struct {
 	Query         string
 	Type          string //综合面试，专项面试
 	Domain        string //go，java，中间件
-	Difficulty    string //校招，社招
+	Difficulty    string //校招，社招（专项面试没有区分）
 	Status        string // 会话状态：active, paused, completed, failed
 	CompanyName   string // 公司名称
 	PositionName  string // 岗位名称

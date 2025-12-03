@@ -41,6 +41,7 @@ func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *Intervi
 	questionIndex := 0
 	const answerTimeout = 30 * time.Minute
 	const heartbeatInterval = 15 * time.Second
+	const maxQuestions = 6 // 最多问6个主问题
 
 	// 用于存储主问题及其追问
 	var mainQuestion *InterviewDialogueData
@@ -52,6 +53,11 @@ func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *Intervi
 		Answer   string
 	}
 	var questionHistory []QuestionAnswer
+
+	// 用于追踪当前主问题是否已回答
+	mainQuestionAnswered := false
+	// 用于追踪已回答的追问数量
+	answeredFollowUpCount := 0
 
 	// 创建智能体服务（在循环外创建一次，避免重复实例化）
 	agentSvc := interview.NewInterviewAgentService(session.UserID)
@@ -67,30 +73,28 @@ func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *Intervi
 		default:
 		}
 
-		// 等待用户答案（除了第一个问题）
+		// 等待用户答案
 		if questionIndex > 0 {
 			log.Printf("[Interview Engine] Waiting for answer, sessionID: %s, questionIndex: %d", session.SessionID, questionIndex)
 			answer, received := WaitForAnswerWithHeartbeat(ctx, e.sessionManager, session.SessionID, answerTimeout, heartbeatInterval, e.writer)
 			if !received {
 				log.Printf("[Interview Engine] Answer timeout, sessionID: %s", session.SessionID)
-				SendErrorEvent(e.writer, "等待答案超时，面试已结束")
 				SendCompleteEvent(e.writer)
 				break
 			}
 
-			//if answer == "quit" {
-			//	SendCompleteEvent(e.writer)
-			//	break
-			//}
-
 			// 保存用户回答到当前主问题或追问
 			if mainQuestion != nil {
-				if len(followUpQuestions) == 0 {
-					// 回答主问题
+				if !mainQuestionAnswered {
+					// 第一个回答：主问题
 					mainQuestion.Answer = answer
-				} else if len(followUpQuestions) > 0 {
-					// 回答最后一个追问
-					followUpQuestions[len(followUpQuestions)-1].Answer = answer
+					mainQuestionAnswered = true
+				} else {
+					// 后续回答：追问（按顺序赋值）
+					if answeredFollowUpCount < len(followUpQuestions) {
+						followUpQuestions[answeredFollowUpCount].Answer = answer
+						answeredFollowUpCount++
+					}
 				}
 			}
 
@@ -103,7 +107,7 @@ func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *Intervi
 				}
 			}
 
-			// 如果还有未回答的追问，继续等待
+			// 如果还有未回答的追问，发送下一个追问并继续等待
 			if hasUnansweredFollowUp {
 				// 发送下一个追问事件
 				for i, followUp := range followUpQuestions {
@@ -122,7 +126,7 @@ func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *Intervi
 						break
 					}
 				}
-				// 继续等待下一个答案，不重置状态
+				// 继续循环，在下一次迭代中等待用户回答追问
 				continue
 			}
 
@@ -135,11 +139,19 @@ func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *Intervi
 					Answer:   mainQuestion.Answer,
 				})
 			}
-			// 重置追问
+			// 重置追问和状态
 			followUpQuestions = nil
 			mainQuestion = nil
+			mainQuestionAnswered = false
+			answeredFollowUpCount = 0
 
-			questionIndex++
+			// 检查是否已达到最大问题数，如果是则结束面试
+			if questionIndex >= maxQuestions {
+				log.Printf("[Interview Engine] Reached max questions (%d), ending interview, sessionID: %s", maxQuestions, session.SessionID)
+				SendTopicCompleteEvent(e.writer)
+				SendCompleteEvent(e.writer)
+				break
+			}
 		}
 
 		// 构建问题提示词
@@ -175,12 +187,14 @@ func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *Intervi
 		})
 
 		if err != nil {
+			log.Printf("[Interview Engine] Failed to generate question: %v, sessionID: %s", err, session.SessionID)
 			SendErrorEvent(e.writer, "Failed to generate question: "+err.Error())
 			SendCompleteEvent(e.writer)
 			break
 		}
 
 		if len(questionResult) == 0 {
+			log.Printf("[Interview Engine] Agent returned empty question result, ending interview, sessionID: %s", session.SessionID)
 			SendTopicCompleteEvent(e.writer)
 			SendCompleteEvent(e.writer)
 			break
@@ -257,6 +271,10 @@ func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *Intervi
 
 		// 更新会话中的问题计数
 		session.QuestionCount = int32(questionIndex)
+
+		// 问题已发送，准备等待用户回答
+		// 在下一次循环中，questionIndex > 0 会进入等待答案的逻辑
+		questionIndex++
 	}
 
 	// 保存最后一个主问题及其追问

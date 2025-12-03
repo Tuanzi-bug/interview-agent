@@ -4,7 +4,6 @@ import (
 	"ai-eino-interview-agent/chatApp/agent/interview/comprehensive"
 	"ai-eino-interview-agent/chatApp/agent/interview/specialized"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 
@@ -158,58 +157,4 @@ func runAgentWithIterator(ctx context.Context, agent adk.Agent, prompt string, c
 	}
 
 	return lastMessage, nil
-}
-
-// ParseInterviewResponse 解析智能体的 JSON 响应
-// 参数:
-//   - response: 智能体的响应文本
-//   - result: 用于存储解析结果的指针
-//
-// 返回:
-//   - error: 错误信息
-func ParseInterviewResponse(response string, result interface{}) error {
-	// 尝试直接解析
-	err := json.Unmarshal([]byte(response), result)
-	if err == nil {
-		return nil
-	}
-
-	// 尝试提取 JSON（如果响应包含额外文本）
-	jsonStart := -1
-	jsonEnd := -1
-
-	for i := 0; i < len(response); i++ {
-		if response[i] == '{' && jsonStart == -1 {
-			jsonStart = i
-		}
-		if response[i] == '}' {
-			jsonEnd = i + 1
-		}
-	}
-
-	if jsonStart != -1 && jsonEnd != -1 && jsonEnd > jsonStart {
-		jsonStr := response[jsonStart:jsonEnd]
-		return json.Unmarshal([]byte(jsonStr), result)
-	}
-
-	return fmt.Errorf("failed to parse JSON response: %w", err)
-}
-
-// GetAvailableAgents 获取所有可用的智能体类型
-// 返回:
-//   - []InterviewAgentType: 所有可用的智能体类型
-func GetAvailableAgents() []InterviewAgentType {
-	return []InterviewAgentType{
-		// Comprehensive
-		ComprehensiveGoSchool,
-		ComprehensiveGoSocial,
-		ComprehensiveJavaSchool,
-		ComprehensiveJavaSocial,
-		// Specialized
-		SpecializedGo,
-		SpecializedJava,
-		SpecializedMQ,
-		SpecializedMySQL,
-		SpecializedRedis,
-	}
 }
