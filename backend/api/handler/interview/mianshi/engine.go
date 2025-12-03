@@ -157,22 +157,23 @@ func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *Intervi
 		// 构建问题提示词
 		var prompt string
 		if questionIndex == 0 {
-			// 第一个问题：只传递简历ID
-			prompt = fmt.Sprintf("请根据简历ID生成一个面试问题。简历ID: %d", session.ResumeId)
+			// 第一个问题：只传递简历ID和难度
+			prompt = fmt.Sprintf("请根据简历ID和难度等级生成一个面试问题。\n简历ID: %d\n难度等级: %s", session.ResumeId, session.Difficulty)
 		} else {
 			// 后续问题：包含历史回答，让智能体根据用户的回答调整后续问题
 			historyText := ""
 			for i, qa := range questionHistory {
 				historyText += fmt.Sprintf("问题%d：%s\n回答%d：%s\n\n", i+1, qa.Question, i+1, qa.Answer)
 			}
-			prompt = fmt.Sprintf(`根据简历ID和用户已回答的问题，生成下一个面试问题。
+			prompt = fmt.Sprintf(`根据简历ID、难度等级和用户已回答的问题，生成下一个面试问题。
 
 简历ID: %d
+难度等级: %s
 
 用户已回答的问题：
 %s
 
-请根据用户的回答情况，生成下一个更有针对性的面试问题。`, session.ResumeId, historyText)
+请根据用户的回答情况和难度等级，生成下一个更有针对性的面试问题。`, session.ResumeId, session.Difficulty, historyText)
 		}
 
 		// 收集智能体的响应
@@ -326,20 +327,13 @@ func (e *InterviewEngine) selectAgentType(session *InterviewSession) interview.I
 	// 综合面试
 	if session.Type == "综合面试" {
 		switch session.Domain {
-		case "Java":
-			// 根据难度选择校招或社招
-			if session.Difficulty == "校招" {
-				return interview.ComprehensiveJavaSchool
-			}
-			return interview.ComprehensiveJavaSocial
-		case "Go":
-			fallthrough
+		case "校招简历面试":
+			return interview.ComprehensiveSchool
+		case "社招简历面试":
+			return interview.ComprehensiveSocial
 		default:
-			// Go 为默认选项
-			if session.Difficulty == "校招" {
-				return interview.ComprehensiveGoSchool
-			}
-			return interview.ComprehensiveGoSocial
+			// 社招简历面试为默认选项
+			return interview.ComprehensiveSocial
 		}
 	}
 

@@ -1292,7 +1292,7 @@ type InterviewSession struct {
 	Type string `thrift:"type,4,required" form:"type,required" json:"type,required" query:"type,required"`
 	// 面试领域
 	Domain string `thrift:"domain,5,required" form:"domain,required" json:"domain,required" query:"domain,required"`
-	// 难度级别
+	// 校招/社招
 	Difficulty string `thrift:"difficulty,6,required" form:"difficulty,required" json:"difficulty,required" query:"difficulty,required"`
 	// 简历ID
 	ResumeID *int64 `thrift:"resume_id,7,optional" form:"resume_id" json:"resume_id,omitempty" query:"resume_id"`
@@ -2232,7 +2232,7 @@ type MianshiStartInterviewRequest struct {
 	Type string `thrift:"type,1,required" form:"type,required" json:"type,required"`
 	// 面试领域
 	Domain string `thrift:"domain,2,required" form:"domain,required" json:"domain,required"`
-	// 难度级别
+	// 校招/社招
 	Difficulty string `thrift:"difficulty,3,required" form:"difficulty,required" json:"difficulty,required"`
 	// 公司名称
 	CompanyName *string `thrift:"company_name,4,optional" form:"company_name" json:"company_name,omitempty"`
