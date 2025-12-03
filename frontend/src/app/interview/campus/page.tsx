@@ -3,7 +3,7 @@
 import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, Tag, message, Modal, Spin } from 'antd';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircleOutlined, VideoCameraOutlined, ToolOutlined, FileOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, VideoCameraOutlined, ToolOutlined, FileOutlined, CaretRightOutlined } from '@ant-design/icons';
 import BackendHealthCheck from '@/components/BackendHealthCheck';
 import apiClient from '@/services/api/client';
 
@@ -204,8 +204,15 @@ export default function CampusInterviewPage() {
               <div className="flex items-center gap-2"><VideoCameraOutlined /><span>功能演示</span></div>
               <Tag color="green">推荐观看</Tag>
             </div>
-            <div className="w-full h-48 md:h-60 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600">
-              <VideoCameraOutlined className="text-3xl mr-2" />示例视频
+            <div className="w-full h-48 md:h-60 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-xl flex flex-col items-center justify-center text-slate-600 relative overflow-hidden group cursor-pointer transition-all hover:shadow-lg border border-slate-100">
+              <div className="absolute inset-0 bg-[linear-gradient(45deg,#0000_25%,rgba(0,0,0,0.02)_0,rgba(0,0,0,0.02)_50%,#0000_0,#0000_75%,rgba(0,0,0,0.02)_0)] bg-[length:20px_20px] opacity-50" />
+              
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-green-500 shadow-md transform scale-95 group-hover:scale-110 transition-all duration-300 z-10 group-hover:text-green-600">
+                <CaretRightOutlined style={{ fontSize: '32px', marginLeft: '4px' }} />
+              </div>
+              
+              <div className="mt-4 font-medium z-10 group-hover:text-slate-800 transition-colors">功能演示视频</div>
+              <div className="text-xs text-slate-400 mt-1 z-10">点击播放 (演示)</div>
             </div>
           </AntCard>
         </Col>

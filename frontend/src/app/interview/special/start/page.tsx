@@ -438,11 +438,18 @@ export default function SpecialInterviewStartPage() {
               <Space direction="vertical" style={{ width: '100%' }}>
                 <Input.TextArea 
                   rows={8} 
-                  placeholder={waitingNextQuestion ? "等待下一题..." : "请在此作答，建议结构化回答（背景/职责/挑战/成果/反思）"} 
+                  placeholder={waitingNextQuestion ? "等待下一题..." : "请在此作答，建议结构化回答（背景/职责/挑战/成果/反思）\n按 Enter 发送，Shift + Enter 换行"} 
                   maxLength={500} 
                   showCount 
                   value={answer} 
                   onChange={(e) => setAnswer(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (!answer.trim()) return;
+                      onSubmit();
+                    }
+                  }}
                   disabled={waitingNextQuestion || starting}
                 />
                 <Space align="center" size={16}>
