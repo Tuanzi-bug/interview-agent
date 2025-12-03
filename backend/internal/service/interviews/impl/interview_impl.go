@@ -4,6 +4,7 @@ import (
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
 	"ai-eino-interview-agent/internal/model"
 	"context"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -284,12 +285,12 @@ func (s *InterviewServiceImpl) SaveInterviewDialogues(ctx context.Context, userI
 			// 如果该 displayOrder 的记录不存在，创建新记录
 			if _, exists := dialogueMap[displayOrder]; !exists {
 				dialogueMap[displayOrder] = &model.InterviewDialogue{
-					UserID:       userID,
-					TopicID:      topic.ID,
-					ReportID:     recordID,
-					Question:     "",
-					Answer:       "",
-					DisplayOrder: displayOrder,
+					UserID: userID,
+					//TopicID:      topic.ID,
+					ReportID: recordID,
+					Question: "",
+					Answer:   "",
+					//DisplayOrder: displayOrder,
 				}
 			}
 
@@ -417,4 +418,37 @@ func (s *InterviewServiceImpl) GetAnswerReport(ctx context.Context, userID uint,
 		"created_at": report.CreatedAt,
 		"updated_at": report.UpdatedAt,
 	}, nil
+}
+
+// SaveInterviewDialogueWithParent 保存面试对话（支持父子关系）
+// 主问题的 ParentID = 0
+// 追问的 ParentID = 主问题的 ID
+func (s *InterviewServiceImpl) SaveInterviewDialogueWithParent(
+	ctx context.Context,
+	userID uint,
+	reportID uint64,
+	mainQuestion *model.InterviewDialogue,
+	followUpQuestions []*model.InterviewDialogue,
+) error {
+	// 1. 保存主问题（ParentID = 0）
+	mainQuestion.UserID = userID
+	mainQuestion.ReportID = reportID
+	mainQuestion.ParentID = 0
+
+	if err := model.InterviewDialogueDao.Create(mainQuestion); err != nil {
+		return fmt.Errorf("failed to save main question: %w", err)
+	}
+
+	// 2. 保存追问（ParentID = 主问题的 ID）
+	for _, followUp := range followUpQuestions {
+		followUp.UserID = userID
+		followUp.ReportID = reportID
+		followUp.ParentID = mainQuestion.ID
+
+		if err := model.InterviewDialogueDao.Create(followUp); err != nil {
+			return fmt.Errorf("failed to save follow-up question: %w", err)
+		}
+	}
+
+	return nil
 }

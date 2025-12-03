@@ -92,22 +92,30 @@ const Navbar: FC = () => {
       <div className="container mx-auto px-4 flex items-center justify-between h-full">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-white text-lg">牛</span>
+            <span className="text-white text-lg">面</span>
           </div>
-          <Title level={3} className="m-0">上岸面试通</Title>
+          <Title level={3} className="m-0">面试吧</Title>
         </div>
 
         <nav className="hidden md:flex items-center space-x-6">
           <Link href="/" className="text-gray-800 hover:text-primary font-medium">首页</Link>
           {/* <Link href="/questions" className="text-gray-700 hover:text-primary">面试题库
             <Badge count={"free"} color="#52c41a" className="ml-2" />
-          </Link>
-          <Link href="/resume" className="text-gray-700 hover:text-primary">简历押题</Link> */}
-          <Link href="/interview/social" className="text-gray-700 hover:text-primary flex items-center">
-            社招简历面试
-            <Badge count={"hot"} color="#fa541c" className="ml-2" />
-          </Link>
-          <Link href="/interview/campus" className="text-gray-700 hover:text-primary">校招简历面试</Link>
+          </Link> */}
+          <Link href="/resume" className="text-gray-700 hover:text-primary">简历押题</Link>
+          <Dropdown
+            menu={{
+              items: [
+                { key: 'social', label: <Link href="/interview/social">社招简历面试</Link> },
+                { key: 'campus', label: <Link href="/interview/campus">校招简历面试</Link> },
+              ],
+            }}
+          >
+            <a className="text-gray-700 hover:text-primary">
+              综合面试 <DownOutlined className="ml-1" />
+              <Badge count={"hot"} color="#fa541c" className="ml-2" />
+            </a>
+          </Dropdown>
           <Link href="/interview/special" className="text-gray-700 hover:text-primary">专项面试</Link>
           {/* <Link href="/" className="text-gray-700 hover:text-primary">邀请有礼</Link> */}
           <Link href="/" className="text-gray-700 hover:text-primary">使用手册</Link>

@@ -37,7 +37,7 @@ struct InterviewSession {
     3: required i64 record_id           // 面试记录ID
     4: required string type             // 面试类型：综合面试、专项面试
     5: required string domain           // 面试领域
-    6: required string difficulty       // 难度级别
+    6: required string difficulty       // 校招/社招
     7: optional i64 resume_id           // 简历ID
     8: optional bool has_resume         // 是否有简历
     9: required i64 start_time          // 开始时间戳
@@ -54,7 +54,7 @@ struct InterviewSession {
 struct MianshiStartInterviewRequest {
     1: required string type (api.body="type")              // 面试类型
     2: required string domain (api.body="domain")          // 面试领域
-    3: required string difficulty (api.body="difficulty")  // 难度级别
+    3: required string difficulty (api.body="difficulty")  // 校招/社招
     4: optional string company_name (api.body="company_name")    // 公司名称
     5: optional string position_name (api.body="position_name")  // 岗位名称
     6: optional i64 resume_id (api.body="resume_id")       // 简历ID

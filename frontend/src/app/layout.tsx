@@ -7,7 +7,11 @@ import Footer from '@/components/layout/Footer';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
+<<<<<<< HEAD
   title: '上岸面试通AI面试平台',
+=======
+  title: '面试吧AI面试平台',
+>>>>>>> bb1ddb28bbf0712092e05690005f1978bdfc728f
   description: '大厂AI面试特训平台',
 };
 

@@ -23,7 +23,7 @@ interface ResumeInfo {
 
 const columns = [
   { title: '项目', dataIndex: 'project' },
-  { title: '牛币变动', dataIndex: 'coin' },
+  { title: '金币变动', dataIndex: 'coin' },
   { title: '支付金额', dataIndex: 'amount' },
   { title: '交易渠道', dataIndex: 'channel' },
   { title: '交易时间', dataIndex: 'time' },
@@ -145,7 +145,11 @@ export default function UserCenterPage() {
                 <Avatar size={64} src="https://api.dicebear.com/7.x/adventurer/svg?seed=LB" />
                 <div>
                   <div className="font-medium text-lg">{profile?.username || '未登录'}</div>
+<<<<<<< HEAD
                   <Tag color="gold">上岸面试通学员</Tag>
+=======
+                  <Tag color="gold">面试吧学员</Tag>
+>>>>>>> bb1ddb28bbf0712092e05690005f1978bdfc728f
                 </div>
               </div>
               
@@ -159,7 +163,7 @@ export default function UserCenterPage() {
             <AntCard className="rounded-2xl mt-6 bg-green-500 text-white" variant="outlined">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm opacity-90">剩余牛币</div>
+                  <div className="text-sm opacity-90">剩余金币</div>
                   <div className="text-3xl font-semibold">0</div>
                 </div>
                 <Button>充值</Button>
@@ -238,7 +242,7 @@ export default function UserCenterPage() {
             </Col>
 
             <Col span={24}>
-              <AntCard className="rounded-2xl" title="牛币记录">
+              <AntCard className="rounded-2xl" title="金币记录">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex gap-2">
                     <Select size="small" value="全部类型" options={[{ value: '全部类型', label: '全部类型' }, { value: '收入', label: '收入' }, { value: '支出', label: '支出' }]} />

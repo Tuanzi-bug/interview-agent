@@ -44,7 +44,7 @@ export default function BackendHealthCheck() {
       console.log('[诊断] 检查面试接口...');
       try {
         const token = localStorage.getItem('token');
-        const interviewResponse = await fetch('http://localhost:8888/api/interview/start/stream', {
+        const interviewResponse = await fetch('http://localhost:8888/api/mianshi/stream/start', {
           method: 'OPTIONS',
           mode: 'cors',
           headers: token ? { 'Authorization': `Bearer ${token}` } : {},
@@ -119,7 +119,7 @@ export default function BackendHealthCheck() {
                 <p>⚠️ 面试接口返回404，可能的原因：</p>
                 <ul className="list-disc ml-6 mt-1">
                   <li>后端路由未正确注册</li>
-                  <li>需要将 /api/interview/start/stream 添加到公共路由列表</li>
+                  <li>需要将 /api/mianshi/stream/start 添加到公共路由列表</li>
                   <li>JWT中间件拦截了请求</li>
                 </ul>
               </div>
@@ -144,8 +144,9 @@ export default function BackendHealthCheck() {
           <p className="font-bold mb-2">💡 解决方案：</p>
           <p>请在后端的 <code>middleware.go</code> 文件中，将以下路径添加到 <code>jwtPublicRoutes</code>：</p>
           <pre className="mt-2 p-2 bg-white rounded border">
-{`"/api/interview/start/stream": {},
-"/api/interview/submit/answer": {},`}
+{`"/api/mianshi/stream/start": {},
+"/api/mianshi/answer/submit": {},
+"/api/mianshi/interview/end": {},`}
           </pre>
         </div>
       )}
