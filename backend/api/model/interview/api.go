@@ -3,7 +3,6 @@
 package interview
 
 import (
-	"ai-eino-interview-agent/api/model/demo"
 	"ai-eino-interview-agent/api/model/interviews"
 	"ai-eino-interview-agent/api/model/mianshi"
 	"ai-eino-interview-agent/api/model/user"
@@ -62,32 +61,6 @@ func NewInterviewsServiceClient(c thrift.TClient) *InterviewsServiceClient {
 	}
 }
 
-type DemoService interface {
-	demo.DemoService
-}
-
-type DemoServiceClient struct {
-	*demo.DemoServiceClient
-}
-
-func NewDemoServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *DemoServiceClient {
-	return &DemoServiceClient{
-		DemoServiceClient: demo.NewDemoServiceClientFactory(t, f),
-	}
-}
-
-func NewDemoServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *DemoServiceClient {
-	return &DemoServiceClient{
-		DemoServiceClient: demo.NewDemoServiceClientProtocol(t, iprot, oprot),
-	}
-}
-
-func NewDemoServiceClient(c thrift.TClient) *DemoServiceClient {
-	return &DemoServiceClient{
-		DemoServiceClient: demo.NewDemoServiceClient(c),
-	}
-}
-
 type MianshiService interface {
 	mianshi.MianshiService
 }
@@ -129,15 +102,6 @@ type InterviewsServiceProcessor struct {
 
 func NewInterviewsServiceProcessor(handler InterviewsService) *InterviewsServiceProcessor {
 	self := &InterviewsServiceProcessor{interviews.NewInterviewsServiceProcessor(handler)}
-	return self
-}
-
-type DemoServiceProcessor struct {
-	*demo.DemoServiceProcessor
-}
-
-func NewDemoServiceProcessor(handler DemoService) *DemoServiceProcessor {
-	self := &DemoServiceProcessor{demo.NewDemoServiceProcessor(handler)}
 	return self
 }
 

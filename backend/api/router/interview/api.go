@@ -20,13 +20,6 @@ func Register(r *server.Hertz) {
 	{
 		_api := root.Group("/api", _apiMw()...)
 		{
-			_demo := _api.Group("/demo", _demoMw()...)
-			{
-				_create := _demo.Group("/create", _createMw()...)
-				_create.POST("/model", append(_createdemomodelMw(), interview.CreateDemoModel)...)
-			}
-		}
-		{
 			_interview := _api.Group("/interview", _interviewMw()...)
 			_interview.GET("/answer-record", append(_getanswerrecordMw(), interview.GetAnswerRecord)...)
 			_interview.GET("/evaluation", append(_getinterviewevaluationMw(), interview.GetInterviewEvaluation)...)
@@ -76,8 +69,8 @@ func Register(r *server.Hertz) {
 			_user.PUT("/profile", append(_updateprofileMw(), interview.UpdateProfile)...)
 			_user.POST("/register", append(_registerMw(), interview.Register)...)
 			{
-				_create0 := _user.Group("/create", _create0Mw()...)
-				_create0.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
+				_create := _user.Group("/create", _createMw()...)
+				_create.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
 			}
 			{
 				_model := _user.Group("/model", _modelMw()...)
