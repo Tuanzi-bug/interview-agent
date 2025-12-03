@@ -39,7 +39,7 @@ func NewGoSchoolAgent(userId uint, needResumeTool bool) adk.Agent {
 		Instruction:   GoSchoolAgentInstruction,
 		Model:         model,
 		ToolsConfig:   toolsConfig,
-		MaxIterations: 20,
+		MaxIterations: 15,
 	})
 	if err != nil {
 		log.Fatal(fmt.Errorf("failed to create Go school agent: %w", err))

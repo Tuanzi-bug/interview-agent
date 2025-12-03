@@ -39,7 +39,7 @@ func NewJavaSchoolAgent(userId uint, needResumeTool bool) adk.Agent {
 		Instruction:   JavaSchoolAgentInstruction,
 		Model:         model,
 		ToolsConfig:   toolsConfig,
-		MaxIterations: 20,
+		MaxIterations: 15,
 	})
 	if err != nil {
 		log.Fatal(fmt.Errorf("failed to create Java school agent: %w", err))

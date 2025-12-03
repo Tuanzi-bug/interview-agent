@@ -1,4 +1,4 @@
-package comprehensive
+package specialized
 
 import (
 	"ai-eino-interview-agent/chatApp/chat"
@@ -12,9 +12,9 @@ import (
 	"github.com/cloudwego/eino/compose"
 )
 
-// NewJavaSocialAgent 创建 Java 社招面试官智能体
-// 专注于评估有工作经验的候选人的 Java 实战能力、架构设计和技术深度
-func NewJavaSocialAgent(userId uint, needResumeTool bool) adk.Agent {
+// NewJavaSpecializedAgent 创建 Java 专项面试官智能体
+// 专注于评估候选人在 Java 方面的专业技能和深度
+func NewJavaSpecializedAgent(userId uint, needResumeTool bool) adk.Agent {
 	ctx := context.Background()
 
 	var toolsConfig adk.ToolsConfig
@@ -34,15 +34,15 @@ func NewJavaSocialAgent(userId uint, needResumeTool bool) adk.Agent {
 	}
 
 	baseAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
-		Name:          "JavaSocialAgent",
-		Description:   "Java 社招面试官智能体，专注于评估有工作经验的候选人的 Java 实战能力和架构设计能力",
-		Instruction:   JavaSocialAgentInstruction,
+		Name:          "JavaSpecializedAgent",
+		Description:   "Java 专项面试官智能体，专注于评估候选人在 Java 方面的专业技能和深度",
+		Instruction:   JavaSpecializedAgentInstruction,
 		Model:         model,
 		ToolsConfig:   toolsConfig,
 		MaxIterations: 15,
 	})
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to create Java social agent: %w", err))
+		log.Fatal(fmt.Errorf("failed to create Java specialized agent: %w", err))
 	}
 	return baseAgent
 }
