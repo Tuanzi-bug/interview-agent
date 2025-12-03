@@ -168,7 +168,7 @@ export default function SpecialInterviewStartPage() {
                   console.log('[面试开始] session_id:', sid);
                   setSessionId(sid);
                   setStarting(false);
-                } else if (payload?.type === 'question') {
+                } else if (payload?.type === 'question' || payload?.type === 'follow_up_question') {
                   const q = payload.data?.question_text || '';
                   const idx = payload.index || payload.data?.index || 0;
                   console.log('[问题]', q, 'index:', idx);
