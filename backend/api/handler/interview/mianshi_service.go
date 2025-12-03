@@ -149,7 +149,7 @@ func SubmitMianshiAnswer(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	// 计算问题索引和是否为最后一个问题
-	questionIndex := int32(len(session.AllQuestions))
+	questionIndex := session.QuestionCount
 	isLastQuestion := false // 这个值由引擎在完成时设置
 
 	resp := &mianshiapi.MianshiSubmitInterviewAnswerResponse{
@@ -210,9 +210,9 @@ func GetSession(ctx context.Context, c *app.RequestContext) {
 	}
 
 	elapsedTime := int64(time.Since(session.StartTime).Seconds())
-	currentQuestionIndex := int32(len(session.AllQuestions))
-	answeredCount := int32(len(session.AllDialogues) / 2)
-	totalCount := int32(len(session.AllQuestions))
+	currentQuestionIndex := session.QuestionCount
+	answeredCount := session.QuestionCount
+	totalCount := session.QuestionCount
 
 	resp := &mianshiapi.MianshiGetSessionResponse{
 		Session:              interviewSession,
@@ -256,24 +256,27 @@ func EndMianshi(ctx context.Context, c *app.RequestContext) {
 	session.Status = "completed"
 	endTime := time.Now()
 	session.LastActivity = endTime
-
-	// 保存面试数据
-	interviewSvc := interviewservice.NewInterviewService()
-	if err := interviewSvc.SaveInterviewDialogues(ctx, session.UserID, session.RecordID, mianshi.ConvertToInterfaceSlice(session.AllQuestions), mianshi.ConvertToInterfaceSlice(session.AllDialogues)); err != nil {
-		log.Printf("[EndMianshi] Failed to save interview dialogues: %v, sessionID: %s", err, req.SessionID)
-	}
-
 	// 计算面试时长
 	duration := int64(endTime.Sub(session.StartTime).Seconds())
 	endTimeMs := endTime.UnixMilli()
-	totalQuestions := int32(len(session.AllQuestions))
-	answeredQuestions := int32(len(session.AllDialogues) / 2)
+	totalQuestions := session.QuestionCount
+	answeredQuestions := session.QuestionCount // 已回答的问题数 = 主问题数
 
 	// 取消面试循环，立即关闭 SSE 连接
 	if session.CancelFunc != nil {
 		session.CancelFunc()
 	}
-
+	interviewSvc := interviewservice.NewInterviewService()
+	updateDTO := &interviewsapi.InterviewRecordDTO{
+		ID:       int64(session.RecordID),
+		UserID:   int32(session.UserID),
+		Status:   "completed",
+		Duration: &duration,
+	}
+	if err := interviewSvc.UpdateInterviewRecord(ctx, updateDTO); err != nil {
+		response.InternalServerError(ctx, c, "Failed to update interview record: "+err.Error())
+		return
+	}
 	// 延迟删除会话
 	go func() {
 		time.Sleep(1 * time.Second)

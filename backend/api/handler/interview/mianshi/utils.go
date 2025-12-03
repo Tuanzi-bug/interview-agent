@@ -2,7 +2,6 @@ package mianshi
 
 import (
 	"context"
-	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -54,21 +53,6 @@ func WaitForAnswerWithHeartbeat(ctx context.Context, sm *SessionManager, session
 			return "", false
 		}
 	}
-}
-
-// IsRetryableError 判断是否为可重试的错误
-func IsRetryableError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	// 上下文相关错误不重试
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return false
-	}
-
-	// 其他错误可重试
-	return true
 }
 
 // SetupSSEResponse 设置 SSE 响应头
