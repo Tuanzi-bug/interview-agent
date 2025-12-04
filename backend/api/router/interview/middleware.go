@@ -310,3 +310,18 @@ func _startmianshistreamMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _getmianshianswerrecordMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getmianshievaluationMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getmianshirecordsMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}

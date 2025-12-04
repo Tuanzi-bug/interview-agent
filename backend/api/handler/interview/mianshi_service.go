@@ -3,7 +3,10 @@
 package interview
 
 import (
+	"ai-eino-interview-agent/chatApp/agent_service/evaluation"
+	"ai-eino-interview-agent/internal/model"
 	"context"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"io"
 	"log"
 	"time"
@@ -293,4 +296,106 @@ func EndMianshi(ctx context.Context, c *app.RequestContext) {
 		AnsweredQuestions: &answeredQuestions,
 	}
 	response.Success(ctx, c, resp)
+}
+
+// GetMianshiEvaluation .
+// @router /api/mianshi/evaluation [GET]
+func GetMianshiEvaluation(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req mianshiapi.GetMianshiEvaluationRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
+		return
+	}
+	userId := middleware.GetUserID(c)
+	if userId == 0 {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+
+	reportID := uint64(req.ReportID)
+	interviewService := interviewservice.NewInterviewService()
+	//获取面试评估报告
+	existingEvaluation, err := interviewService.GetInterviewEvaluation(ctx, userId, reportID)
+	if err == nil && existingEvaluation != nil {
+		response.Success(ctx, c, existingEvaluation)
+		return
+	}
+	//如果没获取到面试评估报告则进行评估
+	resp, err := evaluation.GenerateRecordEvaluation(ctx, userId, reportID)
+	if err != nil {
+		response.InternalServerError(ctx, c, "Failed to generate evaluation: "+err.Error())
+		return
+	}
+
+	response.Success(ctx, c, resp)
+}
+
+// GetMianshiAnswerRecord .
+// @router /api/mianshi/answer-record [GET]
+func GetMianshiAnswerRecord(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req mianshiapi.GetMianshiAnswerRecordRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		response.BadRequest(ctx, c, "Invalid request: "+err.Error())
+		return
+	}
+	userId := middleware.GetUserID(c)
+	if userId == 0 {
+		response.Unauthorized(ctx, c, "Unauthorized")
+		return
+	}
+
+	reportID := uint64(req.ReportID)
+	interviewService := interviewservice.NewInterviewService()
+	res, err := interviewService.GetAnswerReport(ctx, userId, reportID)
+
+	// 如果数据库中已有数据且 records 不为空，直接返回
+	if err == nil && res != nil {
+		resMap, ok := res.(map[string]interface{})
+		if ok {
+			// 检查 records 字段是否存在且不为空
+			if recordsData, exists := resMap["records"]; exists {
+				// 尝试多种类型的断言
+				switch v := recordsData.(type) {
+				case []*model.AnswerRecordItem:
+					if len(v) > 0 {
+						response.Success(ctx, c, res)
+						return
+					}
+				case []interface{}:
+					if len(v) > 0 {
+						response.Success(ctx, c, res)
+						return
+					}
+				}
+			}
+		}
+	}
+	//如果数据库中获取失败则调用智能体生成评估
+	reportId := req.ReportID
+	resp, err := evaluation.GenerateAnswerRecordEvaluation(ctx, userId, uint64(reportId))
+	if err != nil {
+		response.InternalServerError(ctx, c, "Failed to generate evaluation: "+err.Error())
+		return
+	}
+	response.Success(ctx, c, resp)
+}
+
+// GetMianshiRecords .
+// @router /api/mianshi/records [GET]
+func GetMianshiRecords(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req mianshiapi.GetMianshiRecordsRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(mianshiapi.GetMianshiRecordsResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }
