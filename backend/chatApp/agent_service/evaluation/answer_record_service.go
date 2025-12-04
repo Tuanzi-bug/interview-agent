@@ -30,10 +30,8 @@ func GenerateAnswerRecordEvaluation(ctx context.Context, userId uint, reportId u
 
 请按照以下步骤进行：
 1. 首先调用 get_interviews_data 工具获取面试的完整问题和对话记录
-2. 遍历每个问题的父问题（parent_id=0），对其进行独立评估
-3. 收集每个包括父问题下的所有子问题（子问题的parent_id=父问题的id）对话（包括提问和回答）
-4. 仔细分析候选人的回答质量
-5. 为每个主题生成详细的评估反馈
+2. 仔细分析候选人的回答质量
+3. 为每个主题生成详细的评估反馈
 
 评估应包含：
 - 问题顺序和内容
