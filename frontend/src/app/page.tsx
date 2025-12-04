@@ -1,11 +1,17 @@
 'use client';
 
-import { Typography, Row, Col, Button, Card as AntCard, Rate, Collapse, Avatar, Tag } from 'antd';
-import { BulbOutlined, FileTextOutlined, CodeOutlined, CompassOutlined, FlagOutlined, EyeOutlined, ThunderboltOutlined, SmileOutlined, SwitcherOutlined, SendOutlined, TeamOutlined, ExperimentOutlined, VideoCameraOutlined, UserOutlined } from '@ant-design/icons';
-import Banner from '@/components/home/Banner';
+import { Typography, Button, Card as AntCard, Rate, Collapse, Avatar, Tag, Badge } from 'antd';
+import { 
+  BulbOutlined, FileTextOutlined, CodeOutlined, CompassOutlined, 
+  FlagOutlined, EyeOutlined, ThunderboltOutlined, SmileOutlined, 
+  SwitcherOutlined, SendOutlined, TeamOutlined, ExperimentOutlined, 
+  UserOutlined, RocketOutlined, TrophyOutlined, FireOutlined,
+  CheckCircleFilled, RightOutlined, PlayCircleFilled
+} from '@ant-design/icons';
+import Link from 'next/link';
 import type { FC } from 'react';
 
-const { Title, Paragraph } = Typography;
+const { Title, Paragraph, Text } = Typography;
 
 export default function Home() {
   const testimonials = [
@@ -48,187 +54,260 @@ export default function Home() {
   ];
 
   return (
-    <div className="container mx-auto px-4">
-      
-      {/* <div className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg my-4 px-4 py-2 text-sm flex items-center justify-between">
-        <div>
-          秋招特惠：免费简历押题体验+综合面试单次免费！快来无限问答，简历押题&专项面试免费体验！
-        </div>
-        <div className="hidden sm:block opacity-90">
-          今日进行中：题量 +224；出题速度 +3.2 题/小时；板块活跃度 +32.1%
-        </div>
-      </div> */}
+    <div className="min-h-screen bg-slate-50 font-sans overflow-hidden relative -my-8">
+      {/* Decorative Background Elements */}
+      <div className="fixed top-0 left-0 w-[800px] h-[800px] bg-blue-100/40 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0" />
+      <div className="fixed bottom-0 right-0 w-[800px] h-[800px] bg-indigo-100/40 rounded-full blur-[120px] translate-x-1/3 translate-y-1/3 pointer-events-none z-0" />
+      <div className="fixed top-1/2 left-1/2 w-[600px] h-[600px] bg-purple-50/40 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0" />
 
-      
-      <section className="py-8">
-        <Row gutter={[24, 24]} align="middle">
-          <Col xs={24} md={14}>
-            <Title level={2} className="leading-snug">
-              <span className="text-primary">面试吧 综合面试</span>
-              <br />全维度拷问 真实场景还原
-              <br />充分准备 <span className="text-primary">自信</span>迎战！
-            </Title>
-            <Paragraph className="text-gray-600 mt-4">
-              同构单位：大企业标准综合考察 | 详细问题复盘与弱项分析 | 深度面试针对性训练持续提升
-            </Paragraph>
-            <div className="flex gap-3 mt-6">
-              <Button type="primary" size="large">立即使用</Button>
-              <Button size="large" icon={<VideoCameraOutlined />}>视频演示</Button>
-            </div>
-            <div className="mt-6 flex items-center text-gray-500 text-sm gap-6">
-              <div className="flex items-center gap-2"><Tag color="green">注册用户</Tag><span>12,056+</span></div>
-              <div className="flex items-center gap-2"><Tag color="blue">AI面试次数</Tag><span>5,000+</span></div>
-              <div className="flex items-center gap-2"><Tag color="purple">斩获Offer</Tag><span>500+</span></div>
-              <div className="flex items-center gap-2"><Tag color="red">涨薪幅度</Tag><span>40%</span></div>
-            </div>
-          </Col>
-          <Col xs={24} md={10}>
-            <div className="bg-orange-100 rounded-2xl h-64 md:h-80 flex items-center justify-center">
-              <span className="text-orange-500 text-3xl">示例插画</span>
-            </div>
-          </Col>
-        </Row>
-      </section>
+      {/* Hero Section */}
+      <section className="relative pt-20 pb-32 px-4 sm:px-6 lg:px-8 z-10">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 shadow-sm mb-8 animate-fade-in-up">
+            <Badge status="processing" color="blue" />
+            <span className="text-sm font-medium text-slate-600">AI 驱动的面试备战平台 2.0 全新上线</span>
+          </div>
+          
+          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-8 leading-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+            面试从未如此 <br className="hidden md:block" />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
+              简单且自信
+            </span>
+          </h1>
+          
+          <p className="mt-4 max-w-2xl mx-auto text-xl text-slate-500 mb-10 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            基于真实大厂面试题库，通过 AI 模拟真实面试场景。
+            <br />从简历分析到专项突破，全方位提升你的面试通过率。
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+            <Link href="/resume">
+              <Button 
+                type="primary" 
+                size="large" 
+                className="h-14 px-8 text-lg rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:scale-105 hover:shadow-xl transition-all border-0"
+                icon={<RocketOutlined />}
+              >
+                立即开始免费体验
+              </Button>
+            </Link>
+            <Link href="/interview/social">
+              <Button 
+                size="large" 
+                className="h-14 px-8 text-lg rounded-full bg-white hover:bg-slate-50 border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-600 hover:scale-105 transition-all shadow-sm hover:shadow-md"
+                icon={<PlayCircleFilled className="text-slate-400" />}
+              >
+                查看演示视频
+              </Button>
+            </Link>
+          </div>
 
-      
-      <section className="py-10">
-        <div className="text-center mb-10">
-          <Title level={2}>通过面试吧能得到什么服务？</Title>
-        </div>
-        <Row gutter={[24, 24]}>
-          <Col xs={24} md={8}>
-            <AntCard className="rounded-2xl">
-              <div className="flex items-center gap-3 mb-4">
-                <BulbOutlined className="text-3xl text-primary" />
-                <Title level={4} className="m-0">综合面试</Title>
-              </div>
-              <Paragraph className="text-gray-600">高度还原真实面试场景，全面考察技术基础、架构设计、项目经验和团队协作。</Paragraph>
-              <ul className="text-gray-600 space-y-2">
-                <li>• 多维度深入问答，层层追问细节</li>
-                <li>• 结构化评估报告与改进建议</li>
-                <li>• 支持多岗位角色模拟</li>
-              </ul>
-              <Button type="primary" className="mt-6 w-full">选择综合面试</Button>
-            </AntCard>
-          </Col>
-          <Col xs={24} md={8}>
-            <AntCard className="rounded-2xl">
-              <div className="flex items-center gap-3 mb-4">
-                <FileTextOutlined className="text-3xl text-blue-500" />
-                <Title level={4} className="m-0">简历押题</Title>
-              </div>
-              <Paragraph className="text-gray-600">深度分析你的简历，生成个性化的专属面试题目，让你面试如开卷。</Paragraph>
-              <ul className="text-gray-600 space-y-2">
-                <li>• 精准命中高频考点</li>
-                <li>• 项目经历细节追问</li>
-                <li>• 输出押题清单</li>
-              </ul>
-              <Button type="primary" className="mt-6 w-full">选择简历押题</Button>
-            </AntCard>
-          </Col>
-          <Col xs={24} md={8}>
-            <AntCard className="rounded-2xl">
-              <div className="flex items-center gap-3 mb-4">
-                <CodeOutlined className="text-3xl text-purple-500" />
-                <Title level={4} className="m-0">专项面试</Title>
-              </div>
-              <Paragraph className="text-gray-600">针对特定技术领域进行深度评估，帮助查漏补缺，快速补齐短板。</Paragraph>
-              <ul className="text-gray-600 space-y-2">
-                <li>• 数据库/中间件/性能优化</li>
-                <li>• 系统设计/并发/网络</li>
-                <li>• 前后端/算法等</li>
-              </ul>
-              <Button type="primary" className="mt-6 w-full">选择专项面试</Button>
-            </AntCard>
-          </Col>
-        </Row>
-      </section>
-
-      
-      <section className="py-6">
-        <div className="text-center mb-8">
-          <Title level={2}>真实口碑，有据可依</Title>
-          <Paragraph className="text-gray-600 max-w-3xl mx-auto">不搞虚的，来自用户的真实反馈，覆盖技术栈、框架、架构等多类用户群体的面试提升体验与成果。</Paragraph>
-        </div>
-        <Row gutter={[24, 24]}>
-          {testimonials.map((t, i) => (
-            <Col xs={24} md={8} key={i}>
-              <AntCard className="rounded-2xl">
-                <div className="flex justify-between mb-4">
-                  <div className="text-3xl text-primary">“</div>
-                  <Rate disabled defaultValue={5} />
+          {/* Stats Bar */}
+          <div className="mt-20 max-w-4xl mx-auto bg-white/60 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl shadow-slate-200/50 p-8 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {[
+                { label: '注册用户', value: '12,000+', color: 'text-blue-600', icon: <UserOutlined /> },
+                { label: '模拟面试', value: '50,000+', color: 'text-indigo-600', icon: <ExperimentOutlined /> },
+                { label: '题库收录', value: '100,000+', color: 'text-purple-600', icon: <FileTextOutlined /> },
+                { label: 'Offer斩获', value: '2,000+', color: 'text-green-600', icon: <TrophyOutlined /> },
+              ].map((stat, idx) => (
+                <div key={idx} className="flex flex-col items-center">
+                  <div className={`text-2xl mb-2 ${stat.color}`}>{stat.icon}</div>
+                  <div className="text-3xl font-bold text-slate-800">{stat.value}</div>
+                  <div className="text-sm text-slate-500 mt-1">{stat.label}</div>
                 </div>
-                <Paragraph className="text-gray-700">{t.text}</Paragraph>
-                <div className="flex items-center gap-3 mt-6">
-                  <Avatar src={t.avatar} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="relative py-24 px-4 sm:px-6 lg:px-8 z-10 bg-white/50 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">全方位的面试备战方案</h2>
+            <p className="text-lg text-slate-500">无论你是校招萌新还是社招大佬，这里都有适合你的练习模式</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Card 1 */}
+            <div className="group bg-white rounded-3xl p-8 border border-slate-100 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110" />
+              <div className="relative z-10">
+                <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 text-2xl mb-6">
+                  <BulbOutlined />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-800 mb-4">综合模拟面试</h3>
+                <p className="text-slate-500 mb-6 leading-relaxed">
+                  高度还原真实面试场景，包含自我介绍、项目深挖、技术考察等全流程。支持校招/社招不同难度。
+                </p>
+                <ul className="space-y-3 mb-8">
+                  {['全真流程模拟', '智能追问机制', '多维度能力评估'].map((item, i) => (
+                    <li key={i} className="flex items-center gap-2 text-slate-600">
+                      <CheckCircleFilled className="text-blue-500" /> {item}
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/interview/social">
+                  <Button type="primary" size="large" className="w-full bg-blue-600 hover:bg-blue-700 border-0 shadow-blue-200">
+                    开始综合模拟
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Card 2 */}
+            <div className="group bg-gradient-to-b from-slate-800 to-slate-900 rounded-3xl p-8 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden text-white">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl -mr-16 -mt-16" />
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white text-2xl">
+                    <FileTextOutlined />
+                  </div>
+                  <Tag color="gold" className="border-0 px-3 py-1 text-xs font-bold">HOT</Tag>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-4">简历押题</h3>
+                <p className="text-slate-300 mb-6 leading-relaxed">
+                  上传你的简历，AI 将深度分析你的项目经历与技能栈，精准预测面试官可能问到的问题。
+                </p>
+                <ul className="space-y-3 mb-8">
+                  {['简历深度解析', '项目细节拷问', '定制化题库生成'].map((item, i) => (
+                    <li key={i} className="flex items-center gap-2 text-slate-200">
+                      <CheckCircleFilled className="text-indigo-400" /> {item}
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/resume">
+                  <Button size="large" className="w-full bg-white text-slate-900 hover:bg-slate-100 border-0 font-bold">
+                    上传简历押题
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Card 3 */}
+            <div className="group bg-white rounded-3xl p-8 border border-slate-100 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110" />
+              <div className="relative z-10">
+                <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600 text-2xl mb-6">
+                  <CodeOutlined />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-800 mb-4">专项技术突破</h3>
+                <p className="text-slate-500 mb-6 leading-relaxed">
+                  针对特定技术栈或知识点进行集中训练，如高并发、JVM、MySQL调优等，快速补齐短板。
+                </p>
+                <ul className="space-y-3 mb-8">
+                  {['技术栈专项训练', '架构设计专题', '算法与数据结构'].map((item, i) => (
+                    <li key={i} className="flex items-center gap-2 text-slate-600">
+                      <CheckCircleFilled className="text-purple-500" /> {item}
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/interview/special">
+                  <Button type="primary" size="large" className="w-full bg-purple-600 hover:bg-purple-700 border-0 shadow-purple-200">
+                    选择专项训练
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose Us - Grid */}
+      <section className="relative py-24 px-4 sm:px-6 lg:px-8 z-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">为什么选择面试吧？</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+             {[
+              { icon: <CompassOutlined />, title: '大厂真题库', desc: '基于一线大厂历年真题训练，拒绝过时八股文', color: 'text-blue-500', bg: 'bg-blue-50' },
+              { icon: <FlagOutlined />, title: '千人千面', desc: '根据你的简历和能力动态调整题目难度', color: 'text-indigo-500', bg: 'bg-indigo-50' },
+              { icon: <EyeOutlined />, title: '深度复盘', desc: '每次面试都有详细的评估报告与改进建议', color: 'text-purple-500', bg: 'bg-purple-50' },
+              { icon: <ThunderboltOutlined />, title: '极速反馈', desc: '无需等待，随时随地开启面试，实时反馈', color: 'text-yellow-500', bg: 'bg-yellow-50' },
+              { icon: <SmileOutlined />, title: '超高性价比', desc: '仅需传统私教 1/10 的价格享受 24h 服务', color: 'text-green-500', bg: 'bg-green-50' },
+              { icon: <SwitcherOutlined />, title: '难度可控', desc: '从入门到专家级，难度随心切换', color: 'text-pink-500', bg: 'bg-pink-50' },
+              { icon: <SendOutlined />, title: '实战演练', desc: '高压环境模拟，克服面试紧张感', color: 'text-cyan-500', bg: 'bg-cyan-50' },
+              { icon: <TeamOutlined />, title: '角色扮演', desc: '模拟不同风格面试官，从容应对各种情况', color: 'text-orange-500', bg: 'bg-orange-50' },
+            ].map((item, idx) => (
+              <div key={idx} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col items-start">
+                <div className={`w-12 h-12 ${item.bg} rounded-xl flex items-center justify-center text-xl ${item.color} mb-4`}>
+                  {item.icon}
+                </div>
+                <h4 className="text-lg font-bold text-slate-800 mb-2">{item.title}</h4>
+                <p className="text-slate-500 text-sm leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials - Modern Horizontal */}
+      <section className="relative py-24 px-4 sm:px-6 lg:px-8 z-10 bg-gradient-to-b from-slate-50 to-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">用户真实反馈</h2>
+            <p className="text-lg text-slate-500">看看他们如何通过面试吧拿到心仪 Offer</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {testimonials.map((t, i) => (
+              <div key={i} className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-lg transition-all">
+                <div className="flex items-center gap-1 text-yellow-400 mb-6">
+                  {[1,2,3,4,5].map(s => <FireOutlined key={s} />)}
+                </div>
+                <p className="text-slate-600 mb-6 leading-relaxed italic">"{t.text}"</p>
+                <div className="flex items-center gap-4">
+                  <Avatar src={t.avatar} size={48} className="border-2 border-white shadow-sm" />
                   <div>
-                    <div className="font-medium">{t.user}</div>
-                    <div className="text-gray-500 text-sm">{t.title}</div>
+                    <div className="font-bold text-slate-800">{t.user}</div>
+                    <div className="text-xs text-slate-500 font-medium uppercase tracking-wide">{t.title}</div>
                   </div>
                 </div>
-              </AntCard>
-            </Col>
-          ))}
-        </Row>
-      </section>
-
-      
-      <section className="py-10">
-        <div className="text-center mb-8">
-          <Title level={2}>为什么选择面试吧？</Title>
+              </div>
+            ))}
+          </div>
         </div>
-        <Row gutter={[24, 24]}>
-          {[
-            { icon: <CompassOutlined />, title: '大厂真题轰炸', desc: '基于字节、阿里、腾讯真题深度训练，95%命中率精准押题，直击考点！', color: 'text-green-500' },
-            { icon: <FlagOutlined />, title: '简历押题神器', desc: '深入分析你的简历，生成定制化的专属面试题目，让你面试如开卷', color: 'text-blue-500' },
-            { icon: <EyeOutlined />, title: '还原真实标准', desc: '多名大厂面试官共同设计，还原真实评估体系：你是待定还是强烈推荐？', color: 'text-purple-500' },
-            { icon: <ThunderboltOutlined />, title: '进步肉眼可见改', desc: '详细评估报告+改进建议与题目分析，高效锤炼，不断改进，亲身实战锤炼', color: 'text-red-500' },
-            { icon: <SmileOutlined />, title: '成本碾压传统模式', desc: '1次私教费=20次AI特训，省下90%成本，随时开练无需预约，时间花在刀刃上', color: 'text-purple-500' },
-            { icon: <SwitcherOutlined />, title: '难度自由切换', desc: '入门/进阶/挑战级难度一键切换，从小白到大神全阶级覆盖，自己掌控节奏', color: 'text-blue-500' },
-            { icon: <SendOutlined />, title: '临场状态激活', desc: '模拟高压追问，实时1小时节奏练习，让你上场即巅峰，关键时刻绝不掉链子', color: 'text-green-500' },
-            { icon: <TeamOutlined />, title: '领域洞察', desc: '针对不同领域岗位的真实问题库与场景化训练，全面提升', color: 'text-teal-500' },
-          ].map((f, idx) => (
-            <Col xs={24} md={6} key={idx}>
-              <AntCard className="rounded-2xl h-full">
-                <div className={`w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-3 ${f.color}`}>
-                  <span className="text-xl">{f.icon}</span>
-                </div>
-                <Title level={4} className="m-0 mb-2">{f.title}</Title>
-                <Paragraph className="text-gray-600">{f.desc}</Paragraph>
-              </AntCard>
-            </Col>
-          ))}
-        </Row>
       </section>
 
-      
-      <section className="py-10">
-        <Title level={2} className="mb-6">常见问题</Title>
-        <Collapse
-          items={[
-            { key: '1', label: '为什么要用面试吧，而不是豆包、ChatGPT这些通用AI？', children: <Paragraph>面试吧针对求职面试场景深度定制，真实面试标准、追问逻辑与评估体系都更贴近用人单位的要求。</Paragraph> },
-            { key: '2', label: '面试吧到底解决了什么问题', children: <Paragraph>帮助你在真实面试来临前发现薄弱点并针对性训练，输出结构化评估与改进建议。</Paragraph> },
-            { key: '3', label: '面试吧适合什么样的人使用？', children: <Paragraph>从校招到社招，从转岗到晋升，皆可使用；支持多岗位面试模拟。</Paragraph> },
-            { key: '4', label: '收费标准是什么，性价比如何？', children: <Paragraph>单次体验低成本，会员价格更划算；与线下私教相比成本约为1/10。</Paragraph> },
-            { key: '5', label: '面试吧的AI是否真正理解并回答问题？', children: <Paragraph>基于大厂真题与结构化知识库训练，具备追问能力与场景还原，输出更专业。</Paragraph> },
-            { key: '6', label: '面试吧押题效果怎么样？', children: <Paragraph>押题命中率高达95%，覆盖核心技术栈，帮助你在面试中游刃有余。</Paragraph> },
-          ]}
-        />
+      {/* FAQ Section */}
+      <section className="relative py-24 px-4 sm:px-6 lg:px-8 z-10">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900">常见问题</h2>
+          </div>
+          <Collapse
+            ghost
+            expandIconPosition="end"
+            items={[
+              { key: '1', label: '为什么要用面试吧，而不是豆包、ChatGPT这些通用AI？', children: <p className="text-slate-500 pb-4">面试吧针对求职面试场景深度定制，真实面试标准、追问逻辑与评估体系都更贴近用人单位的要求。</p> },
+              { key: '2', label: '面试吧到底解决了什么问题', children: <p className="text-slate-500 pb-4">帮助你在真实面试来临前发现薄弱点并针对性训练，输出结构化评估与改进建议。</p> },
+              { key: '3', label: '面试吧适合什么样的人使用？', children: <p className="text-slate-500 pb-4">从校招到社招，从转岗到晋升，皆可使用；支持多岗位面试模拟。</p> },
+              { key: '4', label: '收费标准是什么，性价比如何？', children: <p className="text-slate-500 pb-4">单次体验低成本，会员价格更划算；与线下私教相比成本约为1/10。</p> },
+            ]}
+            className="bg-white rounded-2xl shadow-sm border border-slate-200"
+          />
+        </div>
       </section>
 
-      
-      <div className="fixed right-4 bottom-24 flex flex-col gap-3">
-        <Button shape="round" className="w-12 h-12 shadow" icon={<UserOutlined />} />
-        <Button shape="round" className="w-12 h-12 shadow" icon={<ExperimentOutlined />} />
-        <Button shape="round" className="w-12 h-12 shadow" icon={<SendOutlined />} />
-        <Button shape="round" className="w-12 h-12 shadow" icon={<VideoCameraOutlined />} />
-      </div>
-
-      
-      <div className="fixed right-6 bottom-6 flex items-center gap-3">
-        <Button type="primary" shape="circle">↑</Button>
-        <Button shape="circle">✉️</Button>
-      </div>
+      {/* Bottom CTA */}
+      <section className="relative py-20 px-4 sm:px-6 lg:px-8 z-10">
+        <div className="max-w-5xl mx-auto bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-12 text-center shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+          <div className="relative z-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">准备好开始你的面试之旅了吗？</h2>
+            <p className="text-blue-100 text-lg mb-10 max-w-2xl mx-auto">立即加入数万名求职者的行列，用 AI 武装自己，从容应对每一次挑战。</p>
+            <Link href="/resume">
+              <Button size="large" className="h-14 px-10 text-lg rounded-full bg-white text-blue-700 hover:bg-blue-50 border-0 font-bold shadow-lg hover:scale-105 transition-all">
+                免费开始使用
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

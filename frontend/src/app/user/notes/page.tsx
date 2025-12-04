@@ -1,9 +1,16 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Typography, Input, Select, Space, Button, Card as AntCard, Table, Tag, Empty, message } from 'antd';
-
-const { Title } = Typography;
+import { Typography, Input, Select, Space, Button, Table, Tag, Empty, message, Card } from 'antd';
+import { 
+  BookOutlined, 
+  SearchOutlined, 
+  DeleteOutlined, 
+  CopyOutlined, 
+  ReloadOutlined,
+  TagsOutlined,
+  FileTextOutlined
+} from '@ant-design/icons';
 
 type Note = {
   key: number;
@@ -37,78 +44,220 @@ export default function NotesPage() {
     return notes.filter(n => n.type === active)
       .filter(n => (keyword ? n.title.includes(keyword) || n.source.includes(keyword) : true))
       .filter(n => (tag ? n.tags.includes(tag) : true));
-  }, [active, keyword, tag]);
+  }, [active, keyword, tag, notes]);
 
   const toggleExpand = (key: number) => {
     setExpandedKeys(prev => (prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]));
   };
 
+  const handleDelete = (key: number) => {
+    setNotes(prev => prev.filter(n => n.key !== key));
+    message.success('笔记已删除');
+  };
+
+  const handleCopy = async (key: number) => {
+    try {
+      await navigator.clipboard.writeText(ANSWERS[key] || '');
+      message.success('答案已复制到剪贴板');
+    } catch {
+      message.error('复制失败');
+    }
+  };
+
   return (
-    <div className="container mx-auto px-4">
-      <Title level={2} className="mt-2">笔记记录</Title>
+    <div className="min-h-screen relative font-sans">
+      {/* Decorative Background */}
+      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-emerald-50/60 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none z-0" />
+      <div className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-blue-50/60 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/3 pointer-events-none z-0" />
 
-      <div className="mt-2 flex items-center justify-between">
-        <Space>
-          <Button type={active === '押题笔记' ? 'primary' : 'default'} onClick={() => setActive('押题笔记')}>押题笔记</Button>
-          <Button type={active === '面试笔记' ? 'primary' : 'default'} onClick={() => setActive('面试笔记')}>面试笔记</Button>
-        </Space>
-        <Space wrap>
-          <Input placeholder="输入关键词" value={keyword} onChange={e => setKeyword(e.target.value)} style={{ width: 220 }} />
-          <Select placeholder="选择标签" allowClear value={tag} onChange={setTag} style={{ width: 180 }} options={[{ value: 'Redis', label: 'Redis' }, { value: 'AOF', label: 'AOF' }, { value: 'Go', label: 'Go' }, { value: '并发', label: '并发' }, { value: 'MySQL', label: 'MySQL' }, { value: '索引', label: '索引' }]} />
-          <Button type="primary">搜索</Button>
-          <Button onClick={() => { setKeyword(''); setTag(undefined); }}>重置</Button>
-        </Space>
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="mb-8 animate-fade-in-up">
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+            <BookOutlined className="text-emerald-500" />
+            笔记列表
+          </h1>
+          <p className="text-slate-500 mt-2 ml-11">整理你的面试知识库，温故而知新</p>
+        </div>
+
+        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+          {/* Tabs & Filters */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div className="bg-slate-100/80 p-1 rounded-xl inline-flex">
+              {(['押题笔记', '面试笔记'] as const).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setActive(type)}
+                  className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                    active === type
+                      ? 'bg-white text-emerald-600 shadow-sm shadow-slate-200'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Input 
+                placeholder="搜索关键词..." 
+                prefix={<SearchOutlined className="text-slate-400" />}
+                value={keyword} 
+                onChange={e => setKeyword(e.target.value)} 
+                className="w-full md:w-[220px] h-10 rounded-lg border-slate-200 hover:border-emerald-400 focus:border-emerald-500"
+                variant="filled"
+              />
+              <Select 
+                placeholder="选择标签" 
+                allowClear 
+                value={tag} 
+                onChange={setTag} 
+                className="w-full md:w-[160px] h-10"
+                options={[
+                  { value: 'Redis', label: 'Redis' }, 
+                  { value: 'AOF', label: 'AOF' }, 
+                  { value: 'Go', label: 'Go' }, 
+                  { value: '并发', label: '并发' }, 
+                  { value: 'MySQL', label: 'MySQL' }, 
+                  { value: '索引', label: '索引' }
+                ]} 
+                variant="filled"
+              />
+              <Button 
+                icon={<ReloadOutlined />} 
+                onClick={() => { setKeyword(''); setTag(undefined); }}
+                className="h-10 px-4 rounded-lg border-slate-200 text-slate-500 hover:text-emerald-600 hover:border-emerald-200"
+              >
+                重置
+              </Button>
+            </div>
+          </div>
+
+          {/* Content */}
+          {filtered.length === 0 ? (
+            <div className="py-20 text-center">
+              <Empty 
+                image={Empty.PRESENTED_IMAGE_SIMPLE} 
+                description={
+                  <div className="text-slate-400">
+                    <p className="mb-2">暂无{active}</p>
+                    <p className="text-xs">尝试切换筛选条件或添加新笔记</p>
+                  </div>
+                } 
+              />
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-slate-100">
+              <Table
+                rowKey="key"
+                expandable={{
+                  expandedRowRender: (row: Note) => (
+                    <div className="p-6 bg-slate-50/50 border-t border-slate-100">
+                      <div className="bg-white rounded-xl p-6 border border-emerald-100 shadow-sm">
+                        <div className="flex items-start gap-4">
+                          <div className="bg-emerald-50 p-2 rounded-lg">
+                            <FileTextOutlined className="text-emerald-600 text-xl" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-3">
+                              <h4 className="font-bold text-slate-800 m-0">参考答案与思路</h4>
+                              <Tag color="success" className="rounded-full px-2 border-0 bg-emerald-50 text-emerald-600">AI 生成</Tag>
+                            </div>
+                            <div className="text-slate-600 leading-relaxed text-base">
+                              {ANSWERS[row.key] || '暂无详细内容'}
+                            </div>
+                            <div className="mt-4 flex items-center gap-2">
+                              <Button 
+                                size="small" 
+                                type="dashed" 
+                                icon={<CopyOutlined />} 
+                                onClick={(e) => { e.stopPropagation(); handleCopy(row.key); }}
+                                className="text-slate-500 hover:text-emerald-600 hover:border-emerald-300"
+                              >
+                                复制内容
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ),
+                  expandedRowKeys: expandedKeys,
+                  onExpandedRowsChange: keys => setExpandedKeys(keys as number[]),
+                  expandIcon: () => null, // Hide default icon, we use row click
+                }}
+                onRow={(row: Note) => ({
+                  onClick: () => toggleExpand(row.key),
+                  className: "cursor-pointer hover:bg-slate-50 transition-colors group"
+                })}
+                pagination={{ 
+                  pageSize: 10,
+                  className: "px-6 py-4",
+                  showTotal: (total) => <span className="text-slate-400">共 {total} 条笔记</span>
+                }}
+                dataSource={filtered}
+                columns={[
+                  { 
+                    title: '标题', 
+                    dataIndex: 'title', 
+                    className: "pl-6",
+                    render: (text) => (
+                      <span className="font-bold text-slate-700 group-hover:text-emerald-700 transition-colors">
+                        {text}
+                      </span>
+                    ) 
+                  },
+                  { 
+                    title: '来源', 
+                    dataIndex: 'source',
+                    render: (text) => <span className="text-slate-500 text-sm bg-slate-100 px-2 py-1 rounded-md">{text}</span>
+                  },
+                  { 
+                    title: '标签', 
+                    dataIndex: 'tags', 
+                    render: (tags: string[]) => (
+                      <div className="flex gap-1">
+                        {tags.map(t => (
+                          <Tag key={t} bordered={false} className="bg-blue-50 text-blue-600 m-0 rounded-full px-2.5">
+                            {t}
+                          </Tag>
+                        ))}
+                      </div>
+                    ) 
+                  },
+                  { 
+                    title: '创建时间', 
+                    dataIndex: 'time',
+                    render: (text) => <span className="text-slate-400 text-xs font-mono">{text}</span>
+                  },
+                  { 
+                    title: '操作', 
+                    width: 120,
+                    render: (_: any, row: Note) => (
+                      <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                        <Button 
+                          type="text" 
+                          icon={<CopyOutlined />} 
+                          onClick={() => handleCopy(row.key)}
+                          className="text-slate-400 hover:text-blue-600 hover:bg-blue-50" 
+                        />
+                        <Button 
+                          type="text" 
+                          danger
+                          icon={<DeleteOutlined />} 
+                          onClick={() => handleDelete(row.key)}
+                          className="text-slate-400 hover:text-red-600 hover:bg-red-50" 
+                        />
+                      </div>
+                    ) 
+                  },
+                ]}
+                className="modern-table"
+              />
+            </div>
+          )}
+        </div>
       </div>
-
-      <AntCard className="rounded-2xl mt-4">
-        {filtered.length === 0 ? (
-          <Empty imageStyle={{ height: 120 }} description={`${active}为空`} />
-        ) : (
-          <Table
-            rowKey="key"
-            expandable={{
-              expandedRowRender: (row: Note) => (
-                <AntCard className="bg-green-50" styles={{ body: { padding: 16 } }}>
-                  <Space direction="vertical" style={{ width: '100%' }}>
-                    <Space align="center" className="text-green-700">
-                      <Tag color="green">答案思路</Tag>
-                    </Space>
-                    <Space wrap>
-                      {row.tags.map(t => (
-                        <Tag key={t}>{t}</Tag>
-                      ))}
-                    </Space>
-                    <div className="mt-2" />
-                    <Tag>参考答案</Tag>
-                    <div>{ANSWERS[row.key] || '暂无答案'}</div>
-                  </Space>
-                </AntCard>
-              ),
-              expandedRowKeys: expandedKeys,
-              onExpandedRowsChange: keys => setExpandedKeys(keys as number[]),
-              expandIcon: () => null,
-            }}
-            onRow={(row: Note) => ({
-              onClick: () => toggleExpand(row.key),
-            })}
-            pagination={{ pageSize: 10 }}
-            dataSource={filtered}
-            columns={[
-              { title: '标题', dataIndex: 'title', render: (_: any, row: Note) => <span>{row.title}</span> },
-              { title: '来源', dataIndex: 'source' },
-              { title: '创建时间', dataIndex: 'time' },
-              { title: '标签', dataIndex: 'tags', render: (tags: string[]) => <Space>{tags.map(t => <Tag key={t}>{t}</Tag>)}</Space> },
-              { title: '操作', render: (_: any, row: Note) => (
-                <Space>
-                  <Button type="link" danger onClick={(e) => { e.stopPropagation(); setNotes(prev => prev.filter(n => n.key !== row.key)); }}>删除</Button>
-                  <Button type="link" onClick={async (e) => { e.stopPropagation(); try { await navigator.clipboard.writeText(ANSWERS[row.key] || ''); message.success('答案已复制'); } catch { message.error('复制失败'); } }}>复制</Button>
-                </Space>
-              ) },
-            ]}
-          />
-        )}
-      </AntCard>
     </div>
   );
 }
-
