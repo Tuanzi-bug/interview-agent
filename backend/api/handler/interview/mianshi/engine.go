@@ -216,7 +216,6 @@ func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *Intervi
 	}
 
 	// 发送完成事件
-	SendTopicCompleteEvent(e.writer)
 	SendCompleteEvent(e.writer)
 
 	// 发布评估报告生成消息
