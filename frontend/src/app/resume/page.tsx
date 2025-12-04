@@ -1,24 +1,61 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, message } from 'antd';
 import { FileTextOutlined, RocketOutlined, ThunderboltOutlined, ReadOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import apiClient from '@/services/api/client';
 
 const { Title, Paragraph, Text } = Typography;
+
+interface Resume {
+  id: number;
+  file_name: string;
+}
 
 export default function ResumePressPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [resumes, setResumes] = useState<Resume[]>([]);
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchResumes = async () => {
+      try {
+        const data: any = await apiClient.get('/resume/list');
+        if (data && data.resumes) {
+          setResumes(data.resumes);
+          if (data.resumes.length > 0) {
+            // Check if default exists or pick first
+            const defaultResume = data.resumes.find((r: any) => r.is_default) || data.resumes[0];
+            form.setFieldsValue({ resume_id: defaultResume.id });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch resumes:', e);
+        // message.error('获取简历列表失败'); // Optional: avoid spamming error on load
+      }
+    };
+    fetchResumes();
+  }, [form]);
 
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const payload = {
+        resume_id: values.resume_id,
+        prediction_type: values.prediction_type,
+        language: values.language,
+        job_title: values.job,
+        difficulty: values.level,
+        company_name: values.company_name
+      };
+      
+      await apiClient.post('/prediction/start', payload);
       message.success('开始生成押题...');
-      // router.push('/user/press/1'); // Example redirection
-    } catch (e) {
-      message.error('提交失败，请重试');
+      router.push('/user/press'); 
+    } catch (e: any) {
+      message.error(e?.message || '提交失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -62,23 +99,37 @@ export default function ResumePressPage() {
                 form={form} 
                 layout="vertical" 
                 onFinish={onFinish}
-                initialValues={{ resume: '我的简历_v1.pdf', language: 'Java', job: '后端开发', level: '入门' }}
+                initialValues={{ language: 'Java', job: '后端开发', level: '进阶', prediction_type: '校招' }}
                 className="flex flex-col gap-4"
               >
                 <Form.Item 
                   label={<span className="font-bold text-slate-700">选择押题的简历</span>} 
-                  name="resume"
+                  name="resume_id"
                   rules={[{ required: true, message: '请选择简历' }]}
                 >
                   <Select 
                     size="large"
                     variant="filled"
                     className="!h-12"
-                    options={[
-                      { value: '我的简历_v1.pdf', label: '我的简历_v1.pdf' }, 
-                      { value: '校招版.pdf', label: '校招版.pdf' }
-                    ]} 
+                    options={resumes.map(r => ({ value: r.id, label: r.file_name }))}
+                    placeholder={resumes.length === 0 ? '加载中...' : '请选择简历'}
                     popupMatchSelectWidth={false} 
+                  />
+                </Form.Item>
+
+                <Form.Item 
+                  label={<span className="font-bold text-slate-700">面试类型</span>} 
+                  name="prediction_type"
+                  rules={[{ required: true, message: '请选择面试类型' }]}
+                >
+                  <Select 
+                    size="large"
+                    variant="filled"
+                    className="!h-12"
+                    options={[
+                      { value: '校招', label: '校招' }, 
+                      { value: '社招', label: '社招' }
+                    ]} 
                   />
                 </Form.Item>
 
@@ -130,6 +181,19 @@ export default function ResumePressPage() {
                         { value: '进阶', label: '进阶' },
                         { value: '专家', label: '专家' }
                       ]} 
+                    />
+                  </Form.Item>
+
+                  <Form.Item 
+                    label={<span className="font-bold text-slate-700">目标公司</span>} 
+                    name="company_name"
+                    rules={[{ required: true, message: '请输入目标公司' }]}
+                  >
+                    <Input 
+                      size="large" 
+                      variant="filled" 
+                      className="!h-12 !bg-slate-50 hover:!bg-slate-100 focus:!bg-white border-transparent hover:border-indigo-300 focus:border-indigo-500"
+                      placeholder="如：字节跳动" 
                     />
                   </Form.Item>
                 </div>
