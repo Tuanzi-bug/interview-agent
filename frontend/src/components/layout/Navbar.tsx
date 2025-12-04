@@ -1,6 +1,6 @@
 'use client';
 
-import { Layout, Typography, Button, Badge, Dropdown, Modal, Tabs, Form, Input, message } from 'antd';
+import { Layout, Typography, Button, Badge, Dropdown, Modal, Tabs, Form, Input, message, Steps } from 'antd';
 import Link from 'next/link';
 import { BellOutlined, UserOutlined, DownOutlined } from '@ant-design/icons';
 import type { FC } from 'react';
@@ -19,6 +19,7 @@ const Navbar: FC = () => {
   const [user, setUser] = useState<{ username?: string; email?: string } | null>(null);
   const [loginForm] = Form.useForm();
   const [registerForm] = Form.useForm();
+  const [guideModalOpen, setGuideModalOpen] = useState(false);
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -68,6 +69,7 @@ const Navbar: FC = () => {
       setUser(userData);
       setAuthed(true);
       setOpenAuth(false);
+      setGuideModalOpen(true);
       message.success('注册并登录成功');
     } catch (e: any) {
       message.error(e?.response?.data?.message || '注册失败');
@@ -187,6 +189,51 @@ const Navbar: FC = () => {
             ),
           },
         ]} />
+      </Modal>
+
+      <Modal
+        open={guideModalOpen}
+        onCancel={() => setGuideModalOpen(false)}
+        footer={null}
+        title="欢迎加入面试吧"
+        centered
+        width={600}
+      >
+        <div className="py-6 px-4">
+          <div className="mb-8 text-center">
+            <Title level={4}>开启您的智能面试之旅</Title>
+            <Typography.Text type="secondary">只需简单两步，让 AI 为您定制专属面试计划</Typography.Text>
+          </div>
+          
+          <Steps
+            direction="vertical"
+            current={0}
+            items={[
+              {
+                title: '第一步：配置用户模型',
+                description: '配置您的大模型key(火山、百炼都有免费大模型)，AI 将根据您的模型生成面试题目。',
+              },
+              {
+                title: '第二步：上传个人简历',
+                description: '前往个人中心上传简历，AI 将根据您的简历内容生成针对性的面试题目。',
+              },
+            ]}
+          />
+          
+          <div className="mt-8 flex justify-center">
+            <Button 
+              type="primary" 
+              size="large" 
+              onClick={() => {
+                setGuideModalOpen(false);
+                router.push('/user/models');
+              }}
+              className="w-full md:w-auto px-8"
+            >
+              立即去配置用户模型
+            </Button>
+          </div>
+        </div>
       </Modal>
     </Header>
   );

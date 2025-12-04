@@ -1,6 +1,6 @@
 'use client';
 
-import { Typography, Card as AntCard, Table, Button, Space, Tag, Modal, Form, Input, Select, InputNumber, message, Switch } from 'antd';
+import { Typography, Card as AntCard, Table, Button, Space, Tag, Modal, Form, Input, Select, InputNumber, message, Switch, Alert } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import apiClient from '@/services/api/client';
 
@@ -113,7 +113,7 @@ export default function UserModelsPage() {
   const columns = useMemo(
     () => [
       { title: '模型名称', dataIndex: 'name' },
-      { title: '模型 Key', dataIndex: 'modelKey' },
+      { title: '模型ID', dataIndex: 'modelKey' },
       { title: '协议', dataIndex: 'protocol', render: (v: string) => <Tag color="blue">{v}</Tag> },
       { title: '提供商', dataIndex: 'providerName' },
       { title: '状态', dataIndex: 'is_default', render: (v: number, row: ModelItem) => (
@@ -207,6 +207,23 @@ export default function UserModelsPage() {
     <div className="container mx-auto px-4">
       <Title level={2} className="mt-2">用户模型管理</Title>
 
+      <Alert
+        message="配置提示"
+        description={
+          <span>
+            如果您不知道如何配置或获取免费大模型，请参看顶部导航栏的
+            <a href="/" className="text-blue-500 hover:text-blue-700 mx-1">
+              使用手册
+            </a>
+            ，我们将为您提供详细的指引。
+          </span>
+        }
+        type="info"
+        showIcon
+        closable
+        className="mt-4 mb-4"
+      />
+
       <AntCard className="rounded-2xl mt-2" extra={<Button type="primary" onClick={() => { const t = typeof window !== 'undefined' ? localStorage.getItem('token') : null; if (!t) { message.warning('请先登录后再创建'); return; } setOpenCreate(true); }}>创建模型</Button>}>
         <Table
           rowKey="id"
@@ -226,7 +243,7 @@ export default function UserModelsPage() {
             <Form.Item label="API 秘钥" name="apiSecret">
               <Input.Password placeholder="请输入平台 API Key" maxLength={500} />
             </Form.Item>
-            <Form.Item label="模型 Key" name="modelKey" rules={[{ required: true, message: '请输入模型 Key' }]}>
+            <Form.Item label="模型 ID" name="modelKey" rules={[{ required: true, message: '请输入模型 ID' }]}>
               <Input placeholder="如：gpt-4" maxLength={100} />
             </Form.Item>
             <Form.Item label="提供商名称" name="providerName">
@@ -344,7 +361,7 @@ export default function UserModelsPage() {
             <Form.Item label="API 秘钥" name="apiSecret">
               <Input.Password placeholder="留空则不更新密钥" maxLength={500} />
             </Form.Item>
-            <Form.Item label="模型 Key" name="modelKey" rules={[{ required: true, message: '请输入模型 Key' }]}> 
+            <Form.Item label="模型 ID" name="modelKey" rules={[{ required: true, message: '请输入模型 ID' }]}> 
               <Input placeholder="如：gpt-4" maxLength={100} />
             </Form.Item>
             <Form.Item label="提供商名称" name="providerName" rules={[{ required: true, message: '请输入提供商名称' }]}> 
