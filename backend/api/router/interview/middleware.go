@@ -325,3 +325,23 @@ func _getmianshirecordsMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _predictionMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getpredictiondetailMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listpredictionsMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _predictMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}

@@ -70,6 +70,8 @@ func migrateDatabase() error {
 		&model.InterviewEvaluation{},
 		&model.AnswerReport{},
 		&model.Resume{},
+		&model.PredictionRecord{},
+		&model.PredictionQuestion{},
 		&model.Demo{},
 	)
 }
