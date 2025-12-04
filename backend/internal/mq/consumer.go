@@ -1,7 +1,7 @@
 package mq
 
 import (
-	"ai-eino-interview-agent/chatApp/agent/service"
+	"ai-eino-interview-agent/chatApp/agent_service/evaluation"
 	"context"
 	"fmt"
 	"log"
@@ -46,8 +46,8 @@ func (h *ConsumerHandler) handleEvaluationReport(ctx context.Context, message *M
 	log.Printf("[Consumer] Generating evaluation report: userID=%d, reportID=%d", uint(userID), uint64(reportID))
 
 	// 调用评估服务生成报告
-	// 这里使用 service.GenerateInterviewEvaluation 生成整体评估
-	_, err := service.GenerateInterviewEvaluation(ctx, uint(userID), uint64(reportID))
+	// 这里使用 evaluation.GenerateRecordEvaluation 生成整体评估
+	_, err := evaluation.GenerateRecordEvaluation(ctx, uint(userID), uint64(reportID))
 	if err != nil {
 		log.Printf("[Consumer] Failed to generate evaluation report: %v", err)
 		return err
@@ -75,8 +75,8 @@ func (h *ConsumerHandler) handleTopicEvaluation(ctx context.Context, message *Me
 	log.Printf("[Consumer] Generating topic evaluation: userID=%d, reportID=%d", uint(userID), uint64(reportID))
 
 	// 调用评估服务生成主题评估
-	// 这里使用 service.GenerateInterviewTopicEvaluation 生成主题级别的评估
-	_, err := service.GenerateInterviewTopicEvaluation(ctx, uint(userID), uint64(reportID))
+	// 这里使用 GenerateAnswerRecordEvaluation 生成答题记录的评估
+	_, err := evaluation.GenerateAnswerRecordEvaluation(ctx, uint(userID), uint64(reportID))
 	if err != nil {
 		log.Printf("[Consumer] Failed to generate topic evaluation: %v", err)
 		return err
