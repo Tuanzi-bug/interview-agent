@@ -14,7 +14,6 @@ type (
 	InterviewDialogue struct {
 		ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
 		UserID    uint      `json:"user_id" gorm:"not null;index:idx_user_id;comment:用户ID"`
-		ParentID  uint64    `json:"parent_id" gorm:"not null;index:idx_parent_id;comment:父对话记录ID"`
 		ReportID  uint64    `json:"report_id" gorm:"not null;index:idx_report_id;comment:关联的面试报告ID"`
 		Question  string    `json:"question" gorm:"type:text;comment:智能体的提问内容"`
 		Answer    string    `json:"answer" gorm:"type:text;comment:用户的回答内容"`
