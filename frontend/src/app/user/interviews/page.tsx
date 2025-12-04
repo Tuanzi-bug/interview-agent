@@ -154,17 +154,12 @@ export default function InterviewRecordsPage() {
                 
                 return (
                   <AntCard key={it.id} className="rounded-2xl" styles={{ body: { padding: 16 } }} style={{ minWidth: 300 }}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="text-xl font-semibold mb-2">{it.title || '未命名面试'}</div>
-                        <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
-                      </div>
-                    </div>
-                    <div className="mt-4 space-y-2 text-sm">
+                    <div className="space-y-2 text-sm">
                       <div>面试类型：{it.type || '-'}</div>
                       <div>公司名称：{it.companyName || '-'}</div>
                       <div>难度等级：{it.difficulty || '-'}</div>
                       <div>领域：{it.domain || '-'}</div>
+                      <div>完成状态：<Tag color={statusInfo.color}>{statusInfo.text}</Tag></div>
                       <div>创建时间：{createdTime}</div>
                     </div>
                     <div className="mt-4">

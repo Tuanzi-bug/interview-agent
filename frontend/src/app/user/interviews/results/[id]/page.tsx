@@ -1,76 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Typography, Card as AntCard, Row, Col, List, Tag, Button, Avatar } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Typography, Card as AntCard, Row, Col, List, Tag, Button, Avatar, Spin, message } from 'antd';
 import { useParams } from 'next/navigation';
+import apiClient from '@/services/api/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const { Title, Paragraph, Text } = Typography;
-
-const mockBasic = {
-  candidate: 'LittleBear',
-  resume: 'golang.pdf',
-  type: '综合面试',
-  score: 65,
-  difficulty: '挑战',
-  company: '腾讯',
-  position: '软件开发-后台开发方向',
-  duration: '13分钟12秒',
-  time: '2025-11-13 22:37:53',
-};
-
-const mockPerformance = {
-  comment:
-    '候选人整体表现良好，技术基础扎实，沟通清晰。建议加强在系统设计和架构方面的深度思考。',
-  dimensions: [
-    { dimension_name: '技术基础与实践能力', evaluation: '掌握基础数据结构与算法，实现规范，逻辑清晰。', score: 68 },
-    { dimension_name: '项目经历真实性验证', evaluation: '能清晰描述项目背景与职责，举例充分。', score: 62 },
-    { dimension_name: '系统架构设计思维', evaluation: '对架构理解到位，需加强扩展性与容错思考。', score: 55 },
-    { dimension_name: '技术深度与前瞻视野', evaluation: '对新技术保持关注，有学习与反思能力。', score: 58 },
-    { dimension_name: '团队协作与沟通能力', evaluation: '表达清晰，主动沟通与互动，解释思路清楚。', score: 66 },
-  ],
-};
-
-const mockRecords = [
-  {
-    order: 1,
-    content: '项目考察',
-    comment: {
-      score: 85,
-      key_points: '项目架构、技术选型、团队协作',
-      difficulty: '中等',
-      strengths: '表达清晰，逻辑完整，技术细节讲解充分',
-      weaknesses: '缺少对项目性能优化的讨论',
-      suggestion: '建议补充项目的性能指标和优化方案',
-      know_points: '系统设计、技术栈选择、项目管理',
-      thinking: '从项目背景→技术选型→实现细节→性能优化的思路讲解',
-      reference: '应包含核心架构、技术栈、难点与解决方案',
-    },
-    message: [
-      { order: 1, question: '这个项目的核心难点是什么？', answer: '高并发场景的数据一致性，使用消息队列与分布式锁。' },
-      { order: 2, question: '你们是如何处理数据一致性的？', answer: 'Redis分布式锁 + RabbitMQ，保证操作原子性。' },
-      { order: 3, question: '性能指标如何？', answer: '支持10万QPS，平均响应 50ms。' },
-    ],
-  },
-  {
-    order: 2,
-    content: '技术考察',
-    comment: {
-      score: 78,
-      key_points: '服务拆分、通信方式、服务治理',
-      difficulty: '中高',
-      strengths: '基础扎实，能举例说明',
-      weaknesses: '服务治理实践不足',
-      suggestion: '建议学习 Service Mesh 相关技术',
-      know_points: '微服务、RPC、服务发现、负载均衡',
-      thinking: '从单体问题→微服务优势→实现挑战的讲解',
-      reference: '应包含拆分原则与通信方式等',
-    },
-    message: [
-      { order: 1, question: '微服务和单体架构的主要区别是什么？', answer: '微服务可独立部署与扩展，单体为整体应用。' },
-      { order: 2, question: '微服务之间如何通信？', answer: '同步RPC（如gRPC）与异步消息队列。' },
-    ],
-  },
-];
 
 function RadarChart({ items, size = 520 }: { items: { dimension_name: string; score: number }[]; size?: number }) {
   const radius = 140;
@@ -135,15 +71,98 @@ function ScoreGauge({ score }: { score: number }) {
 
 export default function InterviewResultDetailPage() {
   const params = useParams() as any;
-  const id = Number(params?.id || 1);
-  const perf = mockPerformance;
-  const basic = mockBasic;
-  const records = mockRecords;
+  const id = Number(params?.id || 0);
+  const { user, login } = useAuth();
 
-  const avgScore = useMemo(() => {
-    const s = perf.dimensions.map(d => d.score);
-    return Math.round((s.reduce((a, b) => a + b, 0) / s.length) * 10) / 10;
-  }, [perf]);
+  const [loading, setLoading] = useState(true);
+  const [interviewInfo, setInterviewInfo] = useState<any>(null);
+  const [evaluation, setEvaluation] = useState<any>(null);
+  const [answerRecords, setAnswerRecords] = useState<any[]>([]);
+
+  const fetchData = async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      // 0. Fetch User Profile if missing
+      if (!user) {
+        try {
+          const userRes: any = await apiClient.get('http://localhost:8888/api/user/profile');
+          if (userRes && userRes.username) {
+            login({
+              id: String(userRes.id),
+              name: userRes.username,
+              email: userRes.email,
+              avatar: userRes.avatar
+            });
+          }
+        } catch (e) {
+          console.error("Failed to fetch user profile", e);
+        }
+      }
+
+      // 1. Fetch Interview Info (from list)
+      const listRes: any = await apiClient.get('http://localhost:8888/api/interview/records', { params: { page: 1, page_size: 1000 } });
+      const listData = listRes?.records || [];
+      const info = listData.find((item: any) => item.id === id);
+      setInterviewInfo(info);
+
+      // 2. Fetch Evaluation Report
+      const evalRes: any = await apiClient.get('http://localhost:8888/api/mianshi/evaluation', { params: { report_id: id } });
+      setEvaluation(evalRes);
+
+      // 3. Fetch Answer Records
+      const recordRes: any = await apiClient.get('http://localhost:8888/api/mianshi/answer-record', { params: { report_id: id } });
+      if (recordRes && recordRes.records) {
+        setAnswerRecords(recordRes.records);
+      } else if (Array.isArray(recordRes)) {
+        setAnswerRecords(recordRes);
+      } else {
+        setAnswerRecords(recordRes?.records || []);
+      }
+    } catch (e: any) {
+      console.error(e);
+      message.error('获取面试详情失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Spin size="large" tip="正在加载面试结果..." />
+      </div>
+    );
+  }
+
+  if (!evaluation) {
+    return (
+      <div className="container mx-auto px-4 mt-8">
+        <AntCard>
+          <div className="text-center py-8 text-gray-500">
+            暂无面试报告数据，请稍后重试或确认面试是否已完成。
+          </div>
+        </AntCard>
+      </div>
+    );
+  }
+
+  const basic = {
+    candidate: user?.name || '未知用户',
+    resume: '暂无', // 接口暂未返回简历名称
+    type: interviewInfo?.type || '未知',
+    score: evaluation.score,
+    difficulty: interviewInfo?.difficulty || '未知',
+    company: interviewInfo?.company_name || '未指定',
+    position: interviewInfo?.position_name || '未指定',
+    duration: interviewInfo?.duration ? `${Math.floor(interviewInfo.duration / 60)}分钟${interviewInfo.duration % 60}秒` : '未知',
+    time: interviewInfo?.created_at ? new Date(interviewInfo.created_at).toLocaleString('zh-CN') : '未知',
+  };
 
   return (
     <div className="container mx-auto px-4">
@@ -153,15 +172,16 @@ export default function InterviewResultDetailPage() {
         <Row gutter={[24, 24]} align="middle">
           <Col xs={24} md={14}>
             <div className="flex items-start gap-3">
-              <Avatar size={48}>LB</Avatar>
+              <Avatar size={48}>{basic.candidate.substring(0, 2).toUpperCase()}</Avatar>
               <div>
                 <div className="text-lg font-semibold">{basic.candidate}</div>
                 <div className="mt-3 space-y-2 text-sm">
                   <div>面试类型：{basic.type}</div>
-                  <div>使用简历：{basic.resume}</div>
+                  {/* <div>使用简历：{basic.resume}</div> */}
                   <div>面试难度：{basic.difficulty}</div>
                   <div>公司名称：{basic.company}</div>
                   <div>岗位名称：{basic.position}</div>
+                  <div>面试时长：{basic.duration}</div>
                   <div>面试时间：{basic.time}</div>
                 </div>
               </div>
@@ -182,17 +202,19 @@ export default function InterviewResultDetailPage() {
       
       <AntCard className="rounded-2xl mt-4" styles={{ body: { padding: 20 } }}>
         <div className="text-xl font-bold mb-2">面试官点评</div>
-        <Paragraph className="text-base leading-relaxed">{perf.comment}</Paragraph>
+        <Paragraph className="text-base leading-relaxed">{evaluation.comment}</Paragraph>
       </AntCard>
 
       <div className="mt-4">
         <div className="text-xl font-bold mb-2">面试表现</div>
         <div className="flex justify-center">
-          <RadarChart items={perf.dimensions} size={520} />
+          {evaluation.dimensions && evaluation.dimensions.length > 0 && (
+             <RadarChart items={evaluation.dimensions} size={520} />
+          )}
         </div>
         <div className="mt-6">
           <Row gutter={[24, 24]}>
-            {perf.dimensions.map((d, i) => (
+            {evaluation.dimensions?.map((d: any, i: number) => (
               <Col key={i} xs={24} md={8}>
                 <AntCard className="rounded-2xl" styles={{ body: { padding: 20 } }}>
                   <div className="flex items-center gap-2 text-green-700">
@@ -207,23 +229,22 @@ export default function InterviewResultDetailPage() {
         </div>
       </div>
 
-      
-
       <AntCard className="rounded-2xl mt-6" styles={{ body: { padding: 20 } }}>
         <div className="text-lg font-semibold mb-2">本次答题记录</div>
+        {answerRecords && answerRecords.length > 0 ? (
         <List
-          dataSource={records}
-          renderItem={(rec) => (
+          dataSource={answerRecords}
+          renderItem={(rec: any) => (
             <List.Item>
               <div style={{ width: '100%' }}>
                 <div className="flex items-center gap-2">
-                  <Tag color="green">{rec.order}/{records.length}</Tag>
+                  <Tag color="green">{rec.order}/{answerRecords.length}</Tag>
                   <Text strong>{rec.content}</Text>
                 </div>
                 <AntCard size="small" className="mt-2" title="问答">
                   <List
-                    dataSource={rec.message}
-                    renderItem={(m) => (
+                    dataSource={rec.message || []}
+                    renderItem={(m: any) => (
                       <List.Item>
                         <div>
                           <Text strong className="text-base">{m.order}. 问题：</Text>
@@ -237,6 +258,7 @@ export default function InterviewResultDetailPage() {
                     )}
                   />
                 </AntCard>
+                {rec.comment && (
                 <AntCard className="mt-3" styles={{ body: { padding: 20, background: '#f5f5f5' } }}>
                   <div className="space-y-3">
                     <div className="flex gap-6"><div className="w-32 text-gray-800 text-lg font-bold">本题得分</div><div className="flex-1 text-lg font-semibold"><Tag color="blue">{rec.comment.score}分</Tag></div></div>
@@ -250,10 +272,14 @@ export default function InterviewResultDetailPage() {
                     <div className="flex gap-6"><div className="w-32 text-gray-800 text-lg font-bold">参考答案</div><div className="flex-1 text-lg leading-relaxed">{rec.comment.reference}</div></div>
                   </div>
                 </AntCard>
+                )}
               </div>
             </List.Item>
           )}
         />
+        ) : (
+          <div className="text-center py-4 text-gray-500">暂无答题记录</div>
+        )}
       </AntCard>
     </div>
   );
