@@ -201,31 +201,6 @@ export default function UserCenterPage() {
                   </div>
                 </div>
               </div>
-
-              <div className="mt-6 pt-6 border-t border-slate-100">
-                <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-xl -mr-8 -mt-8" />
-                  <div className="flex items-center justify-between relative z-10">
-                    <div>
-                      <div className="text-xs text-slate-400 mb-1 uppercase tracking-wider">剩余金币</div>
-                      <div className="text-3xl font-bold font-mono">0</div>
-                    </div>
-                    <Button type="primary" size="small" className="bg-white/20 hover:bg-white/30 border-0 backdrop-blur-sm text-xs h-8 px-4">
-                      充值
-                    </Button>
-                  </div>
-                  <div className="mt-4 space-y-1">
-                    <div className="flex justify-between text-xs text-slate-400">
-                      <span>专项面试</span>
-                      <span className="text-white font-mono">0次</span>
-                    </div>
-                    <div className="flex justify-between text-xs text-slate-400">
-                      <span>综合面试</span>
-                      <span className="text-white font-mono">0次</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </Col>
 
@@ -327,41 +302,6 @@ export default function UserCenterPage() {
                       </div>
                     )}
                   </Spin>
-                </div>
-              </Col>
-
-              <Col span={24}>
-                <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 text-xl">
-                        <StarFilled />
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-800">金币记录</h3>
-                    </div>
-                    <div className="flex gap-2">
-                      <Select 
-                        size="middle" 
-                        defaultValue="全部类型" 
-                        options={[{ value: '全部类型', label: '全部类型' }, { value: '收入', label: '收入' }, { value: '支出', label: '支出' }]} 
-                        className="min-w-[100px]"
-                        variant="filled"
-                      />
-                      <Select 
-                        size="middle" 
-                        defaultValue="最近30天" 
-                        options={[{ value: '最近30天', label: '最近30天' }, { value: '最近90天', label: '最近90天' }]} 
-                        className="min-w-[100px]"
-                        variant="filled"
-                      />
-                    </div>
-                  </div>
-                  <Table 
-                    columns={columns} 
-                    dataSource={data} 
-                    pagination={{ pageSize: 20 }} 
-                    rowClassName="hover:bg-slate-50 transition-colors"
-                  />
                 </div>
               </Col>
             </Row>

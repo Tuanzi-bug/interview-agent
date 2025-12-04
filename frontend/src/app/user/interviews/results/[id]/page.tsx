@@ -21,7 +21,7 @@ import {
 const { Title, Paragraph, Text } = Typography;
 
 function RadarChart({ items, size = 520 }: { items: { dimension_name: string; score: number }[]; size?: number }) {
-  const radius = 140;
+  const radius = size * 0.35; // Use 35% of size for radius to leave room for labels
   const cx = size / 2;
   const cy = size / 2;
   const points = items.map((it, i) => {
@@ -34,27 +34,77 @@ function RadarChart({ items, size = 520 }: { items: { dimension_name: string; sc
     return [cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)];
   });
   const poly = points.map(p => p.join(',')).join(' ');
+  
   return (
-    <div style={{ width: size, height: size }} className="mx-auto">
-      <svg width={size} height={size}>
-        <circle cx={cx} cy={cy} r={radius} fill="#f6ffed" stroke="#b7eb8f" />
-        <circle cx={cx} cy={cy} r={radius * 0.8} fill="none" stroke="#d9f7be" strokeDasharray="4 4" />
-        <circle cx={cx} cy={cy} r={radius * 0.6} fill="none" stroke="#d9f7be" strokeDasharray="4 4" />
-        <circle cx={cx} cy={cy} r={radius * 0.4} fill="none" stroke="#d9f7be" strokeDasharray="4 4" />
-        <circle cx={cx} cy={cy} r={radius * 0.2} fill="none" stroke="#d9f7be" strokeDasharray="4 4" />
+    <div style={{ width: size, height: size }} className="mx-auto relative">
+       <svg width={size} height={size} style={{ overflow: 'visible' }}>
+        <defs>
+          <radialGradient id="radarGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+            <stop offset="0%" stopColor="rgba(82,196,26,0.4)" />
+            <stop offset="100%" stopColor="rgba(82,196,26,0.1)" />
+          </radialGradient>
+        </defs>
+        {/* Background circles */}
+        {[1, 0.8, 0.6, 0.4, 0.2].map((scale, i) => (
+           <circle 
+             key={i} 
+             cx={cx} 
+             cy={cy} 
+             r={radius * scale} 
+             fill={i === 0 ? "#f6ffed" : "none"} 
+             stroke="#d9f7be" 
+             strokeDasharray={i === 0 ? "none" : "4 4"} 
+           />
+        ))}
         
+        {/* Axis lines */}
         {axis.map((p, i) => (
-          <line key={i} x1={cx} y1={cy} x2={p[0]} y2={p[1]} stroke="#d9d9d9" />
+          <line key={i} x1={cx} y1={cy} x2={p[0]} y2={p[1]} stroke="#e8e8e8" />
         ))}
-        <polygon points={poly} fill="rgba(82,196,26,0.3)" stroke="#52c41a" strokeWidth={2} />
+
+        {/* Data polygon */}
+        <polygon points={poly} fill="url(#radarGradient)" stroke="#52c41a" strokeWidth={2} />
+        
+        {/* Data points */}
         {points.map((p, i) => (
-          <circle key={i} cx={p[0]} cy={p[1]} r={4} fill="#52c41a" stroke="#fff" strokeWidth={2} />
+          <circle key={i} cx={p[0]} cy={p[1]} r={4} fill="#fff" stroke="#52c41a" strokeWidth={2} />
         ))}
-        {axis.map((p, i) => (
-          <text key={i} x={p[0]} y={p[1]} dx={p[0] > cx ? 10 : -10} dy={p[1] > cy ? 20 : -10} textAnchor={p[0] > cx ? 'start' : 'end'} fontSize={14} fontWeight={600} fill="#475569">
-            {items[i].dimension_name}
-          </text>
-        ))}
+        
+        {/* Labels */}
+        {axis.map((p, i) => {
+           // Calculate offset based on angle to push labels away from center
+           const angle = (2 * Math.PI * i) / items.length - Math.PI / 2;
+           const labelDist = 20; // Distance from the end of the axis
+           const lx = p[0] + labelDist * Math.cos(angle);
+           const ly = p[1] + labelDist * Math.sin(angle);
+           
+           // Determine text anchor based on x position relative to center
+           let textAnchor = 'middle';
+           if (Math.abs(lx - cx) > 10) {
+             textAnchor = lx > cx ? 'start' : 'end';
+           }
+           
+           // Determine dominant baseline based on y position
+           let dominantBaseline = 'middle';
+           if (Math.abs(ly - cy) > 10) {
+              dominantBaseline = ly > cy ? 'hanging' : 'baseline';
+           }
+
+           return (
+            <text 
+              key={i} 
+              x={lx} 
+              y={ly} 
+              textAnchor={textAnchor} 
+              dominantBaseline={dominantBaseline}
+              fontSize={12} 
+              fontWeight={600} 
+              fill="#64748b"
+            >
+              {items[i].dimension_name}
+            </text>
+           );
+        })}
       </svg>
     </div>
   );
@@ -250,11 +300,11 @@ export default function InterviewResultDetailPage() {
               </div>
             </Col>
             <Col xs={24} lg={10}>
-              <div className="bg-slate-50 rounded-2xl p-6 flex items-center justify-between gap-6 border border-slate-100">
-                <div className="flex-1 text-center border-r border-slate-200 pr-6">
+              <div className="bg-slate-50 rounded-2xl px-6 py-10 flex flex-col xl:flex-row items-center justify-between gap-6 border border-slate-100">
+                <div className="flex-1 text-center xl:border-r border-slate-200 xl:pr-6 w-full xl:w-auto">
                   <ScoreGauge score={basic.score} />
                 </div>
-                <div className="flex flex-col gap-3 min-w-[140px]">
+                <div className="flex flex-col gap-3 w-full xl:w-[180px]">
                   <Button type="primary" icon={<DownloadOutlined />} className="bg-blue-600 hover:bg-blue-500 h-10 rounded-xl shadow-lg shadow-blue-200 border-0 w-full">
                     下载报告
                   </Button>
