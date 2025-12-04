@@ -56,6 +56,12 @@ func Register(r *server.Hertz) {
 			}
 		}
 		{
+			_prediction := _api.Group("/prediction", _predictionMw()...)
+			_prediction.GET("/:id", append(_getpredictiondetailMw(), interview.GetPredictionDetail)...)
+			_prediction.GET("/list", append(_listpredictionsMw(), interview.ListPredictions)...)
+			_prediction.POST("/start", append(_predictMw(), interview.Predict)...)
+		}
+		{
 			_resume := _api.Group("/resume", _resumeMw()...)
 			_resume.GET("/default", append(_getdefaultresumeMw(), interview.GetDefaultResume)...)
 			_resume.GET("/list", append(_getuserresumesMw(), interview.GetUserResumes)...)

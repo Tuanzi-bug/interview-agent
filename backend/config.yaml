@@ -1,0 +1,63 @@
+# 服务配置
+host: "0.0.0.0"
+port: 8888
+
+# 数据库配置
+database:
+  driver: "mysql"
+  dsn: "root:726726@tcp(localhost:3306)/interview_agent?charset=utf8mb4&parseTime=True&loc=Local"
+  max_open_conns: 100
+  max_idle_conns: 10
+  conn_max_lifetime: "1h"
+
+# Redis配置
+redis:
+  addr: "redis:6379"
+  password: ""
+  db: 0
+  dial_timeout: "5s"
+  read_timeout: "3s"
+  write_timeout: "3s"
+  pool_size: 10
+  min_idle_conns: 5
+
+# Hertz框架配置
+hertz:
+  log_level: "info"
+  log_path: "./logs"
+  read_timeout: "10s"
+  write_timeout: "10s"
+  idle_timeout: "60s"
+
+# Eino框架配置
+eino:
+  model: "your-model-name"
+  api_key: "your-api-key-here"
+  base_url: "https://api.example.com/v1"
+  max_tokens: 2048
+  temperature: 0.7
+  retry_count: 3
+  retry_delay: "1s"
+
+# 面试系统配置
+interview:
+  max_duration: "30m"
+  question_timeout: "10m"
+  max_questions: 10
+  min_questions: 5
+
+# 安全性配置
+security:
+  jwt_secret: "your-jwt-secret-key-here"
+  jwt_expiration: "24h"
+  cors:
+    allow_origins: ["*"]
+    allow_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers: ["Origin", "Content-Type", "Authorization"]
+    expose_headers: []
+    allow_credentials: true
+
+# Google搜索工具配置
+google_search:
+  api_key: "your-google-api-key-here"
+  search_engine_id: "your-search-engine-id-here"
