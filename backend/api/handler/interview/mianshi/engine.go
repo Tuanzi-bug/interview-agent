@@ -1,6 +1,7 @@
 package mianshi
 
 import (
+	"ai-eino-interview-agent/internal/mq"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -284,6 +285,16 @@ func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *Intervi
 		// 更新最后一个问题的计数
 		session.QuestionCount = int32(questionIndex + 1)
 	}
+	// 发布评估报告生成消息
+	if err := mq.PublishEvaluationReport(ctx, session.UserID, session.RecordID); err != nil {
+		log.Printf("[Interview Loop] Failed to publish evaluation report message: %v, sessionID: %s", err, session.SessionID)
+	}
+
+	// 发布主题评估消息
+	if err := mq.PublishTopicEvaluation(ctx, session.UserID, session.RecordID); err != nil {
+		log.Printf("[Interview Loop] Failed to publish topic evaluation message: %v, sessionID: %s", err, session.SessionID)
+	}
+
 }
 
 // saveDialogueData 保存单个主问题及其追问到数据库

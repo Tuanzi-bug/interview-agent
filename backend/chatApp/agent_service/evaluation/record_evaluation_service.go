@@ -91,6 +91,13 @@ func GenerateRecordEvaluation(ctx context.Context, userId uint, reportId uint64)
 
 	// 构建答题记录评估响应
 	records := buildEvaluationResponse(lastMessage)
+
+	// 检查 records 是否为 nil
+	if records == nil {
+		log.Printf("[GenerateRecordEvaluation] 评估响应为 nil，返回错误")
+		return nil, fmt.Errorf("failed to build evaluation response: invalid agent response")
+	}
+
 	// 保存评估数据到数据库
 	if err := saveEvaluationToDatabase(ctx, userId, reportId, records); err != nil {
 		log.Printf("Warning: Failed to save evaluation: %v", err)
@@ -112,13 +119,13 @@ func buildEvaluationResponse(agentResponse string) *mianshi.GetMianshiEvaluation
 		jsonStr := ExtractJSONFromResponse(agentResponse)
 		if jsonStr == "" {
 			log.Printf("[buildEvaluationResponse] 无法提取 JSON，使用默认响应")
-			return nil
+			return response // 返回默认值
 		}
 
 		// 尝试解析提取的 JSON
 		if err := json.Unmarshal([]byte(jsonStr), response); err != nil {
 			log.Printf("[buildEvaluationResponse] 解析提取的 JSON 失败: %v", err)
-			return nil
+			return response // 返回默认值
 		}
 	}
 
@@ -127,6 +134,12 @@ func buildEvaluationResponse(agentResponse string) *mianshi.GetMianshiEvaluation
 
 // saveEvaluationToDatabase 将评估数据保存到数据库
 func saveEvaluationToDatabase(ctx context.Context, userId uint, reportId uint64, response *mianshi.GetMianshiEvaluationResponse) error {
+	// 检查 response 是否为 nil
+	if response == nil {
+		log.Printf("[saveEvaluationToDatabase] response 为 nil，无法保存评估")
+		return fmt.Errorf("response is nil")
+	}
+
 	// 将维度数据转换为 []*model.EvaluationDimension
 	var dimensionList []*model.EvaluationDimension
 	for _, dim := range response.Dimensions {
