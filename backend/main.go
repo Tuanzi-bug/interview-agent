@@ -6,6 +6,7 @@ import (
 	routerMiddleware "ai-eino-interview-agent/api/router/middleware"
 	"ai-eino-interview-agent/internal/config"
 	appMiddleware "ai-eino-interview-agent/internal/middleware"
+	"ai-eino-interview-agent/internal/mq"
 	"ai-eino-interview-agent/internal/repository"
 	"context"
 	"errors"
@@ -54,13 +55,13 @@ func main() {
 	}
 	log.Println("Database initialized successfully")
 
-	////5. 初始化Redis
-	//log.Println("Initializing Redis connection...")
-	//err = repository.InitRedis(cfg.Redis)
-	//if err != nil {
-	//	log.Fatalf("Failed to initialize Redis: %v", err)
-	//}
-	//log.Println("Redis initialized successfully")
+	//5. 初始化Redis
+	log.Println("Initializing Redis connection...")
+	err = repository.InitRedis(cfg.Redis)
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+	log.Println("Redis initialized successfully")
 
 	//7. 初始化 Milvus Manager（向量数据库、Embedding、检索等服务）
 	//log.Println("Initializing Milvus Manager...")
@@ -75,27 +76,27 @@ func main() {
 	//}
 	//log.Println("Milvus Manager initialized successfully")
 
-	//// 8. 初始化消息队列（使用 Redis）
-	//log.Println("Initializing Redis message queue...")
-	//redisClient := repository.GetRedis()
-	//if redisClient == nil {
-	//	log.Fatalf("Redis client not initialized")
-	//}
-	//messageQueue := mq.NewRedisQueue(redisClient)
-	//mq.InitMessageQueue(messageQueue)
-	//log.Println("Redis message queue initialized successfully")
-	//
-	//// 9. 启动消费者
-	//log.Println("Starting message consumer...")
-	//consumerCtx, cancelConsumer := context.WithCancel(context.Background())
-	//go func() {
-	//	if err := mq.StartConsumer(consumerCtx); err != nil {
-	//		log.Printf("Error starting consumer: %v", err)
-	//	}
-	//}()
-	//// 给消费者一点时间启动
-	//time.Sleep(500 * time.Millisecond)
-	//defer cancelConsumer()
+	// 8. 初始化消息队列（使用 Redis）
+	log.Println("Initializing Redis message queue...")
+	redisClient := repository.GetRedis()
+	if redisClient == nil {
+		log.Fatalf("Redis client not initialized")
+	}
+	messageQueue := mq.NewRedisQueue(redisClient)
+	mq.InitMessageQueue(messageQueue)
+	log.Println("Redis message queue initialized successfully")
+
+	// 9. 启动消费者
+	log.Println("Starting message consumer...")
+	consumerCtx, cancelConsumer := context.WithCancel(context.Background())
+	go func() {
+		if err := mq.StartConsumer(consumerCtx); err != nil {
+			log.Printf("Error starting consumer: %v", err)
+		}
+	}()
+	// 给消费者一点时间启动
+	time.Sleep(500 * time.Millisecond)
+	defer cancelConsumer()
 
 	// 初始化Hertz服务器
 	s := server.Default(server.WithHostPorts(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)))
@@ -143,16 +144,16 @@ func main() {
 	log.Println("Shutting down server...")
 
 	// 关闭消费者
-	//cancelConsumer()
-	//log.Println("Message consumer stopped")
-	//
-	//// 关闭消息队列
-	//if err := messageQueue.Close(); err != nil {
-	//	log.Printf("Warning: Failed to close message queue: %v", err)
-	//}
-	//log.Println("Message queue closed")
-	//
-	//// 关闭 Milvus Manager
+	cancelConsumer()
+	log.Println("Message consumer stopped")
+
+	// 关闭消息队列
+	if err := messageQueue.Close(); err != nil {
+		log.Printf("Warning: Failed to close message queue: %v", err)
+	}
+	log.Println("Message queue closed")
+
+	// 关闭 Milvus Manager
 	//if milvusManager != nil {
 	//	if err := milvusManager.Close(); err != nil {
 	//		log.Printf("Warning: Failed to close Milvus Manager: %v", err)

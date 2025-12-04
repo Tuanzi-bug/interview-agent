@@ -2,10 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Typography, Row, Col, Card as AntCard, Space, Tag, Button, Input, Avatar, Progress, message } from 'antd';
+import { Typography, Button, Input, Avatar, message } from 'antd';
 import { AudioOutlined, CustomerServiceOutlined, QuestionCircleOutlined, SendOutlined } from '@ant-design/icons';
-
-const { Title, Text } = Typography;
 
 interface ConversationItem {
   type: 'question' | 'answer';
@@ -23,7 +21,6 @@ export default function SpecialInterviewStartPage() {
   const [answer, setAnswer] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const [uploadPercent, setUploadPercent] = useState(0);
   const [starting, setStarting] = useState(false);
   const [waitingNextQuestion, setWaitingNextQuestion] = useState(false);
   const [conversationHistory, setConversationHistory] = useState<ConversationItem[]>([]);
@@ -168,7 +165,7 @@ export default function SpecialInterviewStartPage() {
                   console.log('[面试开始] session_id:', sid);
                   setSessionId(sid);
                   setStarting(false);
-                } else if (payload?.type === 'question') {
+                } else if (payload?.type === 'question' || payload?.type === 'follow_up_question') {
                   const q = payload.data?.question_text || '';
                   const idx = payload.index || payload.data?.index || 0;
                   console.log('[问题]', q, 'index:', idx);
@@ -335,145 +332,169 @@ export default function SpecialInterviewStartPage() {
   };
 
   return (
-    <div className="container mx-auto px-4">
-      <Space align="center" className="mb-2" wrap>
-        <Title level={2} style={{ margin: 0 }}>综合面试 · 专项面试</Title>
-        <Space size={16} className="ml-2">
-          <span style={{ fontSize: 16 }}>已回答 {answeredCount} 题</span>
-          <Space align="center" size={8}>
-            <span style={{ fontSize: 16 }}>进度</span>
-            <Progress percent={percent} size="small" style={{ width: 140 }} />
-            <Tag color="green" style={{ fontSize: 16, padding: '4px 10px' }}>{percent}%</Tag>
-          </Space>
-          <Tag style={{ fontSize: 16, padding: '4px 10px' }}>{mm}:{ss}</Tag>
-          <Button className="bg-green-500" type="primary" onClick={() => onSubmit('quit')}>结束面试</Button>
-        </Space>
-      </Space>
+    <div className="min-h-screen bg-slate-50 relative flex flex-col font-sans -my-8">
+      {/* Decorative Background */}
+      <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-purple-100/40 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 pointer-events-none z-0" />
+      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-pink-100/40 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/3 pointer-events-none z-0" />
 
-      <Row gutter={[24, 24]}>
-        <Col xs={24} md={20}>
-          <Space direction="vertical" style={{ width: '100%' }}>
-            {/* 对话历史区域 */}
-            <AntCard className="rounded-2xl" style={{ minHeight: '400px', maxHeight: '600px' }}>
-              <div 
-                ref={chatContainerRef}
-                style={{ 
-                  maxHeight: '550px', 
-                  overflowY: 'auto',
-                  paddingRight: '10px'
-                }}
-              >
-                <Space direction="vertical" style={{ width: '100%' }} size={16}>
-                  {conversationHistory.length === 0 && !starting && (
-                    <div style={{ textAlign: 'center', color: '#999', padding: '40px 0' }}>
-                      正在生成首题，请稍候…
-                    </div>
-                  )}
-                  
-                  {conversationHistory.map((item, index) => {
-                    // 计算问题序号：统计当前项之前有多少个问题，然后+1
-                    const questionNumber = conversationHistory
-                      .slice(0, index + 1)
-                      .filter(i => i.type === 'question').length;
-                    
-                    return (
-                      <div key={index}>
-                        {item.type === 'question' ? (
-                          <Space align="start" style={{ width: '100%' }}>
-                            <Avatar src="https://api.dicebear.com/7.x/avataaars/svg?seed=interviewer" size={48} />
-                            <Space direction="vertical" style={{ flex: 1 }}>
-                              <div className="bg-orange-50 rounded-2xl px-5 py-4 text-base">
-                                {item.content}
-                              </div>
-                              <Text type="secondary">第 {questionNumber} 题</Text>
-                            </Space>
-                          </Space>
-                        ) : (
-                          <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start' }}>
-                            <Space direction="vertical" style={{ alignItems: 'flex-end', maxWidth: '70%' }}>
-                              <div 
-                                className="bg-blue-50 rounded-2xl px-5 py-4 text-base" 
-                                style={{ 
-                                  backgroundColor: '#e6f7ff',
-                                  wordBreak: 'break-word',
-                                  whiteSpace: 'pre-wrap',
-                                  textAlign: 'left'
-                                }}
-                              >
-                                {item.content}
-                              </div>
-                              <Text type="secondary">你的回答</Text>
-                            </Space>
-                            <Avatar src="https://api.dicebear.com/7.x/avataaars/svg?seed=user" size={48} style={{ marginLeft: '12px' }} />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  
-                  {/* 等待下一题的提示 */}
-                  {waitingNextQuestion && (
-                    <Space align="start" style={{ width: '100%' }}>
-                      <Avatar src="https://api.dicebear.com/7.x/avataaars/svg?seed=interviewer" size={48} />
-                      <div className="bg-gray-100 rounded-2xl px-5 py-4 text-base" style={{ fontStyle: 'italic', color: '#999' }}>
-                        正在生成下一题，请稍候...
-                      </div>
-                    </Space>
-                  )}
-                  
-                  {/* 正在生成首题的提示 */}
-                  {starting && conversationHistory.length === 0 && (
-                    <Space align="start" style={{ width: '100%' }}>
-                      <Avatar src="https://api.dicebear.com/7.x/avataaars/svg?seed=interviewer" size={48} />
-                      <div className="bg-gray-100 rounded-2xl px-5 py-4 text-base" style={{ fontStyle: 'italic', color: '#999' }}>
-                        正在生成首题，请稍候…
-                      </div>
-                    </Space>
-                  )}
-                </Space>
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm transition-all duration-300">
+        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600">
+              <CustomerServiceOutlined />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-slate-800 m-0 leading-tight">专项面试</h1>
+              <p className="text-xs text-slate-500 m-0">{currentDomain || '技能专项练习'}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+                <span className="text-xs font-medium text-slate-600 font-mono">{mm}:{ss}</span>
               </div>
-            </AntCard>
+              <div className="w-px h-3 bg-slate-200" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-500">进度 {percent}%</span>
+                <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-purple-500 transition-all duration-500" style={{ width: `${percent}%` }} />
+                </div>
+              </div>
+            </div>
+            
+            <Button 
+              danger 
+              ghost 
+              size="small" 
+              className="!rounded-full !px-4 hover:!bg-red-50 border-red-200"
+              onClick={() => onSubmit('quit')}
+            >
+              结束面试
+            </Button>
+          </div>
+        </div>
+      </header>
 
-            <AntCard className="rounded-2xl">
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <Input.TextArea 
-                  rows={8} 
-                  placeholder={waitingNextQuestion ? "等待下一题..." : "请在此作答，建议结构化回答（背景/职责/挑战/成果/反思）"} 
-                  maxLength={500} 
-                  showCount 
-                  value={answer} 
-                  onChange={(e) => setAnswer(e.target.value)}
-                  disabled={waitingNextQuestion || starting}
+      {/* Chat Area */}
+      <main className="flex-1 overflow-y-auto relative z-10" ref={chatContainerRef}>
+        <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 pb-32">
+          {conversationHistory.length === 0 && !starting && (
+             <div className="flex flex-col items-center justify-center py-20 opacity-0 animate-fade-in-up">
+                <div className="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-500 text-2xl mb-4 animate-bounce-subtle">
+                  <CustomerServiceOutlined />
+                </div>
+                <p className="text-slate-400 text-sm">正在准备专项面试题...</p>
+             </div>
+          )}
+
+          {conversationHistory.map((item, index) => {
+            const isQuestion = item.type === 'question';
+            const questionNumber = conversationHistory.slice(0, index + 1).filter(i => i.type === 'question').length;
+
+            return (
+              <div 
+                key={index} 
+                className={`flex gap-4 ${isQuestion ? 'items-start' : 'items-end flex-row-reverse'} animate-fade-in-up`}
+              >
+                <Avatar 
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${isQuestion ? 'interviewer' : 'user'}`} 
+                  size={40} 
+                  className="border-2 border-white shadow-sm shrink-0"
                 />
-                <Space align="center" size={16}>
-                  <Tag style={{ fontSize: 14 }}>已回答 {answeredCount} 题</Tag>
-                  <Tag style={{ fontSize: 14 }}>字数建议 80-300</Tag>
-                  {waitingNextQuestion && <Tag color="processing" style={{ fontSize: 14 }}>等待下一题...</Tag>}
-                </Space>
-                <Space size={12}>
-                  <Button disabled={waitingNextQuestion || starting}>求助</Button>
-                  <Button 
-                    type="primary" 
-                    icon={<SendOutlined />} 
-                    loading={submitting} 
-                    disabled={!sessionId || waitingNextQuestion || starting || !answer.trim()} 
-                    onClick={() => onSubmit()}
+                
+                <div className={`flex flex-col max-w-[85%] md:max-w-[75%] ${isQuestion ? 'items-start' : 'items-end'}`}>
+                  {isQuestion && (
+                    <span className="text-xs text-slate-400 mb-1.5 ml-1">面试官 · 第 {questionNumber} 题</span>
+                  )}
+                  
+                  <div 
+                    className={`
+                      relative px-6 py-4 text-[15px] leading-relaxed shadow-sm
+                      ${isQuestion 
+                        ? 'bg-white text-slate-700 rounded-2xl rounded-tl-none border border-slate-100' 
+                        : 'bg-gradient-to-br from-purple-500 to-fuchsia-600 text-white rounded-2xl rounded-tr-none shadow-purple-200'
+                      }
+                    `}
                   >
-                    {waitingNextQuestion ? '等待中...' : '提交答案'}
-                  </Button>
-                </Space>
-              </Space>
-            </AntCard>
-          </Space>
-        </Col>
-        <Col xs={0} md={4}>
-          <Space direction="vertical" className="fixed right-6" size={16}>
-            <Button shape="circle" icon={<CustomerServiceOutlined />} />
-            <Button shape="circle" icon={<AudioOutlined />} />
-            <Button shape="circle" icon={<QuestionCircleOutlined />} />
-          </Space>
-        </Col>
-      </Row>
+                    <div className="whitespace-pre-wrap break-words">
+                      {item.content}
+                    </div>
+                  </div>
+                  
+                  {!isQuestion && (
+                    <span className="text-xs text-slate-400 mt-1.5 mr-1">我 · {new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {(waitingNextQuestion || starting) && (
+            <div className="flex gap-4 items-start animate-fade-in-up">
+              <Avatar src="https://api.dicebear.com/7.x/avataaars/svg?seed=interviewer" size={40} className="border-2 border-white shadow-sm" />
+              <div className="bg-white px-5 py-4 rounded-2xl rounded-tl-none border border-slate-100 shadow-sm flex items-center gap-2">
+                <div className="flex gap-1">
+                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                </div>
+                <span className="text-sm text-slate-400 ml-2">
+                  {starting ? '正在生成首题...' : '正在思考下一题...'}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Input Area */}
+      <footer className="sticky bottom-0 z-50 bg-white/80 backdrop-blur-xl border-t border-slate-200/60 pb-6 pt-4">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="relative bg-white rounded-2xl border border-slate-200 shadow-lg shadow-slate-100/50 transition-all focus-within:shadow-xl focus-within:border-purple-400 focus-within:ring-1 focus-within:ring-purple-100">
+            <Input.TextArea
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              placeholder={waitingNextQuestion ? "面试官正在提问..." : "请输入你的回答..."}
+              disabled={waitingNextQuestion || starting}
+              autoSize={{ minRows: 1, maxRows: 6 }}
+              className="!border-0 !shadow-none !bg-transparent !text-base !px-4 !py-3 !resize-none placeholder:text-slate-400 focus:!shadow-none"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (answer.trim()) onSubmit();
+                }
+              }}
+            />
+            
+            <div className="flex justify-between items-center px-2 pb-2 pt-1 border-t border-slate-50">
+               <div className="flex gap-1">
+                  <Button type="text" size="small" icon={<AudioOutlined className="text-slate-400" />} disabled className="!text-slate-400" />
+                  <Button type="text" size="small" icon={<QuestionCircleOutlined className="text-slate-400" />} className="!text-slate-400" />
+               </div>
+               <div className="flex items-center gap-3">
+                 <span className="text-xs text-slate-300 hidden sm:inline-block">Enter 发送</span>
+                 <Button 
+                   type="primary" 
+                   shape="round"
+                   icon={<SendOutlined />} 
+                   loading={submitting}
+                   disabled={!sessionId || waitingNextQuestion || starting || !answer.trim()}
+                   onClick={() => onSubmit()}
+                   className="!bg-purple-500 hover:!bg-purple-600 !shadow-purple-200 !border-0"
+                 >
+                   发送
+                 </Button>
+               </div>
+            </div>
+          </div>
+          <div className="text-center mt-2">
+             <p className="text-xs text-slate-300">面试吧</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

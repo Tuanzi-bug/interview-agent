@@ -1,76 +1,24 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Typography, Card as AntCard, Row, Col, List, Tag, Button, Avatar } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Typography, Card as AntCard, Row, Col, List, Tag, Button, Avatar, Spin, message, Divider } from 'antd';
 import { useParams } from 'next/navigation';
+import apiClient from '@/services/api/client';
+import { useAuth } from '@/hooks/useAuth';
+import { 
+  TrophyOutlined, 
+  ClockCircleOutlined, 
+  CalendarOutlined, 
+  EnvironmentOutlined, 
+  UserOutlined, 
+  BarChartOutlined,
+  DownloadOutlined,
+  RobotOutlined,
+  CheckCircleOutlined,
+  BulbOutlined
+} from '@ant-design/icons';
 
 const { Title, Paragraph, Text } = Typography;
-
-const mockBasic = {
-  candidate: 'LittleBear',
-  resume: 'golang.pdf',
-  type: '综合面试',
-  score: 65,
-  difficulty: '挑战',
-  company: '腾讯',
-  position: '软件开发-后台开发方向',
-  duration: '13分钟12秒',
-  time: '2025-11-13 22:37:53',
-};
-
-const mockPerformance = {
-  comment:
-    '候选人整体表现良好，技术基础扎实，沟通清晰。建议加强在系统设计和架构方面的深度思考。',
-  dimensions: [
-    { dimension_name: '技术基础与实践能力', evaluation: '掌握基础数据结构与算法，实现规范，逻辑清晰。', score: 68 },
-    { dimension_name: '项目经历真实性验证', evaluation: '能清晰描述项目背景与职责，举例充分。', score: 62 },
-    { dimension_name: '系统架构设计思维', evaluation: '对架构理解到位，需加强扩展性与容错思考。', score: 55 },
-    { dimension_name: '技术深度与前瞻视野', evaluation: '对新技术保持关注，有学习与反思能力。', score: 58 },
-    { dimension_name: '团队协作与沟通能力', evaluation: '表达清晰，主动沟通与互动，解释思路清楚。', score: 66 },
-  ],
-};
-
-const mockRecords = [
-  {
-    order: 1,
-    content: '项目考察',
-    comment: {
-      score: 85,
-      key_points: '项目架构、技术选型、团队协作',
-      difficulty: '中等',
-      strengths: '表达清晰，逻辑完整，技术细节讲解充分',
-      weaknesses: '缺少对项目性能优化的讨论',
-      suggestion: '建议补充项目的性能指标和优化方案',
-      know_points: '系统设计、技术栈选择、项目管理',
-      thinking: '从项目背景→技术选型→实现细节→性能优化的思路讲解',
-      reference: '应包含核心架构、技术栈、难点与解决方案',
-    },
-    message: [
-      { order: 1, question: '这个项目的核心难点是什么？', answer: '高并发场景的数据一致性，使用消息队列与分布式锁。' },
-      { order: 2, question: '你们是如何处理数据一致性的？', answer: 'Redis分布式锁 + RabbitMQ，保证操作原子性。' },
-      { order: 3, question: '性能指标如何？', answer: '支持10万QPS，平均响应 50ms。' },
-    ],
-  },
-  {
-    order: 2,
-    content: '技术考察',
-    comment: {
-      score: 78,
-      key_points: '服务拆分、通信方式、服务治理',
-      difficulty: '中高',
-      strengths: '基础扎实，能举例说明',
-      weaknesses: '服务治理实践不足',
-      suggestion: '建议学习 Service Mesh 相关技术',
-      know_points: '微服务、RPC、服务发现、负载均衡',
-      thinking: '从单体问题→微服务优势→实现挑战的讲解',
-      reference: '应包含拆分原则与通信方式等',
-    },
-    message: [
-      { order: 1, question: '微服务和单体架构的主要区别是什么？', answer: '微服务可独立部署与扩展，单体为整体应用。' },
-      { order: 2, question: '微服务之间如何通信？', answer: '同步RPC（如gRPC）与异步消息队列。' },
-    ],
-  },
-];
 
 function RadarChart({ items, size = 520 }: { items: { dimension_name: string; score: number }[]; size?: number }) {
   const radius = 140;
@@ -87,15 +35,23 @@ function RadarChart({ items, size = 520 }: { items: { dimension_name: string; sc
   });
   const poly = points.map(p => p.join(',')).join(' ');
   return (
-    <div style={{ width: size, height: size }}>
+    <div style={{ width: size, height: size }} className="mx-auto">
       <svg width={size} height={size}>
         <circle cx={cx} cy={cy} r={radius} fill="#f6ffed" stroke="#b7eb8f" />
+        <circle cx={cx} cy={cy} r={radius * 0.8} fill="none" stroke="#d9f7be" strokeDasharray="4 4" />
+        <circle cx={cx} cy={cy} r={radius * 0.6} fill="none" stroke="#d9f7be" strokeDasharray="4 4" />
+        <circle cx={cx} cy={cy} r={radius * 0.4} fill="none" stroke="#d9f7be" strokeDasharray="4 4" />
+        <circle cx={cx} cy={cy} r={radius * 0.2} fill="none" stroke="#d9f7be" strokeDasharray="4 4" />
+        
         {axis.map((p, i) => (
           <line key={i} x1={cx} y1={cy} x2={p[0]} y2={p[1]} stroke="#d9d9d9" />
         ))}
-        <polygon points={poly} fill="rgba(82,196,26,0.25)" stroke="#52c41a" />
+        <polygon points={poly} fill="rgba(82,196,26,0.3)" stroke="#52c41a" strokeWidth={2} />
+        {points.map((p, i) => (
+          <circle key={i} cx={p[0]} cy={p[1]} r={4} fill="#52c41a" stroke="#fff" strokeWidth={2} />
+        ))}
         {axis.map((p, i) => (
-          <text key={i} x={p[0]} y={p[1]} dx={p[0] > cx ? 8 : -8} dy={p[1] > cy ? 16 : -8} textAnchor={p[0] > cx ? 'start' : 'end'} fontSize={14} fontWeight={600} fill="#434343">
+          <text key={i} x={p[0]} y={p[1]} dx={p[0] > cx ? 10 : -10} dy={p[1] > cy ? 20 : -10} textAnchor={p[0] > cx ? 'start' : 'end'} fontSize={14} fontWeight={600} fill="#475569">
             {items[i].dimension_name}
           </text>
         ))}
@@ -118,16 +74,21 @@ function ScoreGauge({ score }: { score: number }) {
     const ex = cx + r * Math.cos(start + ang);
     const ey = cy + r * Math.sin(start + ang);
     return (
-      <path d={`M ${sx} ${sy} A ${r} ${r} 0 0 1 ${ex} ${ey}`} stroke={color} strokeWidth={14} fill="none" />
+      <path d={`M ${sx} ${sy} A ${r} ${r} 0 0 1 ${ex} ${ey}`} stroke={color} strokeWidth={14} fill="none" strokeLinecap="round" />
     );
   };
+  
+  let color = '#52c41a'; // Green for good
+  if (score < 60) color = '#ff4d4f'; // Red for bad
+  else if (score < 80) color = '#faad14'; // Yellow for average
+
   return (
-    <div style={{ width: size, height: size / 1.4 }}>
+    <div style={{ width: size, height: size / 1.4 }} className="mx-auto relative">
       <svg width={size} height={size / 1.4}>
-        <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} stroke="#e6f4ff" strokeWidth={14} fill="none" />
-        {arcPath(angle, '#52c41a')}
-        <text x={cx} y={cy - 10} textAnchor="middle" fontSize={12} fill="#8c8c8c">本次面试评分</text>
-        <text x={cx} y={cy + 24} textAnchor="middle" fontSize={36} fontWeight={600} fill="#262626">{score}</text>
+        <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} stroke="#f0f0f0" strokeWidth={14} fill="none" strokeLinecap="round" />
+        {arcPath(angle, color)}
+        <text x={cx} y={cy - 15} textAnchor="middle" fontSize={14} fill="#8c8c8c">本次面试评分</text>
+        <text x={cx} y={cy + 30} textAnchor="middle" fontSize={48} fontWeight={700} fill={color}>{score}</text>
       </svg>
     </div>
   );
@@ -135,126 +96,330 @@ function ScoreGauge({ score }: { score: number }) {
 
 export default function InterviewResultDetailPage() {
   const params = useParams() as any;
-  const id = Number(params?.id || 1);
-  const perf = mockPerformance;
-  const basic = mockBasic;
-  const records = mockRecords;
+  const id = Number(params?.id || 0);
+  const { user, login } = useAuth();
 
-  const avgScore = useMemo(() => {
-    const s = perf.dimensions.map(d => d.score);
-    return Math.round((s.reduce((a, b) => a + b, 0) / s.length) * 10) / 10;
-  }, [perf]);
+  const [loading, setLoading] = useState(true);
+  const [interviewInfo, setInterviewInfo] = useState<any>(null);
+  const [evaluation, setEvaluation] = useState<any>(null);
+  const [answerRecords, setAnswerRecords] = useState<any[]>([]);
+
+  const fetchData = async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      // 0. Fetch User Profile if missing
+      if (!user) {
+        try {
+          const userRes: any = await apiClient.get('http://localhost:8888/api/user/profile');
+          if (userRes && userRes.username) {
+            login({
+              id: String(userRes.id),
+              name: userRes.username,
+              email: userRes.email,
+              avatar: userRes.avatar
+            });
+          }
+        } catch (e) {
+          console.error("Failed to fetch user profile", e);
+        }
+      }
+
+      // 1. Fetch Interview Info (from list)
+      const listRes: any = await apiClient.get('http://localhost:8888/api/interview/records', { params: { page: 1, page_size: 1000 } });
+      const listData = listRes?.records || [];
+      const info = listData.find((item: any) => item.id === id);
+      setInterviewInfo(info);
+
+      // 2. Fetch Evaluation Report
+      const evalRes: any = await apiClient.get('http://localhost:8888/api/mianshi/evaluation', { params: { report_id: id } });
+      setEvaluation(evalRes);
+
+      // 3. Fetch Answer Records
+      const recordRes: any = await apiClient.get('http://localhost:8888/api/mianshi/answer-record', { params: { report_id: id } });
+      if (recordRes && recordRes.records) {
+        setAnswerRecords(recordRes.records);
+      } else if (Array.isArray(recordRes)) {
+        setAnswerRecords(recordRes);
+      } else {
+        setAnswerRecords(recordRes?.records || []);
+      }
+    } catch (e: any) {
+      console.error(e);
+      message.error('获取面试详情失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-slate-50">
+        <Spin size="large" tip="正在生成详细分析..." />
+      </div>
+    );
+  }
+
+  if (!evaluation) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <AntCard className="rounded-3xl shadow-xl border-0 text-center p-10 max-w-md w-full">
+          <div className="mb-4 text-6xl">📊</div>
+          <h3 className="text-xl font-bold text-slate-700 mb-2">暂无分析报告</h3>
+          <p className="text-slate-500 mb-6">可能是面试尚未完成，或数据正在处理中。</p>
+          <Button type="primary" onClick={() => window.history.back()} className="bg-blue-600 rounded-xl h-10 px-6">返回列表</Button>
+        </AntCard>
+      </div>
+    );
+  }
+
+  const basic = {
+    candidate: user?.name || '未知用户',
+    resume: '暂无', // 接口暂未返回简历名称
+    type: interviewInfo?.type || '未知',
+    score: evaluation.score,
+    difficulty: interviewInfo?.difficulty || '未知',
+    company: interviewInfo?.company_name || '未指定',
+    position: interviewInfo?.position_name || '未指定',
+    duration: interviewInfo?.duration ? `${Math.floor(interviewInfo.duration / 60)}分钟${interviewInfo.duration % 60}秒` : '未知',
+    time: interviewInfo?.created_at ? new Date(interviewInfo.created_at).toLocaleString('zh-CN') : '未知',
+  };
 
   return (
-    <div className="container mx-auto px-4">
-      <Title level={2} className="mt-2">面试结果</Title>
-      
-      <AntCard className="rounded-2xl mt-2" styles={{ body: { padding: 20 } }}>
-        <Row gutter={[24, 24]} align="middle">
-          <Col xs={24} md={14}>
-            <div className="flex items-start gap-3">
-              <Avatar size={48}>LB</Avatar>
-              <div>
-                <div className="text-lg font-semibold">{basic.candidate}</div>
-                <div className="mt-3 space-y-2 text-sm">
-                  <div>面试类型：{basic.type}</div>
-                  <div>使用简历：{basic.resume}</div>
-                  <div>面试难度：{basic.difficulty}</div>
-                  <div>公司名称：{basic.company}</div>
-                  <div>岗位名称：{basic.position}</div>
-                  <div>面试时间：{basic.time}</div>
+    <div className="min-h-screen relative font-sans bg-slate-50/50 pb-20">
+      {/* Decorative Background */}
+      <div className="fixed top-0 left-0 w-full h-[400px] bg-gradient-to-b from-blue-50/80 to-transparent pointer-events-none z-0" />
+      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-indigo-50/60 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none z-0" />
+
+      <div className="container mx-auto px-4 relative z-10 pt-8">
+        <div className="mb-8 animate-fade-in-up flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+              <TrophyOutlined className="text-yellow-500" />
+              面试结果分析
+            </h1>
+            <p className="text-slate-500 mt-2 ml-11">全面复盘您的面试表现，AI 助你更进一步</p>
+          </div>
+          <Button onClick={() => window.history.back()} className="rounded-xl border-slate-200 hover:border-blue-400 hover:text-blue-600">
+            返回列表
+          </Button>
+        </div>
+        
+        {/* Header Info Card */}
+        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50 animate-fade-in-up mb-8">
+          <Row gutter={[48, 24]} align="middle">
+            <Col xs={24} lg={14}>
+              <div className="flex items-start gap-6">
+                <Avatar size={80} className="bg-blue-100 text-blue-600 font-bold text-2xl border-4 border-white shadow-lg">
+                  {basic.candidate.substring(0, 2).toUpperCase()}
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h2 className="text-2xl font-bold text-slate-800 m-0">{basic.candidate}</h2>
+                    <Tag color="blue" className="rounded-full px-3 border-0 bg-blue-50 text-blue-700 font-medium">{basic.type}</Tag>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8 text-slate-600 mt-4">
+                    <div className="flex items-center gap-2">
+                      <EnvironmentOutlined className="text-slate-400" />
+                      <span>公司：<span className="font-medium text-slate-800">{basic.company}</span></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <UserOutlined className="text-slate-400" />
+                      <span>岗位：<span className="font-medium text-slate-800">{basic.position}</span></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <BarChartOutlined className="text-slate-400" />
+                      <span>难度：<span className="font-medium text-slate-800">{basic.difficulty}</span></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ClockCircleOutlined className="text-slate-400" />
+                      <span>时长：<span className="font-medium text-slate-800">{basic.duration}</span></span>
+                    </div>
+                    <div className="flex items-center gap-2 sm:col-span-2">
+                      <CalendarOutlined className="text-slate-400" />
+                      <span>时间：<span className="font-medium text-slate-800">{basic.time}</span></span>
+                    </div>
+                  </div>
                 </div>
+              </div>
+            </Col>
+            <Col xs={24} lg={10}>
+              <div className="bg-slate-50 rounded-2xl p-6 flex items-center justify-between gap-6 border border-slate-100">
+                <div className="flex-1 text-center border-r border-slate-200 pr-6">
+                  <ScoreGauge score={basic.score} />
+                </div>
+                <div className="flex flex-col gap-3 min-w-[140px]">
+                  <Button type="primary" icon={<DownloadOutlined />} className="bg-blue-600 hover:bg-blue-500 h-10 rounded-xl shadow-lg shadow-blue-200 border-0 w-full">
+                    下载报告
+                  </Button>
+                  <Button icon={<RobotOutlined />} className="h-10 rounded-xl border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 w-full">
+                    AI 提升建议
+                  </Button>
+                </div>
+              </div>
+            </Col>
+          </Row>
+        </div>
+
+        {/* Analysis Content */}
+        <Row gutter={[24, 24]}>
+          <Col xs={24} lg={16}>
+            {/* Interviewer Comment */}
+            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-lg shadow-slate-200/50 animate-fade-in-up h-full" style={{ animationDelay: '0.1s' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
+                  <CheckCircleOutlined className="text-xl" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 m-0">面试官综合点评</h3>
+              </div>
+              <div className="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-50 text-slate-700 leading-relaxed text-lg">
+                {evaluation.comment}
+              </div>
+
+              <Divider className="my-8" />
+
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-emerald-100 p-2 rounded-lg text-emerald-600">
+                  <BarChartOutlined className="text-xl" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 m-0">维度详细分析</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {evaluation.dimensions?.map((d: any, i: number) => (
+                  <div key={i} className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md transition-shadow duration-300">
+                    <div className="flex justify-between items-center mb-3">
+                      <Tag color="cyan" className="rounded-md px-2 py-0.5 text-sm font-medium m-0 border-0 bg-cyan-50 text-cyan-700">
+                        {d.dimension_name}
+                      </Tag>
+                      <span className="font-bold text-slate-800 text-lg">{d.score} <span className="text-xs text-slate-400 font-normal">/ 100</span></span>
+                    </div>
+                    <p className="text-slate-600 text-sm leading-relaxed m-0">
+                      {d.evaluation}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </Col>
-          <Col xs={24} md={10}>
-            <div className="flex items-center justify-between gap-4">
-              <ScoreGauge score={basic.score} />
-              <div className="flex flex-col gap-2">
-                <Button>下载面试报告</Button>
-                <Button type="primary">AI 技能补充建议</Button>
+
+          <Col xs={24} lg={8}>
+            {/* Radar Chart */}
+            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-lg shadow-slate-200/50 animate-fade-in-up h-full" style={{ animationDelay: '0.2s' }}>
+               <div className="flex items-center gap-3 mb-6">
+                <div className="bg-purple-100 p-2 rounded-lg text-purple-600">
+                  <BulbOutlined className="text-xl" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 m-0">能力模型雷达</h3>
+              </div>
+              <div className="flex justify-center items-center py-4">
+                {evaluation.dimensions && evaluation.dimensions.length > 0 ? (
+                   <RadarChart items={evaluation.dimensions} size={320} />
+                ) : (
+                  <div className="text-slate-400 py-10">暂无维度数据</div>
+                )}
+              </div>
+              <div className="text-center text-slate-500 text-sm mt-4">
+                基于本次面试表现生成的五维能力模型
               </div>
             </div>
           </Col>
         </Row>
-      </AntCard>
 
-      
-      <AntCard className="rounded-2xl mt-4" styles={{ body: { padding: 20 } }}>
-        <div className="text-xl font-bold mb-2">面试官点评</div>
-        <Paragraph className="text-base leading-relaxed">{perf.comment}</Paragraph>
-      </AntCard>
+        {/* Q&A Records */}
+        <div className="mt-8 bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+          <div className="flex items-center gap-3 mb-8">
+            <div className="bg-orange-100 p-2 rounded-lg text-orange-600">
+              <ClockCircleOutlined className="text-xl" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 m-0">答题全记录复盘</h3>
+          </div>
 
-      <div className="mt-4">
-        <div className="text-xl font-bold mb-2">面试表现</div>
-        <div className="flex justify-center">
-          <RadarChart items={perf.dimensions} size={520} />
-        </div>
-        <div className="mt-6">
-          <Row gutter={[24, 24]}>
-            {perf.dimensions.map((d, i) => (
-              <Col key={i} xs={24} md={8}>
-                <AntCard className="rounded-2xl" styles={{ body: { padding: 20 } }}>
-                  <div className="flex items-center gap-2 text-green-700">
-                    <Tag color="green">{d.dimension_name}</Tag>
+          {answerRecords && answerRecords.length > 0 ? (
+            <div className="space-y-8">
+              {answerRecords.map((rec: any, index) => (
+                <div key={index} className="group">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="bg-slate-800 text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold shadow-md">
+                      {rec.order}
+                    </div>
+                    <h4 className="text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
+                      {rec.content}
+                    </h4>
                   </div>
-                  <Paragraph className="text-base leading-relaxed" style={{ marginTop: 8 }}>{d.evaluation}</Paragraph>
-                  <div className="text-base text-gray-700 font-medium">{d.score} 分</div>
-                </AntCard>
-              </Col>
-            ))}
-          </Row>
+
+                  <div className="border-l-2 border-slate-200 ml-4 pl-8 pb-8 space-y-6">
+                    {/* QA Pairs */}
+                    {rec.message?.map((m: any, mIdx: number) => (
+                      <div key={mIdx} className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
+                        <div className="mb-4">
+                          <span className="inline-block bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded mb-2">面试官提问</span>
+                          <p className="text-slate-800 font-medium text-lg">{m.question}</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                          <span className="inline-block bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded mb-2">你的回答</span>
+                          <p className="text-slate-600 leading-relaxed">{m.answer}</p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* AI Comment for this Question */}
+                    {rec.comment && (
+                      <div className="bg-gradient-to-r from-orange-50 to-rose-50 rounded-2xl p-6 border border-orange-100">
+                         <div className="flex items-center gap-2 mb-4 text-orange-700 font-bold">
+                            <RobotOutlined /> AI 深度点评
+                         </div>
+                         
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <div className="bg-white/60 rounded-xl p-4">
+                              <div className="text-xs text-slate-400 uppercase tracking-wider font-bold mb-1">本题得分</div>
+                              <div className="text-2xl font-bold text-orange-600">{rec.comment.score} <span className="text-sm text-slate-400">分</span></div>
+                           </div>
+                           <div className="bg-white/60 rounded-xl p-4">
+                              <div className="text-xs text-slate-400 uppercase tracking-wider font-bold mb-1">难度等级</div>
+                              <div className="text-lg font-bold text-slate-700">{rec.comment.difficulty}</div>
+                           </div>
+                         </div>
+
+                         <div className="mt-6 space-y-4">
+                            {[
+                              { label: '关键点', val: rec.comment.key_points },
+                              { label: '优势', val: rec.comment.strengths, color: 'text-green-700' },
+                              { label: '不足', val: rec.comment.weaknesses, color: 'text-red-600' },
+                              { label: '改进建议', val: rec.comment.suggestion, color: 'text-blue-600' },
+                              { label: '参考思路', val: rec.comment.thinking },
+                              { label: '标准答案', val: rec.comment.reference },
+                            ].map((item, idx) => (
+                              item.val && (
+                                <div key={idx} className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm">
+                                  <div className="min-w-[80px] font-bold text-slate-500 text-right">{item.label}</div>
+                                  <div className={`flex-1 ${item.color || 'text-slate-700'} leading-relaxed bg-white/40 p-2 rounded-lg`}>
+                                    {item.val}
+                                  </div>
+                                </div>
+                              )
+                            ))}
+                         </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4 opacity-20">📝</div>
+              <div className="text-slate-400">暂无答题记录</div>
+            </div>
+          )}
         </div>
       </div>
-
-      
-
-      <AntCard className="rounded-2xl mt-6" styles={{ body: { padding: 20 } }}>
-        <div className="text-lg font-semibold mb-2">本次答题记录</div>
-        <List
-          dataSource={records}
-          renderItem={(rec) => (
-            <List.Item>
-              <div style={{ width: '100%' }}>
-                <div className="flex items-center gap-2">
-                  <Tag color="green">{rec.order}/{records.length}</Tag>
-                  <Text strong>{rec.content}</Text>
-                </div>
-                <AntCard size="small" className="mt-2" title="问答">
-                  <List
-                    dataSource={rec.message}
-                    renderItem={(m) => (
-                      <List.Item>
-                        <div>
-                          <Text strong className="text-base">{m.order}. 问题：</Text>
-                          <Text className="text-base">{m.question}</Text>
-                          <div className="mt-1">
-                            <Text strong className="text-base">回答：</Text>
-                            <Text className="text-base leading-relaxed">{m.answer}</Text>
-                          </div>
-                        </div>
-                      </List.Item>
-                    )}
-                  />
-                </AntCard>
-                <AntCard className="mt-3" styles={{ body: { padding: 20, background: '#f5f5f5' } }}>
-                  <div className="space-y-3">
-                    <div className="flex gap-6"><div className="w-32 text-gray-800 text-lg font-bold">本题得分</div><div className="flex-1 text-lg font-semibold"><Tag color="blue">{rec.comment.score}分</Tag></div></div>
-                    <div className="flex gap-6"><div className="w-32 text-gray-800 text-lg font-bold">难度等级</div><div className="flex-1 text-lg font-semibold"><Tag>{rec.comment.difficulty}</Tag></div></div>
-                    <div className="flex gap-6"><div className="w-32 text-gray-800 text-lg font-bold">关键点</div><div className="flex-1 text-lg leading-relaxed">{rec.comment.key_points}</div></div>
-                    <div className="flex gap-6"><div className="w-32 text-gray-800 text-lg font-bold">优势</div><div className="flex-1 text-lg leading-relaxed">{rec.comment.strengths}</div></div>
-                    <div className="flex gap-6"><div className="w-32 text-gray-800 text-lg font-bold">不足</div><div className="flex-1 text-lg leading-relaxed">{rec.comment.weaknesses}</div></div>
-                    <div className="flex gap-6"><div className="w-32 text-gray-800 text-lg font-bold">建议</div><div className="flex-1 text-lg leading-relaxed">{rec.comment.suggestion}</div></div>
-                    <div className="flex gap-6"><div className="w-32 text-gray-800 text-lg font-bold">考点</div><div className="flex-1 text-lg leading-relaxed">{rec.comment.know_points}</div></div>
-                    <div className="flex gap-6"><div className="w-32 text-gray-800 text-lg font-bold">思路</div><div className="flex-1 text-lg leading-relaxed">{rec.comment.thinking}</div></div>
-                    <div className="flex gap-6"><div className="w-32 text-gray-800 text-lg font-bold">参考答案</div><div className="flex-1 text-lg leading-relaxed">{rec.comment.reference}</div></div>
-                  </div>
-                </AntCard>
-              </div>
-            </List.Item>
-          )}
-        />
-      </AntCard>
     </div>
   );
 }

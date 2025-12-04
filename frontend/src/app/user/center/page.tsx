@@ -1,8 +1,9 @@
 'use client';
 
-import { Typography, Row, Col, Card as AntCard, Avatar, Tag, Button, Space, Table, Select, Upload, message, Spin, Popconfirm } from 'antd';
+import { Typography, Row, Col, Card as AntCard, Avatar, Tag, Button, Space, Table, Select, Upload, message, Spin, Popconfirm, Alert } from 'antd';
 import { UploadOutlined, FileOutlined, DeleteOutlined, StarOutlined, StarFilled, InboxOutlined } from '@ant-design/icons';
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import type { UploadProps } from 'antd';
 import apiClient from '@/services/api/client';
 
@@ -40,6 +41,8 @@ export default function UserCenterPage() {
   const [resumes, setResumes] = useState<ResumeInfo[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loadingResumes, setLoadingResumes] = useState(false);
+  const [modelConfigured, setModelConfigured] = useState<boolean | null>(null);
+  const [checkingConfig, setCheckingConfig] = useState<boolean>(false);
 
   // 获取简历列表
   const fetchResumes = useCallback(async () => {
@@ -56,6 +59,11 @@ export default function UserCenterPage() {
 
   // 上传简历
   const handleUpload = async (file: File) => {
+    if (modelConfigured === false) {
+      message.error('请先配置模型，否则无法上传简历');
+      return false;
+    }
+
     if (resumes.length >= 3) {
       message.warning('最多只能上传 3 份简历');
       return false;
@@ -127,6 +135,29 @@ export default function UserCenterPage() {
   };
 
   useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    setCheckingConfig(true);
+    fetch('http://localhost:8888/api/user/model/check', {
+      method: 'GET',
+      headers: {
+        Authorization: token ? `Bearer ${token}` : '',
+        'X-Auth-Token': token || '',
+      },
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+        const configured = !!(data && data.data && data.data.configured);
+        setModelConfigured(configured);
+      })
+      .catch(() => {
+        setModelConfigured(false);
+      })
+      .finally(() => {
+        setCheckingConfig(false);
+      });
+  }, []);
+
+  useEffect(() => {
     (async () => {
       try {
         const data: any = await apiClient.get('/user/profile');
@@ -136,121 +167,207 @@ export default function UserCenterPage() {
     fetchResumes();
   }, [fetchResumes]);
   return (
-    <div className="container mx-auto px-4">
-      <Row gutter={[24, 24]}>
-        <Col xs={24} md={8}>
-          <AntCard className="rounded-2xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar size={64} src="https://api.dicebear.com/7.x/adventurer/svg?seed=LB" />
-                <div>
-                  <div className="font-medium text-lg">{profile?.username || '未登录'}</div>
-                  <Tag color="gold">面试吧学员</Tag>
-                </div>
-              </div>
+    <div className="min-h-screen relative font-sans">
+      {/* Decorative Background */}
+      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-blue-50/60 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none z-0" />
+      <div className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-purple-50/60 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/3 pointer-events-none z-0" />
+
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="mb-8 animate-fade-in-up">
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">个人中心</h1>
+          <p className="text-slate-500 mt-2">管理你的个人信息、简历与消费记录</p>
+        </div>
+
+        <Row gutter={[24, 24]}>
+          <Col xs={24} md={8} className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-bl-full -mr-8 -mt-8 z-0" />
               
-            </div>
-
-            <div className="mt-6 space-y-2 text-sm text-gray-700">
-              <div>用户名：{profile?.username ?? '-'}</div>
-              <div>邮箱：{profile?.email ?? '-'}</div>
-            </div>
-
-            <AntCard className="rounded-2xl mt-6 bg-green-500 text-white" variant="outlined">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm opacity-90">剩余金币</div>
-                  <div className="text-3xl font-semibold">0</div>
+              <div className="relative z-10 flex flex-col items-center text-center">
+                <div className="p-1 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 mb-4">
+                  <Avatar size={80} src="https://api.dicebear.com/7.x/adventurer/svg?seed=LB" className="border-4 border-white shadow-md" />
                 </div>
-                <Button>充值</Button>
-              </div>
-              <div className="mt-4 text-sm space-y-1 opacity-90">
-                <div>专项面试：0次</div>
-                <div>综合面试：0次</div>
-                <div>简历押题：0次</div>
-              </div>
-            </AntCard>
-          </AntCard>
-        </Col>
-
-        <Col xs={24} md={16}>
-          <Row gutter={[16, 16]}>
-            <Col span={24}>
-              <AntCard className="rounded-2xl">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="font-medium">我的简历 ({resumes.length}/3)</div>
-                </div>
-
-                {/* 简历列表 */}
-                <Spin spinning={loadingResumes}>
-                  {resumes.length > 0 && (
-                    <div className="space-y-2 mb-4">
-                      {resumes.map((resume) => (
-                        <div
-                          key={resume.id}
-                          className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex items-center gap-2">
-                            <FileOutlined className="text-red-500" />
-                            <span className="text-gray-800">{resume.file_name}</span>
-                          </div>
-                          <Popconfirm
-                            title="确认删除"
-                            description="删除后无法恢复，确定删除吗？"
-                            onConfirm={() => handleDelete(resume.id)}
-                            okText="确定"
-                            cancelText="取消"
-                          >
-                            <Button
-                              type="text"
-                              size="small"
-                              danger
-                              icon={<DeleteOutlined />}
-                            />
-                          </Popconfirm>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* 上传区域 */}
-                  {resumes.length < 3 && (
-                    <Dragger {...uploadProps} disabled={uploading}>
-                      <p className="ant-upload-drag-icon">
-                        {uploading ? <Spin /> : <InboxOutlined />}
-                      </p>
-                      <p className="ant-upload-text">
-                        {uploading ? '上传中...' : '点击或拖拽文件到此区域上传'}
-                      </p>
-                      <p className="ant-upload-hint text-gray-500">
-                        仅支持 PDF 格式，文件大小不超过 10MB
-                      </p>
-                    </Dragger>
-                  )}
-
-                  {resumes.length >= 3 && (
-                    <div className="text-center text-gray-500 py-4">
-                      已达到简历数量上限，如需上传新简历请先删除旧简历
-                    </div>
-                  )}
-                </Spin>
-              </AntCard>
-            </Col>
-
-            <Col span={24}>
-              <AntCard className="rounded-2xl" title="金币记录">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex gap-2">
-                    <Select size="small" value="全部类型" options={[{ value: '全部类型', label: '全部类型' }, { value: '收入', label: '收入' }, { value: '支出', label: '支出' }]} />
-                    <Select size="small" value="最近30天" options={[{ value: '最近30天', label: '最近30天' }, { value: '最近90天', label: '最近90天' }]} />
+                <h2 className="text-xl font-bold text-slate-800 mb-1">{profile?.username || '未登录'}</h2>
+                <Tag color="blue" className="border-0 bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-medium">面试吧学员</Tag>
+                
+                <div className="w-full mt-8 space-y-3 text-left bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500">用户名</span>
+                    <span className="font-medium text-slate-700">{profile?.username ?? '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500">邮箱</span>
+                    <span className="font-medium text-slate-700">{profile?.email ?? '-'}</span>
                   </div>
                 </div>
-                <Table size="small" columns={columns} dataSource={data} pagination={{ pageSize: 20 }} />
-              </AntCard>
-            </Col>
-          </Row>
-        </Col>
-      </Row>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-slate-100">
+                <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-xl -mr-8 -mt-8" />
+                  <div className="flex items-center justify-between relative z-10">
+                    <div>
+                      <div className="text-xs text-slate-400 mb-1 uppercase tracking-wider">剩余金币</div>
+                      <div className="text-3xl font-bold font-mono">0</div>
+                    </div>
+                    <Button type="primary" size="small" className="bg-white/20 hover:bg-white/30 border-0 backdrop-blur-sm text-xs h-8 px-4">
+                      充值
+                    </Button>
+                  </div>
+                  <div className="mt-4 space-y-1">
+                    <div className="flex justify-between text-xs text-slate-400">
+                      <span>专项面试</span>
+                      <span className="text-white font-mono">0次</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-slate-400">
+                      <span>综合面试</span>
+                      <span className="text-white font-mono">0次</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Col>
+
+          <Col xs={24} md={16} className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            <Row gutter={[16, 16]}>
+              <Col span={24}>
+                <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 text-xl">
+                        <FileOutlined />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-800">我的简历</h3>
+                        <p className="text-xs text-slate-400">已上传 {resumes.length}/3 份</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Spin spinning={loadingResumes}>
+                    {resumes.length > 0 ? (
+                      <div className="space-y-3 mb-6">
+                        {resumes.map((resume) => (
+                          <div
+                            key={resume.id}
+                            className="group flex items-center justify-between p-4 bg-slate-50 hover:bg-blue-50/50 border border-slate-100 hover:border-blue-100 rounded-2xl transition-all duration-300"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-red-500 shadow-sm">
+                                <FileOutlined className="text-lg" />
+                              </div>
+                              <div>
+                                <div className="font-medium text-slate-700 group-hover:text-blue-700 transition-colors">{resume.file_name}</div>
+                                <div className="text-xs text-slate-400 flex gap-2 mt-1">
+                                  <span>{formatFileSize(resume.file_size)}</span>
+                                  <span>•</span>
+                                  <span>{formatTime(resume.created_at)}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <Popconfirm
+                              title="确认删除"
+                              description="删除后无法恢复，确定删除吗？"
+                              onConfirm={() => handleDelete(resume.id)}
+                              okText="确定"
+                              cancelText="取消"
+                            >
+                              <Button
+                                type="text"
+                                size="small"
+                                danger
+                                icon={<DeleteOutlined />}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-white shadow-sm border border-red-100"
+                              />
+                            </Popconfirm>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {/* 上传区域 */}
+                    {resumes.length < 3 && (
+                      <>
+                        {!checkingConfig && modelConfigured === false && (
+                          <Alert
+                            message="模型未配置"
+                            description={
+                              <span>
+                                无法上传简历，请先去 <Link href="/user/models" className="text-blue-600 font-medium underline hover:text-blue-700">用户模型页面</Link> 配置模型
+                              </span>
+                            }
+                            type="warning"
+                            showIcon
+                            className="mb-4 rounded-xl border-orange-100 bg-orange-50"
+                          />
+                        )}
+                        <Dragger 
+                          {...uploadProps} 
+                          disabled={uploading || !modelConfigured || checkingConfig}
+                          className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl hover:border-blue-400 transition-colors"
+                          style={{ padding: '40px 0', background: 'rgb(248 250 252)' }}
+                        >
+                          <p className="ant-upload-drag-icon text-blue-500 mb-4">
+                            {uploading ? <Spin /> : <InboxOutlined style={{ fontSize: '48px', color: '#3b82f6' }} />}
+                          </p>
+                          <p className="text-base font-medium text-slate-700 mb-2">
+                            {uploading ? '上传中...' : (modelConfigured === false ? '请先配置模型' : '点击或拖拽文件到此区域上传')}
+                          </p>
+                          <p className="text-sm text-slate-400">
+                            仅支持 PDF 格式，文件大小不超过 10MB
+                          </p>
+                        </Dragger>
+                      </>
+                    )}
+
+                    {resumes.length >= 3 && (
+                      <div className="text-center text-slate-400 py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                        已达到简历数量上限，如需上传新简历请先删除旧简历
+                      </div>
+                    )}
+                  </Spin>
+                </div>
+              </Col>
+
+              <Col span={24}>
+                <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 text-xl">
+                        <StarFilled />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-800">金币记录</h3>
+                    </div>
+                    <div className="flex gap-2">
+                      <Select 
+                        size="middle" 
+                        defaultValue="全部类型" 
+                        options={[{ value: '全部类型', label: '全部类型' }, { value: '收入', label: '收入' }, { value: '支出', label: '支出' }]} 
+                        className="min-w-[100px]"
+                        variant="filled"
+                      />
+                      <Select 
+                        size="middle" 
+                        defaultValue="最近30天" 
+                        options={[{ value: '最近30天', label: '最近30天' }, { value: '最近90天', label: '最近90天' }]} 
+                        className="min-w-[100px]"
+                        variant="filled"
+                      />
+                    </div>
+                  </div>
+                  <Table 
+                    columns={columns} 
+                    dataSource={data} 
+                    pagination={{ pageSize: 20 }} 
+                    rowClassName="hover:bg-slate-50 transition-colors"
+                  />
+                </div>
+              </Col>
+            </Row>
+          </Col>
+        </Row>
+      </div>
     </div>
   );
 }

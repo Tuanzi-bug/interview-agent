@@ -20,8 +20,6 @@ func Register(r *server.Hertz) {
 	{
 		_api := root.Group("/api", _apiMw()...)
 		{
-		}
-		{
 			_interview := _api.Group("/interview", _interviewMw()...)
 			_interview.GET("/answer-record", append(_getanswerrecordMw(), interview.GetAnswerRecord)...)
 			_interview.GET("/evaluation", append(_getinterviewevaluationMw(), interview.GetInterviewEvaluation)...)
@@ -37,6 +35,9 @@ func Register(r *server.Hertz) {
 		}
 		{
 			_mianshi := _api.Group("/mianshi", _mianshiMw()...)
+			_mianshi.GET("/answer-record", append(_getmianshianswerrecordMw(), interview.GetMianshiAnswerRecord)...)
+			_mianshi.GET("/evaluation", append(_getmianshievaluationMw(), interview.GetMianshiEvaluation)...)
+			_mianshi.GET("/records", append(_getmianshirecordsMw(), interview.GetMianshiRecords)...)
 			{
 				_answer := _mianshi.Group("/answer", _answerMw()...)
 				_answer.POST("/submit", append(_submitmianshianswerMw(), interview.SubmitMianshiAnswer)...)
@@ -55,6 +56,12 @@ func Register(r *server.Hertz) {
 			}
 		}
 		{
+			_prediction := _api.Group("/prediction", _predictionMw()...)
+			_prediction.GET("/:id", append(_getpredictiondetailMw(), interview.GetPredictionDetail)...)
+			_prediction.GET("/list", append(_listpredictionsMw(), interview.ListPredictions)...)
+			_prediction.POST("/start", append(_predictMw(), interview.Predict)...)
+		}
+		{
 			_resume := _api.Group("/resume", _resumeMw()...)
 			_resume.GET("/default", append(_getdefaultresumeMw(), interview.GetDefaultResume)...)
 			_resume.GET("/list", append(_getuserresumesMw(), interview.GetUserResumes)...)
@@ -71,8 +78,8 @@ func Register(r *server.Hertz) {
 			_user.PUT("/profile", append(_updateprofileMw(), interview.UpdateProfile)...)
 			_user.POST("/register", append(_registerMw(), interview.Register)...)
 			{
-				_create0 := _user.Group("/create", _create0Mw()...)
-				_create0.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
+				_create := _user.Group("/create", _createMw()...)
+				_create.POST("/model", append(_createusermodelMw(), interview.CreateUserModel)...)
 			}
 			{
 				_model := _user.Group("/model", _modelMw()...)

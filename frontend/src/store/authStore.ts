@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface User {
   id: string;
@@ -10,15 +11,20 @@ interface User {
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  // 预留登录方法
   login: (user: User) => void;
-  // 预留登出方法
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isAuthenticated: false,
-  login: (user) => set({ user, isAuthenticated: true }),
-  logout: () => set({ user: null, isAuthenticated: false }),
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      isAuthenticated: false,
+      login: (user) => set({ user, isAuthenticated: true }),
+      logout: () => set({ user: null, isAuthenticated: false }),
+    }),
+    {
+      name: 'auth-storage',
+    }
+  )
+);

@@ -85,114 +85,162 @@ export default function InterviewRecordsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4">
-      <Title level={2} className="mt-2">面试记录</Title>
+    <div className="min-h-screen relative font-sans">
+      {/* Decorative Background */}
+      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-indigo-50/60 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none z-0" />
+      <div className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-blue-50/60 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/3 pointer-events-none z-0" />
 
-      <AntCard className="rounded-2xl mt-2" styles={{ body: { padding: 20 } }}>
-        <Row gutter={[24, 24]} align="middle">
-          <Col xs={24} md={12}>
-            <div className="grid grid-cols-2 gap-6 items-center">
-              <div className="text-center">
-                <div className="text-3xl font-semibold">{totalCount}</div>
-                <div className="text-gray-500">面试总数(次)</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-semibold">{completedCount}</div>
-                <div className="text-gray-500">已完成面试(次)</div>
-              </div>
-            </div>
-          </Col>
-          <Col xs={24} md={12}>
-            <div className="space-y-2">
-              {[
-                '你的面试次数在全站用户中位于靠前 0%',
-                '你的近7天没有进行面试',
-                '你的面试均分在全站用户中位于靠前 0%',
-                '你的提高分数为 0分',
-              ].map((t, i) => (
-                <div key={i} className="flex items-center gap-2 text-green-700">
-                  <CheckCircleOutlined />
-                  <span>{t}</span>
-                </div>
-              ))}
-            </div>
-          </Col>
-        </Row>
-      </AntCard>
-
-      <div className="mt-6">
-        <div className="flex items-center gap-4">
-          <span>类型筛选：</span>
-          <Select value={filter} onChange={setFilter} style={{ width: 200 }} options={[{ value: '全部', label: '全部' }, { value: '综合面试', label: '综合面试' }, { value: '社招', label: '社招' }, { value: '校招', label: '校招' }]} />
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="mb-8 animate-fade-in-up">
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">面试记录</h1>
+          <p className="text-slate-500 mt-2">查看你的所有面试历史、评估报告与详细反馈</p>
         </div>
 
-        <div className="mt-8">
-          <Spin spinning={loading}>
-          {filteredList.length === 0 ? (
-            <Empty
-              imageStyle={{ height: 120 }}
-              description={
-                <div>
-                  <div>暂时无面试记录</div>
-                  <div className="mt-2">
-                    可以进行 <Link href="/interview/social">社招简历面试</Link> 或 <Link href="/interview/campus">校招简历面试</Link>
+        <AntCard className="rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 animate-fade-in-up overflow-hidden mb-8" styles={{ body: { padding: 0 } }} style={{ animationDelay: '0.1s' }}>
+          <div className="bg-gradient-to-r from-blue-50/50 to-indigo-50/50 p-8">
+            <Row gutter={[24, 24]} align="middle">
+              <Col xs={24} md={10}>
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-slate-100">
+                  <div className="grid grid-cols-2 gap-6 items-center">
+                    <div className="text-center border-r border-slate-100">
+                      <div className="text-4xl font-extrabold text-slate-800 mb-1">{totalCount}</div>
+                      <div className="text-sm text-slate-500 font-medium">面试总数(次)</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-4xl font-extrabold text-blue-600 mb-1">{completedCount}</div>
+                      <div className="text-sm text-slate-500 font-medium">已完成面试(次)</div>
+                    </div>
                   </div>
                 </div>
-              }
-            />
-          ) : (
-            <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {paginatedList.map((it: any) => {
-                const statusMap: Record<string, { text: string; color: string }> = {
-                  pending: { text: '待面试', color: 'blue' },
-                  in_progress: { text: '进行中', color: 'orange' },
-                  completed: { text: '已完成', color: 'green' },
-                };
-                const statusInfo = statusMap[it.status] || { text: it.status, color: 'default' };
-                const createdTime = it.createdAt ? new Date(it.createdAt).toLocaleString('zh-CN') : '-';
-                
-                return (
-                  <AntCard key={it.id} className="rounded-2xl" styles={{ body: { padding: 16 } }} style={{ minWidth: 300 }}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="text-xl font-semibold mb-2">{it.title || '未命名面试'}</div>
-                        <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
-                      </div>
+              </Col>
+              <Col xs={24} md={14}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[
+                    { text: '你的面试次数在全站用户中位于靠前 0%', icon: <CheckCircleOutlined className="text-green-500 text-lg" /> },
+                    { text: '你的近7天没有进行面试', icon: <CheckCircleOutlined className="text-green-500 text-lg" /> },
+                    { text: '你的面试均分在全站用户中位于靠前 0%', icon: <CheckCircleOutlined className="text-green-500 text-lg" /> },
+                    { text: '你的提高分数为 0分', icon: <CheckCircleOutlined className="text-green-500 text-lg" /> },
+                  ].map((t, i) => (
+                    <div key={i} className="flex items-center gap-3 bg-white/60 p-3 rounded-xl border border-slate-100/50">
+                      {t.icon}
+                      <span className="text-sm text-slate-700 font-medium">{t.text}</span>
                     </div>
-                    <div className="mt-4 space-y-2 text-sm">
-                      <div>面试类型：{it.type || '-'}</div>
-                      <div>公司名称：{it.companyName || '-'}</div>
-                      <div>难度等级：{it.difficulty || '-'}</div>
-                      <div>领域：{it.domain || '-'}</div>
-                      <div>创建时间：{createdTime}</div>
-                    </div>
-                    <div className="mt-4">
-                      <Link href={`/user/interviews/results/${it.id}`} className="inline-block">
-                        <Button type="primary">查看面试详情</Button>
+                  ))}
+                </div>
+              </Col>
+            </Row>
+          </div>
+        </AntCard>
+
+        <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+          <div className="flex items-center justify-between mb-6 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-4">
+              <span className="text-slate-600 font-medium">筛选面试记录：</span>
+              <Select 
+                value={filter} 
+                onChange={setFilter} 
+                style={{ width: 180 }} 
+                options={[{ value: '全部', label: '全部类型' }, { value: '综合面试', label: '综合面试' }, { value: '社招', label: '社招专项' }, { value: '校招', label: '校招专项' }]} 
+                className="font-medium"
+                size="large"
+                variant="filled"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <Spin spinning={loading}>
+            {filteredList.length === 0 ? (
+              <Empty
+                imageStyle={{ height: 160 }}
+                description={
+                  <div className="flex flex-col items-center">
+                    <div className="text-slate-500 text-lg mb-4">暂时没有相关的面试记录</div>
+                    <div className="flex gap-4">
+                      <Link href="/interview/social">
+                        <Button type="primary" className="bg-blue-600 h-10 px-6 rounded-full shadow-blue-200">社招简历面试</Button>
+                      </Link>
+                      <Link href="/interview/campus">
+                        <Button className="h-10 px-6 rounded-full border-slate-200 text-slate-600">校招简历面试</Button>
                       </Link>
                     </div>
-                  </AntCard>
-                );
-              })}
-            </div>
-            
-            {/* 分页组件 */}
-            {filteredList.length > pageSize && (
-              <div className="flex justify-center mt-8">
-                <Pagination
-                  current={currentPage}
-                  total={filteredList.length}
-                  pageSize={pageSize}
-                  onChange={handlePageChange}
-                  showSizeChanger={false}
-                  showTotal={(total) => `共 ${total} 条记录`}
-                />
+                  </div>
+                }
+                className="bg-white rounded-3xl p-12 border border-slate-100 shadow-sm"
+              />
+            ) : (
+              <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedList.map((it: any) => {
+                  const statusMap: Record<string, { text: string; color: string; bg: string; border: string }> = {
+                    pending: { text: '待面试', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+                    in_progress: { text: '进行中', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100' },
+                    completed: { text: '已完成', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100' },
+                  };
+                  const statusInfo = statusMap[it.status] || { text: it.status, color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-100' };
+                  const createdTime = it.createdAt ? new Date(it.createdAt).toLocaleString('zh-CN') : '-';
+                  
+                  return (
+                    <div key={it.id} className="group bg-white rounded-2xl p-6 border border-slate-100 shadow-lg shadow-slate-100/50 hover:shadow-xl hover:shadow-blue-100/50 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                      <div className={`absolute top-0 right-0 w-24 h-24 ${statusInfo.bg} rounded-bl-full -mr-8 -mt-8 opacity-50`} />
+                      
+                      <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className={`px-3 py-1 rounded-full text-xs font-bold ${statusInfo.bg} ${statusInfo.color} ${statusInfo.border} border`}>
+                            {statusInfo.text}
+                          </div>
+                          <div className="text-xs text-slate-400 font-mono">{createdTime.split(' ')[0]}</div>
+                        </div>
+                        
+                        <h3 className="text-lg font-bold text-slate-800 mb-2 line-clamp-1" title={it.title || it.companyName}>
+                          {it.companyName || '未命名公司'}
+                          {it.title ? ` - ${it.title}` : ''}
+                        </h3>
+                        
+                        <div className="space-y-2 mb-6">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-slate-500">面试类型</span>
+                            <span className="font-medium text-slate-700">{it.type || '-'}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-slate-500">领域/方向</span>
+                            <span className="font-medium text-slate-700">{it.domain || '-'}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-slate-500">难度等级</span>
+                            <span className="font-medium text-slate-700">{it.difficulty || '-'}</span>
+                          </div>
+                        </div>
+
+                        <Link href={`/user/interviews/results/${it.id}`} className="block">
+                          <Button type="primary" ghost className="w-full h-10 rounded-xl border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 font-medium">
+                            查看详情与反馈
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+              
+              {/* 分页组件 */}
+              {filteredList.length > pageSize && (
+                <div className="flex justify-center mt-10">
+                  <Pagination
+                    current={currentPage}
+                    total={filteredList.length}
+                    pageSize={pageSize}
+                    onChange={handlePageChange}
+                    showSizeChanger={false}
+                    showTotal={(total) => <span className="text-slate-500">共 {total} 条记录</span>}
+                    className="bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100"
+                  />
+                </div>
+              )}
+              </>
             )}
-            </>
-          )}
-          </Spin>
+            </Spin>
+          </div>
         </div>
       </div>
     </div>

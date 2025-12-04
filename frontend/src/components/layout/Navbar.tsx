@@ -1,8 +1,8 @@
 'use client';
 
-import { Layout, Typography, Button, Badge, Dropdown, Modal, Tabs, Form, Input, message } from 'antd';
+import { Layout, Typography, Button, Badge, Dropdown, Modal, Tabs, Form, Input, message, Steps } from 'antd';
 import Link from 'next/link';
-import { BellOutlined, UserOutlined, DownOutlined } from '@ant-design/icons';
+import { BellOutlined, UserOutlined, DownOutlined, TeamOutlined } from '@ant-design/icons';
 import type { FC } from 'react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -19,6 +19,7 @@ const Navbar: FC = () => {
   const [user, setUser] = useState<{ username?: string; email?: string } | null>(null);
   const [loginForm] = Form.useForm();
   const [registerForm] = Form.useForm();
+  const [guideModalOpen, setGuideModalOpen] = useState(false);
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -68,6 +69,7 @@ const Navbar: FC = () => {
       setUser(userData);
       setAuthed(true);
       setOpenAuth(false);
+      setGuideModalOpen(true);
       message.success('注册并登录成功');
     } catch (e: any) {
       message.error(e?.response?.data?.message || '注册失败');
@@ -88,42 +90,81 @@ const Navbar: FC = () => {
   };
 
   return (
-    <Header className="sticky top-0 z-50 bg-white shadow-sm border-b">
-      <div className="container mx-auto px-4 flex items-center justify-between h-full">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-white text-lg">面</span>
+    <Header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-slate-200/60 transition-all duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/')}>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200">
+            <span className="text-white text-xl font-bold">面</span>
           </div>
-          <Title level={3} className="m-0">面试吧</Title>
+          <div className="flex flex-col justify-center h-10">
+            <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600 leading-none mb-0.5 pt-1">面试吧</span>
+            <span className="text-[10px] text-slate-500 tracking-wider uppercase font-medium leading-none scale-90 origin-left">Interview Master</span>
+          </div>
         </div>
 
-        <nav className="hidden md:flex items-center space-x-6">
-          <Link href="/" className="text-gray-800 hover:text-primary font-medium">首页</Link>
-          {/* <Link href="/questions" className="text-gray-700 hover:text-primary">面试题库
-            <Badge count={"free"} color="#52c41a" className="ml-2" />
-          </Link> */}
-          <Link href="/resume" className="text-gray-700 hover:text-primary">简历押题</Link>
+        <nav className="hidden md:flex items-center gap-8">
+          <Link href="/" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors relative group">
+            首页
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full" />
+          </Link>
+          <Link href="/resume" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors relative group">
+            简历押题
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full" />
+          </Link>
           <Dropdown
             menu={{
               items: [
-                { key: 'social', label: <Link href="/interview/social">社招简历面试</Link> },
-                { key: 'campus', label: <Link href="/interview/campus">校招简历面试</Link> },
+                { 
+                  key: 'social', 
+                  label: (
+                    <Link href="/interview/social" className="flex items-center gap-2 py-1">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600"><UserOutlined /></div>
+                      <div className="flex flex-col">
+                        <span className="font-medium">社招简历面试</span>
+                        <span className="text-xs text-slate-400">针对社招人员的深度面试</span>
+                      </div>
+                    </Link>
+                  ) 
+                },
+                { 
+                  key: 'campus', 
+                  label: (
+                    <Link href="/interview/campus" className="flex items-center gap-2 py-1">
+                      <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600"><TeamOutlined /></div>
+                      <div className="flex flex-col">
+                        <span className="font-medium">校招简历面试</span>
+                        <span className="text-xs text-slate-400">针对应届生的基础面试</span>
+                      </div>
+                    </Link>
+                  ) 
+                },
               ],
+              className: "p-2"
             }}
+            overlayClassName="pt-2"
           >
-            <a className="text-gray-700 hover:text-primary">
-              综合面试 <DownOutlined className="ml-1" />
-              <Badge count={"hot"} color="#fa541c" className="ml-2" />
+            <a className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-1 cursor-pointer group">
+              综合面试 <DownOutlined className="text-xs transition-transform group-hover:rotate-180" />
+              <Badge count={"HOT"} color="#fa541c" offset={[10, -8]} className="scale-75 origin-left" />
             </a>
           </Dropdown>
-          <Link href="/interview/special" className="text-gray-700 hover:text-primary">专项面试</Link>
-          {/* <Link href="/" className="text-gray-700 hover:text-primary">邀请有礼</Link> */}
-          <Link href="/" className="text-gray-700 hover:text-primary">使用手册</Link>
+          <Link href="/interview/special" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors relative group">
+            专项面试
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full" />
+          </Link>
+          <Link href="/" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors relative group">
+            使用手册
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full" />
+          </Link>
         </nav>
 
-        <div className="flex items-center space-x-3">
-          {/* <Button className="bg-yellow-300 hover:bg-yellow-400 border-none">充值中心</Button> */}
-          <Button icon={<BellOutlined />} />
+        <div className="flex items-center gap-4">
+          <Button 
+            type="text" 
+            shape="circle" 
+            icon={<BellOutlined className="text-slate-600 text-lg" />} 
+            className="hover:bg-slate-100 flex items-center justify-center"
+          />
           {authed ? (
             <Dropdown
               trigger={["hover"]}
@@ -134,14 +175,25 @@ const Navbar: FC = () => {
                   { key: 'press', label: <Link href="/user/press">押题记录</Link> },
                   { key: 'notes', label: <Link href="/user/notes">笔记列表</Link> },
                   { key: 'models', label: <Link href="/user/models">用户模型</Link> },
-                  { key: 'logout', label: <a onClick={logout}>退出登录</a> },
+                  { type: 'divider' },
+                  { key: 'logout', label: <a onClick={logout} className="text-red-500">退出登录</a> },
                 ],
+                className: "w-40"
               }}
             >
-              <Button icon={<UserOutlined />}>{user?.username || user?.email || '用户'}</Button>
+              <Button className="border-slate-200 hover:border-blue-400 hover:text-blue-600 px-4 h-9 rounded-full flex items-center gap-2 transition-all">
+                <UserOutlined />
+                <span className="max-w-[100px] truncate">{user?.username || user?.email?.split('@')[0] || '用户'}</span>
+              </Button>
             </Dropdown>
           ) : (
-            <Button type="primary" onClick={() => { setActiveKey('login'); setOpenAuth(true); }}>登录 / 注册</Button>
+            <Button 
+              type="primary" 
+              onClick={() => { setActiveKey('login'); setOpenAuth(true); }}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-0 h-9 px-6 rounded-full shadow-lg shadow-blue-200 font-medium transition-all hover:scale-105"
+            >
+              登录 / 注册
+            </Button>
           )}
         </div>
       </div>
@@ -187,6 +239,51 @@ const Navbar: FC = () => {
             ),
           },
         ]} />
+      </Modal>
+
+      <Modal
+        open={guideModalOpen}
+        onCancel={() => setGuideModalOpen(false)}
+        footer={null}
+        title="欢迎加入面试吧"
+        centered
+        width={600}
+      >
+        <div className="py-6 px-4">
+          <div className="mb-8 text-center">
+            <Title level={4}>开启您的智能面试之旅</Title>
+            <Typography.Text type="secondary">只需简单两步，让 AI 为您定制专属面试计划</Typography.Text>
+          </div>
+          
+          <Steps
+            direction="vertical"
+            current={0}
+            items={[
+              {
+                title: '第一步：配置用户模型',
+                description: '配置您的大模型key(火山、百炼都有免费大模型)，AI 将根据您的模型生成面试题目。',
+              },
+              {
+                title: '第二步：上传个人简历',
+                description: '前往个人中心上传简历，AI 将根据您的简历内容生成针对性的面试题目。',
+              },
+            ]}
+          />
+          
+          <div className="mt-8 flex justify-center">
+            <Button 
+              type="primary" 
+              size="large" 
+              onClick={() => {
+                setGuideModalOpen(false);
+                router.push('/user/models');
+              }}
+              className="w-full md:w-auto px-8"
+            >
+              立即去配置用户模型
+            </Button>
+          </div>
+        </div>
       </Modal>
     </Header>
   );

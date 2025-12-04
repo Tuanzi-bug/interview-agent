@@ -1,2 +1,3 @@
 frontend/.next/
 backend/config.yaml
+/config.yaml

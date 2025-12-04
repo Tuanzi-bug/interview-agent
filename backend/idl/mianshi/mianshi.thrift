@@ -146,6 +146,82 @@ struct MianshiInterviewRecordDTO {
     18: optional map<string, string> metadata  // 扩展元数据
 }
 
+// ==================== 评估相关结构 ====================
+
+// 评估维度
+struct MianshiEvaluationDimension {
+    1: required string dimension_name  // 维度名称（如：技术能力、沟通能力等）
+    2: required string evaluation      // 该维度的评估内容
+    3: required i32 score              // 该维度的评分（0-100）
+}
+
+// 获取面试评估请求
+struct GetMianshiEvaluationRequest {
+    1: required i64 report_id (api.query="report_id")  // 面试报告ID
+}
+
+// 获取面试评估响应
+struct GetMianshiEvaluationResponse {
+    1: required string comment                                    // 整体评价
+    2: required list<MianshiEvaluationDimension> dimensions      // 各维度评估列表
+}
+
+// ==================== 答题记录相关结构 ====================
+
+// 答题记录中的单条对话
+struct MianshiAnswerRecordMessage {
+    1: required i32 order       // 对话顺序
+    2: required string question // 提问内容
+    3: required string answer   // 回答内容
+}
+
+// 答题记录中的评论信息
+struct MianshiAnswerRecordComment {
+    1: required i32 score           // 评分
+    2: required string key_points   // 关键点
+    3: required string difficulty   // 难度等级
+    4: required string strengths    // 优势
+    5: required string weaknesses   // 不足
+    6: required string suggestion   // 建议
+    7: required string know_points  // 知识点
+    8: required string thinking     // 思考过程
+    9: required string reference    // 参考答案
+}
+
+// 单个答题记录
+struct MianshiAnswerRecord {
+    1: required i32 order                                    // 问题顺序
+    2: required string content                               // 问题内容
+    3: required MianshiAnswerRecordComment comment           // 评论信息
+    4: required list<MianshiAnswerRecordMessage> message     // 对话列表
+}
+
+// 获取答题记录请求
+struct GetMianshiAnswerRecordRequest {
+    1: required i64 report_id (api.query="report_id")  // 面试报告ID
+}
+
+// 获取答题记录响应
+struct GetMianshiAnswerRecordResponse {
+    1: required list<MianshiAnswerRecord> records  // 答题记录列表
+}
+
+// ==================== 面试记录列表相关结构 ====================
+
+// 获取面试记录列表请求
+struct GetMianshiRecordsRequest {
+    1: optional i32 page      (api.query="page")       // 页码，默认 1
+    2: optional i32 page_size (api.query="page_size")  // 每页数量，默认 10
+}
+
+// 获取面试记录列表响应
+struct GetMianshiRecordsResponse {
+    1: required list<MianshiInterviewRecordDTO> records   // 面试记录列表
+    2: required i64 total                                 // 总条数
+    3: required i32 page                                  // 当前页码
+    4: required i32 page_size                             // 每页数量
+}
+
 
 
 
@@ -178,6 +254,29 @@ service MianshiService {
     // 结束面试
     MianshiEndInterviewResponse EndMianshi(1: MianshiEndInterviewRequest request) (
         api.post="/api/mianshi/interview/end",
+        api.category="mianshi",
+        api.gen_path="mianshi"
+    )
+
+    // ==================== 评估和记录相关接口 ====================
+
+    // 获取面试评估
+    GetMianshiEvaluationResponse GetMianshiEvaluation(1: GetMianshiEvaluationRequest request) (
+        api.get="/api/mianshi/evaluation",
+        api.category="mianshi",
+        api.gen_path="mianshi"
+    )
+
+    // 获取答题记录
+    GetMianshiAnswerRecordResponse GetMianshiAnswerRecord(1: GetMianshiAnswerRecordRequest request) (
+        api.get="/api/mianshi/answer-record",
+        api.category="mianshi",
+        api.gen_path="mianshi"
+    )
+
+    // 获取面试记录列表
+    GetMianshiRecordsResponse GetMianshiRecords(1: GetMianshiRecordsRequest request) (
+        api.get="/api/mianshi/records",
         api.category="mianshi",
         api.gen_path="mianshi"
     )

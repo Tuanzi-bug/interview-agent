@@ -3,9 +3,9 @@
 package interview
 
 import (
-	"ai-eino-interview-agent/api/model/demo"
 	"ai-eino-interview-agent/api/model/interviews"
 	"ai-eino-interview-agent/api/model/mianshi"
+	"ai-eino-interview-agent/api/model/prediction"
 	"ai-eino-interview-agent/api/model/user"
 	"github.com/apache/thrift/lib/go/thrift"
 )
@@ -62,32 +62,6 @@ func NewInterviewsServiceClient(c thrift.TClient) *InterviewsServiceClient {
 	}
 }
 
-type DemoService interface {
-	demo.DemoService
-}
-
-type DemoServiceClient struct {
-	*demo.DemoServiceClient
-}
-
-func NewDemoServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *DemoServiceClient {
-	return &DemoServiceClient{
-		DemoServiceClient: demo.NewDemoServiceClientFactory(t, f),
-	}
-}
-
-func NewDemoServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *DemoServiceClient {
-	return &DemoServiceClient{
-		DemoServiceClient: demo.NewDemoServiceClientProtocol(t, iprot, oprot),
-	}
-}
-
-func NewDemoServiceClient(c thrift.TClient) *DemoServiceClient {
-	return &DemoServiceClient{
-		DemoServiceClient: demo.NewDemoServiceClient(c),
-	}
-}
-
 type MianshiService interface {
 	mianshi.MianshiService
 }
@@ -114,6 +88,32 @@ func NewMianshiServiceClient(c thrift.TClient) *MianshiServiceClient {
 	}
 }
 
+type PredictionService interface {
+	prediction.PredictionService
+}
+
+type PredictionServiceClient struct {
+	*prediction.PredictionServiceClient
+}
+
+func NewPredictionServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *PredictionServiceClient {
+	return &PredictionServiceClient{
+		PredictionServiceClient: prediction.NewPredictionServiceClientFactory(t, f),
+	}
+}
+
+func NewPredictionServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *PredictionServiceClient {
+	return &PredictionServiceClient{
+		PredictionServiceClient: prediction.NewPredictionServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewPredictionServiceClient(c thrift.TClient) *PredictionServiceClient {
+	return &PredictionServiceClient{
+		PredictionServiceClient: prediction.NewPredictionServiceClient(c),
+	}
+}
+
 type UserServiceProcessor struct {
 	*user.UserServiceProcessor
 }
@@ -132,20 +132,20 @@ func NewInterviewsServiceProcessor(handler InterviewsService) *InterviewsService
 	return self
 }
 
-type DemoServiceProcessor struct {
-	*demo.DemoServiceProcessor
-}
-
-func NewDemoServiceProcessor(handler DemoService) *DemoServiceProcessor {
-	self := &DemoServiceProcessor{demo.NewDemoServiceProcessor(handler)}
-	return self
-}
-
 type MianshiServiceProcessor struct {
 	*mianshi.MianshiServiceProcessor
 }
 
 func NewMianshiServiceProcessor(handler MianshiService) *MianshiServiceProcessor {
 	self := &MianshiServiceProcessor{mianshi.NewMianshiServiceProcessor(handler)}
+	return self
+}
+
+type PredictionServiceProcessor struct {
+	*prediction.PredictionServiceProcessor
+}
+
+func NewPredictionServiceProcessor(handler PredictionService) *PredictionServiceProcessor {
+	self := &PredictionServiceProcessor{prediction.NewPredictionServiceProcessor(handler)}
 	return self
 }
