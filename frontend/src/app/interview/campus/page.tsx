@@ -1,8 +1,9 @@
 'use client';
 
-import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, Tag, message, Modal, Spin } from 'antd';
+import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, Tag, message, Modal, Spin, Alert } from 'antd';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { CheckCircleOutlined, VideoCameraOutlined, ToolOutlined, FileOutlined, CaretRightOutlined } from '@ant-design/icons';
 import BackendHealthCheck from '@/components/BackendHealthCheck';
 import apiClient from '@/services/api/client';
@@ -153,12 +154,21 @@ export default function CampusInterviewPage() {
               </Row>
 
               <div className="mt-4">
-                {checkingConfig ? (
+                {!checkingConfig && modelConfigured === false && (
+                  <Alert
+                    message="模型未配置"
+                    description={
+                      <span>
+                        请去 <Link href="/user/models" className="text-blue-500 underline">用户模型页面</Link> 配置模型
+                      </span>
+                    }
+                    type="warning"
+                    showIcon
+                    className="mb-4"
+                  />
+                )}
+                {checkingConfig && (
                   <Tag color="default" className="mb-2">正在检查模型配置</Tag>
-                ) : modelConfigured ? (
-                  <Tag color="green" className="mb-2">模型已配置</Tag>
-                ) : (
-                  <Tag color="red" className="mb-2">模型未配置</Tag>
                 )}
                 <Button
                   type="primary"

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Typography, Row, Col, Card as AntCard, Form, Select, Button, Tag, message } from 'antd';
+import Link from 'next/link';
+import { Typography, Row, Col, Card as AntCard, Form, Select, Button, Tag, message, Alert } from 'antd';
 import { CheckCircleOutlined, VideoCameraOutlined, CaretRightOutlined } from '@ant-design/icons';
 
 const { Title, Paragraph } = Typography;
@@ -37,10 +38,39 @@ const GROUPED_OPTIONS = [
 export default function SpecialInterviewPage() {
   const [stack, setStack] = useState<string>('Go');
   const [starting, setStarting] = useState(false);
+  const [modelConfigured, setModelConfigured] = useState<boolean | null>(null);
+  const [checkingConfig, setCheckingConfig] = useState<boolean>(false);
   const [form] = Form.useForm();
   const router = useRouter();
 
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    setCheckingConfig(true);
+    fetch('http://localhost:8888/api/user/model/check', {
+      method: 'GET',
+      headers: {
+        Authorization: token ? `Bearer ${token}` : '',
+        'X-Auth-Token': token || '',
+      },
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+        const configured = !!(data && data.data && data.data.configured);
+        setModelConfigured(configured);
+      })
+      .catch(() => {
+        setModelConfigured(false);
+      })
+      .finally(() => {
+        setCheckingConfig(false);
+      });
+  }, []);
+
   const handleStart = async () => {
+    if (!modelConfigured) {
+      message.error('未配置模型，无法开始面试');
+      return;
+    }
     try {
       const values = await form.validateFields();
       setStarting(true);
@@ -99,11 +129,28 @@ export default function SpecialInterviewPage() {
                 <Select options={[{ value: '简单', label: '简单' }, { value: '中等', label: '中等' }, { value: '复杂', label: '复杂' }]} />
               </Form.Item>
               <div className="mt-2">
+                {!checkingConfig && modelConfigured === false && (
+                  <Alert
+                    message="模型未配置"
+                    description={
+                      <span>
+                        请去 <Link href="/user/models" className="text-blue-500 underline">用户模型页面</Link> 配置模型
+                      </span>
+                    }
+                    type="warning"
+                    showIcon
+                    className="mb-4"
+                  />
+                )}
+                {checkingConfig && (
+                  <Tag color="default" className="mb-2">正在检查模型配置</Tag>
+                )}
                 <Button 
                   type="primary" 
                   className="bg-green-500 w-full h-12 text-base" 
                   onClick={handleStart}
                   loading={starting}
+                  disabled={starting || checkingConfig || modelConfigured === false}
                 >
                   首次专项面试免费
                 </Button>

@@ -1,8 +1,9 @@
 'use client';
 
-import { Typography, Row, Col, Card as AntCard, Avatar, Tag, Button, Space, Table, Select, Upload, message, Spin, Popconfirm } from 'antd';
+import { Typography, Row, Col, Card as AntCard, Avatar, Tag, Button, Space, Table, Select, Upload, message, Spin, Popconfirm, Alert } from 'antd';
 import { UploadOutlined, FileOutlined, DeleteOutlined, StarOutlined, StarFilled, InboxOutlined } from '@ant-design/icons';
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import type { UploadProps } from 'antd';
 import apiClient from '@/services/api/client';
 
@@ -40,6 +41,8 @@ export default function UserCenterPage() {
   const [resumes, setResumes] = useState<ResumeInfo[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loadingResumes, setLoadingResumes] = useState(false);
+  const [modelConfigured, setModelConfigured] = useState<boolean | null>(null);
+  const [checkingConfig, setCheckingConfig] = useState<boolean>(false);
 
   // 获取简历列表
   const fetchResumes = useCallback(async () => {
@@ -56,6 +59,11 @@ export default function UserCenterPage() {
 
   // 上传简历
   const handleUpload = async (file: File) => {
+    if (modelConfigured === false) {
+      message.error('请先配置模型，否则无法上传简历');
+      return false;
+    }
+
     if (resumes.length >= 3) {
       message.warning('最多只能上传 3 份简历');
       return false;
@@ -125,6 +133,29 @@ export default function UserCenterPage() {
     showUploadList: false,
     beforeUpload: handleUpload,
   };
+
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    setCheckingConfig(true);
+    fetch('http://localhost:8888/api/user/model/check', {
+      method: 'GET',
+      headers: {
+        Authorization: token ? `Bearer ${token}` : '',
+        'X-Auth-Token': token || '',
+      },
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+        const configured = !!(data && data.data && data.data.configured);
+        setModelConfigured(configured);
+      })
+      .catch(() => {
+        setModelConfigured(false);
+      })
+      .finally(() => {
+        setCheckingConfig(false);
+      });
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -215,17 +246,32 @@ export default function UserCenterPage() {
 
                   {/* 上传区域 */}
                   {resumes.length < 3 && (
-                    <Dragger {...uploadProps} disabled={uploading}>
-                      <p className="ant-upload-drag-icon">
-                        {uploading ? <Spin /> : <InboxOutlined />}
-                      </p>
-                      <p className="ant-upload-text">
-                        {uploading ? '上传中...' : '点击或拖拽文件到此区域上传'}
-                      </p>
-                      <p className="ant-upload-hint text-gray-500">
-                        仅支持 PDF 格式，文件大小不超过 10MB
-                      </p>
-                    </Dragger>
+                    <>
+                      {!checkingConfig && modelConfigured === false && (
+                        <Alert
+                          message="模型未配置"
+                          description={
+                            <span>
+                              无法上传简历，请先去 <Link href="/user/models" className="text-blue-500 underline">用户模型页面</Link> 配置模型
+                            </span>
+                          }
+                          type="warning"
+                          showIcon
+                          className="mb-4"
+                        />
+                      )}
+                      <Dragger {...uploadProps} disabled={uploading || !modelConfigured || checkingConfig}>
+                        <p className="ant-upload-drag-icon">
+                          {uploading ? <Spin /> : <InboxOutlined />}
+                        </p>
+                        <p className="ant-upload-text">
+                          {uploading ? '上传中...' : (modelConfigured === false ? '请先配置模型' : '点击或拖拽文件到此区域上传')}
+                        </p>
+                        <p className="ant-upload-hint text-gray-500">
+                          仅支持 PDF 格式，文件大小不超过 10MB
+                        </p>
+                      </Dragger>
+                    </>
                   )}
 
                   {resumes.length >= 3 && (
