@@ -166,6 +166,7 @@ func (s *PredictionServiceImpl) Predict(ctx context.Context, req *predictionIDL.
 		questions = append(questions, model.PredictionQuestion{
 			RecordID:        record.ID, // 显式设置 RecordID
 			Question:        q.Question,
+			Content:         q.Content,
 			Focus:           q.Focus,
 			ThinkingPath:    q.ThinkingPath,
 			ReferenceAnswer: q.ReferenceAnswer,
