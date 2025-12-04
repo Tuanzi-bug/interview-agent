@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Typography, Row, Col, Card as AntCard, Form, Select, Button, Tag, message, Alert } from 'antd';
-import { CheckCircleOutlined, VideoCameraOutlined, CaretRightOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined } from '@ant-design/icons';
 
-const { Title, Paragraph } = Typography;
+const { Title, Paragraph, Text } = Typography;
 
 const GROUPED_OPTIONS = [
   { label: '标准语言', options: [
@@ -93,91 +93,129 @@ export default function SpecialInterviewPage() {
   };
 
   return (
-    <div className="container mx-auto px-4">
-      <Title level={2} className="mt-2">专项面试 · {stack}</Title>
-      <Paragraph className="text-gray-600 max-w-3xl">
-        选择专项方向后，系统会围绕该技术栈构建真实面试场景，聚焦高频问题与深度追问，结合行业通用标准输出结构化评估与改进建议。
-      </Paragraph>
+    <div className="min-h-screen py-12 bg-slate-50/50">
+      <div className="max-w-5xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <Title level={2} className="!text-3xl !font-bold text-slate-800 !mb-3">
+            专项面试 · <span className="text-purple-600">{stack}</span>
+          </Title>
+          <Paragraph className="text-slate-500 text-base max-w-2xl mx-auto">
+            选择专项方向后，系统会围绕该技术栈构建真实面试场景，聚焦高频问题与深度追问，结合行业通用标准输出结构化评估与改进建议。
+          </Paragraph>
+        </div>
 
-      <Row gutter={[24, 24]} className="mt-2">
-        <Col xs={24} md={16}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {[
-              '精准拆解，直击岗位核心高频要点',
-              '动静结合，链路梳理',
-              '高密度追问，定位能力边界',
-              '实战模拟，还原面试真实效果',
-            ].map((t, i) => (
-              <div key={i} className="flex items-center gap-2 text-green-700">
-                <CheckCircleOutlined />
-                <span>{t}</span>
-              </div>
-            ))}
-          </div>
+        {/* Main Card */}
+        <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 md:p-10 relative overflow-hidden">
+          {/* Decorative Background - Purple theme */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-purple-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-pink-50/50 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
 
-          <AntCard className="rounded-2xl">
-            <Form form={form} layout="vertical" initialValues={{ stack: stack, level: '简单' }}>
-              <Form.Item label="专项类别" name="stack">
-                <Select
-                  popupMatchSelectWidth={false}
-                  options={GROUPED_OPTIONS}
-                  value={stack}
-                  onChange={(v) => setStack(v)}
-                />
-              </Form.Item>
-              <Form.Item label="难度等级" name="level">
-                <Select options={[{ value: '简单', label: '简单' }, { value: '中等', label: '中等' }, { value: '复杂', label: '复杂' }]} />
-              </Form.Item>
-              <div className="mt-2">
-                {!checkingConfig && modelConfigured === false && (
-                  <Alert
-                    message="模型未配置"
-                    description={
-                      <span>
-                        请去 <Link href="/user/models" className="text-blue-500 underline">用户模型页面</Link> 配置模型
-                      </span>
-                    }
-                    type="warning"
-                    showIcon
-                    className="mb-4"
-                  />
-                )}
-                {checkingConfig && (
-                  <Tag color="default" className="mb-2">正在检查模型配置</Tag>
-                )}
-                <Button 
-                  type="primary" 
-                  className="bg-green-500 w-full h-12 text-base" 
-                  onClick={handleStart}
-                  loading={starting}
-                  disabled={starting || checkingConfig || modelConfigured === false}
-                >
-                  首次专项面试免费
-                </Button>
-                <div className="text-center text-gray-500 text-sm mt-2">单次专项面试约30-60分钟，系统自动续集题目链路</div>
+          <Row gutter={[48, 32]}>
+            {/* Left Side: Info & Features */}
+            <Col xs={24} lg={9} className="relative z-10 border-b lg:border-b-0 lg:border-r border-slate-100 pb-8 lg:pb-0 lg:pr-10">
+              <div className="h-full flex flex-col">
+                <div className="mb-6">
+                  <Title level={4} className="!mb-2 !font-bold text-slate-800">专项突击优势</Title>
+                  <Text className="text-slate-400 text-sm">针对特定技术栈的深度强化训练</Text>
+                </div>
+                
+                <div className="space-y-6 flex-1">
+                  {[
+                    { title: '精准拆解', desc: '直击岗位核心高频要点' },
+                    { title: '链路梳理', desc: '动静结合，系统化知识图谱' },
+                    { title: '高密度追问', desc: '快速定位能力边界' },
+                    { title: '实战模拟', desc: '还原面试真实高压环境' },
+                  ].map((t, i) => (
+                    <div key={i} className="flex gap-4 group">
+                      <div className="mt-1 w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500 group-hover:text-white transition-colors duration-300">
+                        <CheckCircleOutlined className="text-lg" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-slate-700 mb-1 group-hover:text-purple-600 transition-colors">{t.title}</div>
+                        <div className="text-sm text-slate-400 leading-relaxed">{t.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-8 pt-8 border-t border-slate-50 hidden lg:block">
+                   <div className="bg-slate-50 rounded-xl p-4 text-xs text-slate-500 leading-relaxed">
+                     💡 提示：专项面试适合在综合面试前进行单点突破，或在复习阶段查漏补缺。
+                   </div>
+                </div>
               </div>
-            </Form>
-          </AntCard>
-        </Col>
-        <Col xs={24} md={8}>
-          <AntCard className="rounded-2xl">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2"><VideoCameraOutlined /><span>功能演示</span></div>
-              <Tag color="green">推荐观看</Tag>
-            </div>
-            <div className="w-full h-48 md:h-60 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-xl flex flex-col items-center justify-center text-slate-600 relative overflow-hidden group cursor-pointer transition-all hover:shadow-lg border border-slate-100">
-              <div className="absolute inset-0 bg-[linear-gradient(45deg,#0000_25%,rgba(0,0,0,0.02)_0,rgba(0,0,0,0.02)_50%,#0000_0,#0000_75%,rgba(0,0,0,0.02)_0)] bg-[length:20px_20px] opacity-50" />
-              
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-green-500 shadow-md transform scale-95 group-hover:scale-110 transition-all duration-300 z-10 group-hover:text-green-600">
-                <CaretRightOutlined style={{ fontSize: '32px', marginLeft: '4px' }} />
+            </Col>
+
+            {/* Right Side: Form */}
+            <Col xs={24} lg={15} className="relative z-10">
+              <div className="lg:pl-4">
+                <Title level={4} className="!mb-8 !font-bold text-slate-800 flex items-center gap-2">
+                  <span className="w-1.5 h-6 bg-purple-500 rounded-full block"></span>
+                  面试配置
+                </Title>
+                
+                <Form form={form} layout="vertical" size="large" initialValues={{ stack: stack, level: '简单' }} className="flex flex-col gap-4">
+                  <Form.Item label={<span className="font-medium text-slate-700">专项类别</span>} name="stack" className="!mb-2">
+                    <Select
+                      popupMatchSelectWidth={false}
+                      className="!h-12"
+                      variant="filled"
+                      options={GROUPED_OPTIONS}
+                      value={stack}
+                      onChange={(v) => setStack(v)}
+                    />
+                  </Form.Item>
+
+                  <Form.Item label={<span className="font-medium text-slate-700">难度等级</span>} name="level" className="!mb-6">
+                    <Select 
+                      className="!h-12"
+                      variant="filled"
+                      options={[{ value: '简单', label: '简单' }, { value: '中等', label: '中等' }, { value: '复杂', label: '复杂' }]} 
+                    />
+                  </Form.Item>
+
+                  <div className="mt-2">
+                    {!checkingConfig && modelConfigured === false && (
+                      <Alert
+                        message="模型未配置"
+                        description={
+                          <span>
+                            请去 <Link href="/user/models" className="text-blue-500 underline">用户模型页面</Link> 配置模型
+                          </span>
+                        }
+                        type="warning"
+                        showIcon
+                        className="mb-6 rounded-xl"
+                      />
+                    )}
+                    {checkingConfig && (
+                      <div className="mb-4 flex justify-center">
+                         <Tag color="default" className="px-3 py-1 rounded-full">正在检查模型配置...</Tag>
+                      </div>
+                    )}
+                    
+                    <Button 
+                      type="primary" 
+                      block
+                      size="large"
+                      className="!h-14 !text-lg !font-medium !rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 hover:!from-purple-600 hover:!to-pink-700 border-0 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/40 transition-all duration-300 transform hover:-translate-y-0.5"
+                      onClick={handleStart}
+                      loading={starting}
+                      disabled={starting || checkingConfig || modelConfigured === false}
+                    >
+                      首次专项面试免费
+                    </Button>
+                    <div className="text-center text-slate-400 text-sm mt-4">
+                      单次专项面试约30-60分钟 · 系统自动续集题目链路
+                    </div>
+                  </div>
+                </Form>
               </div>
-              
-              <div className="mt-4 font-medium z-10 group-hover:text-slate-800 transition-colors">功能演示视频</div>
-              <div className="text-xs text-slate-400 mt-1 z-10">点击播放 (演示)</div>
-            </div>
-          </AntCard>
-        </Col>
-      </Row>
+            </Col>
+          </Row>
+        </div>
+      </div>
     </div>
   );
 }

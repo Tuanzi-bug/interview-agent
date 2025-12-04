@@ -4,11 +4,10 @@ import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, Tag
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircleOutlined, VideoCameraOutlined, ToolOutlined, FileOutlined, CaretRightOutlined } from '@ant-design/icons';
-import BackendHealthCheck from '@/components/BackendHealthCheck';
+import { CheckCircleOutlined, FileOutlined } from '@ant-design/icons';
 import apiClient from '@/services/api/client';
 
-const { Title, Paragraph } = Typography;
+const { Title, Paragraph, Text } = Typography;
 
 // 简历信息类型
 interface ResumeInfo {
@@ -22,7 +21,6 @@ export default function SocialInterviewPage() {
   const [resumes, setResumes] = useState<ResumeInfo[]>([]);
   const [loadingResumes, setLoadingResumes] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [diagnosisVisible, setDiagnosisVisible] = useState(false);
   const [modelConfigured, setModelConfigured] = useState<boolean | null>(null);
   const [checkingConfig, setCheckingConfig] = useState<boolean>(false);
   const router = useRouter();
@@ -65,175 +63,184 @@ export default function SocialInterviewPage() {
   }, [fetchResumes]);
 
   return (
-    <div className="container mx-auto px-4">
-      <div className="flex justify-between items-center mt-2 mb-2">
-        <Title level={2} style={{ margin: 0 }}>综合面试 · 社招简历面试</Title>
-        <Button 
-          icon={<ToolOutlined />} 
-          onClick={() => setDiagnosisVisible(true)}
-        >
-          后端服务诊断
-        </Button>
-      </div>
-      <Paragraph className="text-gray-600 max-w-3xl">
-        在综合面试模式中，系统会围绕你的简历、项目经历与岗位胜任力，从技术基础、项目落地、设计能力到沟通协作，构建环环追问的真实面试场景，帮助你快速查漏补缺与提升应对能力。
-      </Paragraph>
-      
-      <Modal
-        title="后端服务诊断"
-        open={diagnosisVisible}
-        onCancel={() => setDiagnosisVisible(false)}
-        footer={null}
-        width={700}
-      >
-        <BackendHealthCheck />
-      </Modal>
+    <div className="min-h-screen py-12 bg-slate-50/50">
+      <div className="max-w-5xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <Title level={2} className="!text-3xl !font-bold text-slate-800 !mb-3">
+            综合面试 · <span className="text-blue-600">社招简历面试</span>
+          </Title>
+          <Paragraph className="text-slate-500 text-base max-w-2xl mx-auto">
+            在综合面试模式中，系统会围绕你的简历、项目经历与岗位胜任力，从技术基础、项目落地、设计能力到沟通协作，构建环环追问的真实面试场景。
+          </Paragraph>
+        </div>
 
-      <Row gutter={[24, 24]} className="mt-2">
-        <Col xs={24} md={16}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {[
-              '深挖技术本质逻辑，构建环环追问交叉',
-              '聚焦架构设计能力，真实场景还原',
-              '针对业务问题推演，技术方案落地',
-              '逻辑体系梳理完整，洞察核心关键点',
-            ].map((t, i) => (
-              <div key={i} className="flex items-center gap-2 text-green-700">
-                <CheckCircleOutlined />
-                <span>{t}</span>
-              </div>
-            ))}
-          </div>
+        {/* Main Card */}
+        <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 md:p-10 relative overflow-hidden">
+          {/* Decorative Background - Blue theme for Social */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-50/50 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
 
-          <AntCard className="rounded-2xl">
-            <Form
-              form={form}
-              layout="vertical"
-              initialValues={{ job: 'Java后端开发', level: '简单' }}
-            >
-              <Form.Item
-                label="选择简历"
-                name="resume_id"
-                rules={[{ required: true, message: '请选择简历' }]}
-              >
-                <Select
-                  placeholder="请选择已上传的简历"
-                  loading={loadingResumes}
-                  disabled={starting}
-                  onChange={(value) => setSelectedResumeId(value)}
-                  notFoundContent={loadingResumes ? <Spin size="small" /> : '暂无简历，请先在个人中心上传'}
-                  options={resumes.map((r) => ({
-                    value: r.id,
-                    label: (
-                      <div className="flex items-center gap-2">
-                        <FileOutlined className="text-red-500" />
-                        <span>{r.file_name}</span>
+          <Row gutter={[48, 32]}>
+            {/* Left Side: Info & Features */}
+            <Col xs={24} lg={9} className="relative z-10 border-b lg:border-b-0 lg:border-r border-slate-100 pb-8 lg:pb-0 lg:pr-10">
+              <div className="h-full flex flex-col">
+                <div className="mb-6">
+                  <Title level={4} className="!mb-2 !font-bold text-slate-800">社招核心考察点</Title>
+                  <Text className="text-slate-400 text-sm">面向有经验的工程师，深度挖掘</Text>
+                </div>
+                
+                <div className="space-y-6 flex-1">
+                  {[
+                    { title: '技术本质逻辑', desc: '深挖底层原理，构建环环追问' },
+                    { title: '设计与决策', desc: '结合项目落地难点，考察架构能力' },
+                    { title: '沟通与展示', desc: '从被动回答到主动展示，提升影响力' },
+                    { title: '职级能力定位', desc: '对标大厂职级体系，精准定位' },
+                  ].map((t, i) => (
+                    <div key={i} className="flex gap-4 group">
+                      <div className="mt-1 w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500 group-hover:text-white transition-colors duration-300">
+                        <CheckCircleOutlined className="text-lg" />
                       </div>
-                    ),
-                  }))}
-                />
-              </Form.Item>
-              <Row gutter={16}>
-                <Col xs={24} md={12}>
-                  <Form.Item label="岗位意向" name="job">
-                    <Input placeholder="如：Java后端开发" />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item label="难度等级" name="level" rules={[{ required: true, message: '请选择难度等级' }]}> 
-                    <Select options={[{ value: '简单', label: '简单' }, { value: '中等', label: '中等' }, { value: '复杂', label: '复杂' }]} />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col xs={24} md={12}>
-                  {/* <Form.Item label="面试时长" name="duration">
-                    <Select options={[{ value: '30min', label: '30分钟' }, { value: '60min', label: '60分钟' }]} />
-                  </Form.Item> */}
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col xs={24} md={12}>
-                  <Form.Item label="目标公司（可选）" name="company_name">
-                    <Input placeholder="如：字节跳动" maxLength={100} />
-                  </Form.Item>
-                </Col>
-              </Row>
+                      <div>
+                        <div className="font-medium text-slate-700 mb-1 group-hover:text-blue-600 transition-colors">{t.title}</div>
+                        <div className="text-sm text-slate-400 leading-relaxed">{t.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-              <div className="mt-4">
-                {!checkingConfig && modelConfigured === false && (
-                  <Alert
-                    message="模型未配置"
-                    description={
-                      <span>
-                        请去 <Link href="/user/models" className="text-blue-500 underline">用户模型页面</Link> 配置模型
-                      </span>
-                    }
-                    type="warning"
-                    showIcon
-                    className="mb-4"
-                  />
-                )}
-                {checkingConfig && (
-                  <Tag color="default" className="mb-2">正在检查模型配置</Tag>
-                )}
-                <Button
-                  type="primary"
-                  className="bg-green-500 w-full h-12 text-base"
-                  loading={starting}
-                  disabled={starting || checkingConfig || modelConfigured === false}
-                  onClick={async () => {
-                    try {
-                      await form.validateFields();
-                    } catch (e) {
-                      message.error('请完善表单后再开始面试');
-                      return;
-                    }
-                    if (!modelConfigured) {
-                      message.error('未配置模型，无法开始面试');
-                      return;
-                    }
-                    const values = form.getFieldsValue();
-                    const params = {
-                      type: '综合面试',
-                      domain: '社招简历面试',
-                      difficulty: values.level,
-                      position_name: values.job || '',
-                      company_name: String(values.company_name || ''),
-                      resume_id: values.resume_id,
-                    };
-                    (window as any).__interviewParams = { ...params };
-                    try { sessionStorage.setItem('interviewParams', JSON.stringify(params)); } catch {}
-                    setStarting(true);
-                    router.push('/interview/social/start');
-                  }}
+                <div className="mt-8 pt-8 border-t border-slate-50 hidden lg:block">
+                   <div className="bg-slate-50 rounded-xl p-4 text-xs text-slate-500 leading-relaxed">
+                     💡 提示：建议上传包含详细项目难点与解决方案的简历，以获得更具挑战性的面试体验。
+                   </div>
+                </div>
+              </div>
+            </Col>
+
+            {/* Right Side: Form */}
+            <Col xs={24} lg={15} className="relative z-10">
+              <div className="lg:pl-4">
+                <Title level={4} className="!mb-8 !font-bold text-slate-800 flex items-center gap-2">
+                  <span className="w-1.5 h-6 bg-blue-500 rounded-full block"></span>
+                  面试配置
+                </Title>
+                
+                <Form
+                  form={form}
+                  layout="vertical"
+                  size="large"
+                  initialValues={{ job: 'Java后端开发', level: '简单' }}
+                  className="flex flex-col gap-4"
                 >
-                  开始面试
-                </Button>
-                <div className="text-center text-gray-500 text-sm mt-2">1次体验价约等于20次AI陪练，单次2小时题目自动续集</div>
+                  <Form.Item
+                    label={<span className="font-medium text-slate-700">选择简历</span>}
+                    name="resume_id"
+                    rules={[{ required: true, message: '请选择简历' }]}
+                    className="!mb-2"
+                  >
+                    <Select
+                      placeholder="请选择已上传的简历"
+                      loading={loadingResumes}
+                      disabled={starting}
+                      className="!h-12"
+                      variant="filled"
+                      onChange={(value) => setSelectedResumeId(value)}
+                      notFoundContent={loadingResumes ? <Spin size="small" /> : '暂无简历，请先在个人中心上传'}
+                      options={resumes.map((r) => ({
+                        value: r.id,
+                        label: (
+                          <div className="flex items-center gap-2">
+                            <FileOutlined className="text-blue-500" />
+                            <span className="text-slate-700">{r.file_name}</span>
+                          </div>
+                        ),
+                      }))}
+                    />
+                  </Form.Item>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <Form.Item label={<span className="font-medium text-slate-700">岗位意向</span>} name="job" className="!mb-2">
+                      <Input placeholder="如：Java后端开发" className="!h-12 !bg-slate-50 border-slate-200 hover:bg-white focus:bg-white transition-colors" />
+                    </Form.Item>
+                    
+                    <Form.Item label={<span className="font-medium text-slate-700">难度等级</span>} name="level" rules={[{ required: true, message: '请选择难度等级' }]} className="!mb-2"> 
+                      <Select 
+                        className="!h-12"
+                        variant="filled"
+                        options={[{ value: '简单', label: '简单' }, { value: '中等', label: '中等' }, { value: '复杂', label: '复杂' }]} 
+                      />
+                    </Form.Item>
+                  </div>
+
+                  <Form.Item label={<span className="font-medium text-slate-700">目标公司（可选）</span>} name="company_name" className="!mb-6">
+                    <Input placeholder="如：字节跳动" maxLength={100} className="!h-12 !bg-slate-50 border-slate-200 hover:bg-white focus:bg-white transition-colors" />
+                  </Form.Item>
+
+                  <div className="mt-2">
+                    {!checkingConfig && modelConfigured === false && (
+                      <Alert
+                        message="模型未配置"
+                        description={
+                          <span>
+                            请去 <Link href="/user/models" className="text-blue-500 underline">用户模型页面</Link> 配置模型
+                          </span>
+                        }
+                        type="warning"
+                        showIcon
+                        className="mb-6 rounded-xl"
+                      />
+                    )}
+                    {checkingConfig && (
+                      <div className="mb-4 flex justify-center">
+                         <Tag color="default" className="px-3 py-1 rounded-full">正在检查模型配置...</Tag>
+                      </div>
+                    )}
+                    
+                    <Button
+                      type="primary"
+                      block
+                      size="large"
+                      className="!h-14 !text-lg !font-medium !rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:!from-blue-600 hover:!to-indigo-700 border-0 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all duration-300 transform hover:-translate-y-0.5"
+                      loading={starting}
+                      disabled={starting || checkingConfig || modelConfigured === false}
+                      onClick={async () => {
+                        try {
+                          await form.validateFields();
+                        } catch (e) {
+                          message.error('请完善表单后再开始面试');
+                          return;
+                        }
+                        if (!modelConfigured) {
+                          message.error('未配置模型，无法开始面试');
+                          return;
+                        }
+                        const values = form.getFieldsValue();
+                        const params = {
+                          type: '综合面试',
+                          domain: '社招简历面试', // Updated domain
+                          difficulty: values.level,
+                          position_name: values.job || '',
+                          company_name: String(values.company_name || ''),
+                          resume_id: values.resume_id,
+                        };
+                        (window as any).__interviewParams = { ...params };
+                        try { sessionStorage.setItem('interviewParams', JSON.stringify(params)); } catch {}
+                        setStarting(true);
+                        router.push('/interview/social/start');
+                      }}
+                    >
+                      开始面试
+                    </Button>
+                    <div className="text-center text-slate-400 text-sm mt-4">
+                      社招模式将包含更深度的架构设计与场景题追问
+                    </div>
+                  </div>
+                </Form>
               </div>
-            </Form>
-          </AntCard>
-        </Col>
-        <Col xs={24} md={8}>
-          <AntCard className="rounded-2xl">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2"><VideoCameraOutlined /><span>功能演示</span></div>
-              <Tag color="green">推荐观看</Tag>
-            </div>
-            <div className="w-full h-48 md:h-60 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-xl flex flex-col items-center justify-center text-slate-600 relative overflow-hidden group cursor-pointer transition-all hover:shadow-lg border border-slate-100">
-              <div className="absolute inset-0 bg-[linear-gradient(45deg,#0000_25%,rgba(0,0,0,0.02)_0,rgba(0,0,0,0.02)_50%,#0000_0,#0000_75%,rgba(0,0,0,0.02)_0)] bg-[length:20px_20px] opacity-50" />
-              
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-green-500 shadow-md transform scale-95 group-hover:scale-110 transition-all duration-300 z-10 group-hover:text-green-600">
-                <CaretRightOutlined style={{ fontSize: '32px', marginLeft: '4px' }} />
-              </div>
-              
-              <div className="mt-4 font-medium z-10 group-hover:text-slate-800 transition-colors">功能演示视频</div>
-              <div className="text-xs text-slate-400 mt-1 z-10">点击播放 (演示)</div>
-            </div>
-          </AntCard>
-        </Col>
-      </Row>
+            </Col>
+          </Row>
+        </div>
+      </div>
     </div>
   );
 }
