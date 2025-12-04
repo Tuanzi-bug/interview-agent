@@ -35,6 +35,9 @@ func Register(r *server.Hertz) {
 		}
 		{
 			_mianshi := _api.Group("/mianshi", _mianshiMw()...)
+			_mianshi.GET("/answer-record", append(_getmianshianswerrecordMw(), interview.GetMianshiAnswerRecord)...)
+			_mianshi.GET("/evaluation", append(_getmianshievaluationMw(), interview.GetMianshiEvaluation)...)
+			_mianshi.GET("/records", append(_getmianshirecordsMw(), interview.GetMianshiRecords)...)
 			{
 				_answer := _mianshi.Group("/answer", _answerMw()...)
 				_answer.POST("/submit", append(_submitmianshianswerMw(), interview.SubmitMianshiAnswer)...)
