@@ -6,10 +6,11 @@ import (
 	"ai-eino-interview-agent/chatApp/agent_service/evaluation"
 	"ai-eino-interview-agent/internal/model"
 	"context"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"io"
 	"log"
 	"time"
+
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
 	"ai-eino-interview-agent/api/handler/interview/mianshi"
 	interviewsapi "ai-eino-interview-agent/api/model/interviews"
@@ -326,6 +327,12 @@ func GetMianshiEvaluation(ctx context.Context, c *app.RequestContext) {
 	resp, err := evaluation.GenerateRecordEvaluation(ctx, userId, reportID)
 	if err != nil {
 		response.InternalServerError(ctx, c, "Failed to generate evaluation: "+err.Error())
+		return
+	}
+
+	// 检查 resp 是否为 nil（
+	if resp == nil {
+		response.InternalServerError(ctx, c, "Evaluation response is nil")
 		return
 	}
 
