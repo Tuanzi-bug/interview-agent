@@ -14,11 +14,12 @@ struct PredictRequest {
 struct PredictionQuestion {
     1: required i64 id
     2: required string question
-    3: required string focus
-    4: required string thinking_path
-    5: required string reference_answer
-    6: required string follow_up
-    7: required i32 sort
+    3: required string content
+    4: required string focus
+    5: required string thinking_path
+    6: required string reference_answer
+    7: required string follow_up
+    8: required i32 sort
 }
 
 // 押题响应
