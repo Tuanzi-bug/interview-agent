@@ -42,7 +42,7 @@ func NewInterviewEngine(sessionManager *SessionManager, interviewSvc interviewse
 func (e *InterviewEngine) RunInterviewLoop(ctx context.Context, session *InterviewSession) {
 	const answerTimeout = 30 * time.Minute
 	const heartbeatInterval = 15 * time.Second
-	const maxQuestions = 5       // 最多生成30道问题
+	const maxQuestions = 20      // 最多生成30道问题
 	const historyContextSize = 5 // 保留前5道题作为历史上下文
 
 	// 创建智能体服务
