@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, Button, Input, Avatar, Progress, message } from 'antd';
+import { INTERVIEW_API } from '@/config/api';
 import {
   AudioOutlined,
   SendOutlined,
@@ -78,13 +79,14 @@ export default function CampusInterviewStartPage() {
         // 先测试后端服务是否可达
         console.log('[检测] 测试后端服务连接...');
         try {
-          const testResponse = await fetch('http://localhost:8888/api/user/login', {
+          const testResponse = await fetch(`${INTERVIEW_API.START_STREAM}`, {
             method: 'OPTIONS',
             mode: 'cors',
           });
           console.log('[检测] 后端服务连接正常');
         } catch (e) {
-          message.error('无法连接到后端服务，请确认后端服务是否运行在 http://localhost:8888');
+          const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+          message.error(`无法连接到后端服务，请确认后端服务是否运行在 ${apiUrl}`);
           setStarting(false);
           console.error('[检测] 后端服务连接失败:', e);
           return;
@@ -96,7 +98,7 @@ export default function CampusInterviewStartPage() {
         console.log('[面试启动] 请求参数:', requestBody);
 
         try {
-          response = await fetch('http://localhost:8888/api/mianshi/stream/start', {
+          response = await fetch(`${INTERVIEW_API.START_STREAM}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -109,7 +111,7 @@ export default function CampusInterviewStartPage() {
         } catch (headerError) {
           // 如果Authorization header方式失败，尝试使用URL参数
           console.log('[面试启动] 方案1失败，尝试方案2: 使用URL参数传递token');
-          const urlWithToken = `http://localhost:8888/api/mianshi/stream/start?token=${encodeURIComponent(token)}`;
+          const urlWithToken = `${INTERVIEW_API.START_STREAM}?token=${encodeURIComponent(token)}`;
 
           response = await fetch(urlWithToken, {
             method: 'POST',
@@ -256,7 +258,7 @@ export default function CampusInterviewStartPage() {
         if (token) {
           // 调用后端接口结束面试
           // 更新为新的结束面试接口
-          await fetch('http://localhost:8888/api/mianshi/interview/end', {
+          await fetch(`${INTERVIEW_API.END_INTERVIEW}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -324,7 +326,7 @@ export default function CampusInterviewStartPage() {
       };
 
       // 更新为新的提交答案接口
-      const response = await fetch('http://localhost:8888/api/mianshi/answer/submit', {
+      const response = await fetch(`${INTERVIEW_API.SUBMIT_ANSWER}`, {
         method: 'POST',
         headers,
         body: JSON.stringify({

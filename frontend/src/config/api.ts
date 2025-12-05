@@ -1,5 +1,6 @@
 // API 配置文件
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8888/api';
+// 使用 NEXT_PUBLIC_API_BASE_URL 环境变量，默认为相对路径 /api
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
 
 // 面试相关接口
 export const INTERVIEW_API = {

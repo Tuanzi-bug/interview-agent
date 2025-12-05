@@ -17,6 +17,7 @@ import {
 import { CheckCircleOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import apiClient from '@/services/api/client';
+import { API_BASE_URL } from '@/config/api';
 
 const { Title } = Typography;
 
@@ -31,7 +32,7 @@ export default function InterviewRecordsPage() {
     setLoading(true);
     try {
       // 一次性获取所有数据，然后在前端分页
-      const res: any = await apiClient.get('http://localhost:8888/api/interview/records', {
+      const res: any = await apiClient.get('/interview/records', {
         params: { page: 1, page_size: 1000 },
       });
       const data = res?.data || res;

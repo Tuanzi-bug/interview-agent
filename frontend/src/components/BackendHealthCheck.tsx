@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button, Card, Descriptions, Tag, message } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons';
+import { INTERVIEW_API } from '@/config/api';
 
 interface HealthCheckResult {
   backendReachable: boolean;
@@ -28,7 +29,7 @@ export default function BackendHealthCheck() {
     try {
       // 1. 检查后端服务是否可达
       console.log('[诊断] 检查后端服务...');
-      const baseResponse = await fetch('http://localhost:8888/api/user/login', {
+      const baseResponse = await fetch(`${INTERVIEW_API.START_STREAM}`, {
         method: 'OPTIONS',
         mode: 'cors',
       });
@@ -44,7 +45,7 @@ export default function BackendHealthCheck() {
       console.log('[诊断] 检查面试接口...');
       try {
         const token = localStorage.getItem('token');
-        const interviewResponse = await fetch('http://localhost:8888/api/mianshi/stream/start', {
+        const interviewResponse = await fetch(`${INTERVIEW_API.START_STREAM}`, {
           method: 'OPTIONS',
           mode: 'cors',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -69,7 +70,8 @@ export default function BackendHealthCheck() {
       console.error('[诊断] 检查失败:', error);
       checkResult.error = error.message || '网络错误';
       setResult(checkResult);
-      message.error('无法连接到后端服务，请确认后端是否运行在 http://localhost:8888');
+      const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+      message.error(`无法连接到后端服务，请确认后端是否运行在 ${apiUrl}`);
     } finally {
       setChecking(false);
     }
@@ -103,7 +105,7 @@ export default function BackendHealthCheck() {
           <Descriptions.Item label="后端服务连接">
             <StatusTag status={result.backendReachable} />
             {!result.backendReachable && (
-              <span className="ml-2 text-red-500">请确认后端运行在 http://localhost:8888</span>
+              <span className="ml-2 text-red-500">请确认后端运行在 {process.env.NEXT_PUBLIC_API_BASE_URL || '/api'}</span>
             )}
           </Descriptions.Item>
 

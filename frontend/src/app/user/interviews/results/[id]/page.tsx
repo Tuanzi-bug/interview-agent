@@ -17,6 +17,7 @@ import {
 import { useParams } from 'next/navigation';
 import apiClient from '@/services/api/client';
 import { useAuth } from '@/hooks/useAuth';
+import { API_BASE_URL } from '@/config/api';
 import {
   TrophyOutlined,
   ClockCircleOutlined,
@@ -196,7 +197,7 @@ export default function InterviewResultDetailPage() {
       // 0. Fetch User Profile if missing
       if (!user) {
         try {
-          const userRes: any = await apiClient.get('http://localhost:8888/api/user/profile');
+          const userRes: any = await apiClient.get('/user/profile');
           if (userRes && userRes.username) {
             login({
               id: String(userRes.id),
@@ -211,7 +212,7 @@ export default function InterviewResultDetailPage() {
       }
 
       // 1. Fetch Interview Info (from list)
-      const listRes: any = await apiClient.get('http://localhost:8888/api/interview/records', {
+      const listRes: any = await apiClient.get('/interview/records', {
         params: { page: 1, page_size: 1000 },
       });
       const listData = listRes?.records || [];
@@ -219,14 +220,14 @@ export default function InterviewResultDetailPage() {
       setInterviewInfo(info);
 
       // 2. Fetch Evaluation Report
-      const evalRes: any = await apiClient.get('http://localhost:8888/api/mianshi/evaluation', {
+      const evalRes: any = await apiClient.get('/mianshi/evaluation', {
         params: { report_id: id },
       });
       setEvaluation(evalRes);
 
       // 3. Fetch Answer Records
       const recordRes: any = await apiClient.get(
-        'http://localhost:8888/api/mianshi/answer-record',
+        '/mianshi/answer-record',
         { params: { report_id: id } }
       );
       if (recordRes && recordRes.records) {

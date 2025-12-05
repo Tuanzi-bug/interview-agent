@@ -19,6 +19,7 @@ import {
 } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import apiClient from '@/services/api/client';
+import { API_BASE_URL } from '@/config/api';
 import {
   ExperimentOutlined,
   PlusOutlined,
@@ -116,7 +117,7 @@ export default function UserModelsPage() {
         scope: 7,
         is_default: v.is_default === true ? 1 : 0,
       };
-      await apiClient.post('http://localhost:8888/api/user/create/model', payload);
+      await apiClient.post('/user/create/model', payload);
       message.success('创建成功');
       setOpenCreate(false);
       form.resetFields();
@@ -191,7 +192,7 @@ export default function UserModelsPage() {
                   is_default: checked ? 1 : 0,
                 };
                 await apiClient.put(
-                  `http://localhost:8888/api/user/model/update/${row.id}`,
+                  `/user/model/update/${row.id}`,
                   payload
                 );
                 message.success('状态已更新');
@@ -553,7 +554,7 @@ export default function UserModelsPage() {
                 return;
               }
               await apiClient.put(
-                `http://localhost:8888/api/user/model/update/${editingId}`,
+                `/user/model/update/${editingId}`,
                 payload
               );
               message.success('更新成功');

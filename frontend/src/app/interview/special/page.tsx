@@ -16,6 +16,8 @@ import {
   Alert,
 } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
+import apiClient from '@/services/api/client';
+import { API_BASE_URL } from '@/config/api';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -69,7 +71,7 @@ export default function SpecialInterviewPage() {
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     setCheckingConfig(true);
-    fetch('http://localhost:8888/api/user/model/check', {
+    fetch(`${API_BASE_URL}/user/model/check`, {
       method: 'GET',
       headers: {
         Authorization: token ? `Bearer ${token}` : '',
