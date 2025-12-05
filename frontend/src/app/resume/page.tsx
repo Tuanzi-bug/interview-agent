@@ -67,7 +67,7 @@ export default function ResumePressPage() {
       <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-indigo-50/60 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none z-0" />
       <div className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-purple-50/60 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/3 pointer-events-none z-0" />
 
-      <div className="container mx-auto px-4 relative z-10">
+      <div className="container mx-auto px-4 max-w-6xl relative z-10">
         <div className="mb-10 animate-fade-in-up pt-8">
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
             <RocketOutlined className="text-indigo-600" />
@@ -81,7 +81,7 @@ export default function ResumePressPage() {
         <Row gutter={[32, 32]} className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
           <Col xs={24} lg={16}>
             <AntCard 
-              className="rounded-3xl border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden" 
+              className="rounded-3xl border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden"
               styles={{ body: { padding: 40 } }}
             >
               <div className="bg-indigo-50/50 rounded-2xl p-5 mb-8 border border-indigo-100 flex items-start gap-3">
@@ -110,7 +110,7 @@ export default function ResumePressPage() {
                   <Select 
                     size="large"
                     variant="filled"
-                    className="!h-12"
+                    className="!h-12 !bg-slate-50 hover:!bg-slate-100 focus:!bg-white"
                     options={resumes.map(r => ({ value: r.id, label: r.file_name }))}
                     placeholder={resumes.length === 0 ? '加载中...' : '请选择简历'}
                     popupMatchSelectWidth={false} 
@@ -125,7 +125,7 @@ export default function ResumePressPage() {
                   <Select 
                     size="large"
                     variant="filled"
-                    className="!h-12"
+                    className="!h-12 !bg-slate-50 hover:!bg-slate-100 focus:!bg-white"
                     options={[
                       { value: '校招', label: '校招' }, 
                       { value: '社招', label: '社招' }
@@ -142,7 +142,7 @@ export default function ResumePressPage() {
                     <Select 
                       size="large"
                       variant="filled"
-                      className="!h-12"
+                      className="!h-12 !bg-slate-50 hover:!bg-slate-100 focus:!bg-white"
                       options={[
                         { value: 'Java', label: 'Java' }, 
                         { value: 'Golang', label: 'Golang' }, 
@@ -205,7 +205,7 @@ export default function ResumePressPage() {
                     loading={loading}
                     size="large"
                     icon={<ThunderboltOutlined />}
-                    className="w-full h-14 text-lg font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-200"
+                    className="w-full h-14 text-lg font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-200 transition-all duration-200"
                   >
                     开始简历押题
                   </Button>
