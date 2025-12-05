@@ -195,6 +195,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://101.42.249.106:8888/api
     container_name: app-frontend
     restart: always
     ports:

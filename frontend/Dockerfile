@@ -13,6 +13,10 @@ RUN npm ci
 # 复制应用代码
 COPY . .
 
+# 设置构建时的环境变量
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8888/api}
+
 # 构建应用
 RUN npm run build
 
