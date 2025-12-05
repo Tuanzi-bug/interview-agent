@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, message } from 'antd';
+import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, message, Modal } from 'antd';
 import {
   FileTextOutlined,
   RocketOutlined,
@@ -23,6 +23,7 @@ export default function ResumePressPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [resumes, setResumes] = useState<Resume[]>([]);
+  const [showNoResumeModal, setShowNoResumeModal] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,7 +36,11 @@ export default function ResumePressPage() {
             // Check if default exists or pick first
             const defaultResume = data.resumes.find((r: any) => r.is_default) || data.resumes[0];
             form.setFieldsValue({ resume_id: defaultResume.id });
+          } else {
+            setShowNoResumeModal(true);
           }
+        } else {
+          setShowNoResumeModal(true);
         }
       } catch (e) {
         console.error('Failed to fetch resumes:', e);
@@ -270,6 +275,30 @@ export default function ResumePressPage() {
           </Col>
         </Row>
       </div>
+      <Modal
+        open={showNoResumeModal}
+        title="温馨提示"
+        footer={null}
+        onCancel={() => setShowNoResumeModal(false)}
+        centered
+      >
+        <div className="text-center py-6">
+          <div className="mb-4 text-slate-600 text-lg">
+            检测到您尚未上传简历，无法进行押题。
+          </div>
+          <div className="mb-8 text-slate-500">
+            请前往个人中心上传您的简历，AI 将根据您的简历内容生成针对性的面试题目。
+          </div>
+          <Button
+            type="primary"
+            size="large"
+            onClick={() => router.push('/user/center')}
+            className="w-full bg-indigo-600 hover:bg-indigo-500"
+          >
+            前往上传简历
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

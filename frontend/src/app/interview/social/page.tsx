@@ -38,6 +38,7 @@ export default function SocialInterviewPage() {
   const [starting, setStarting] = useState(false);
   const [modelConfigured, setModelConfigured] = useState<boolean | null>(null);
   const [checkingConfig, setCheckingConfig] = useState<boolean>(false);
+  const [showNoResumeModal, setShowNoResumeModal] = useState(false);
   const router = useRouter();
 
   // 获取用户简历列表
@@ -45,7 +46,11 @@ export default function SocialInterviewPage() {
     setLoadingResumes(true);
     try {
       const data: any = await apiClient.get('/resume/list');
-      setResumes(data?.resumes || []);
+      const list = data?.resumes || [];
+      setResumes(list);
+      if (list.length === 0) {
+        setShowNoResumeModal(true);
+      }
     } catch (err) {
       console.error('获取简历列表失败:', err);
     } finally {
@@ -301,6 +306,30 @@ export default function SocialInterviewPage() {
           </Row>
         </div>
       </div>
+      <Modal
+        open={showNoResumeModal}
+        title="温馨提示"
+        footer={null}
+        onCancel={() => setShowNoResumeModal(false)}
+        centered
+      >
+        <div className="text-center py-6">
+          <div className="mb-4 text-slate-600 text-lg">
+            检测到您尚未上传简历，无法进行面试。
+          </div>
+          <div className="mb-8 text-slate-500">
+            请前往个人中心上传您的简历，AI 将根据您的简历内容生成针对性的面试题目。
+          </div>
+          <Button
+            type="primary"
+            size="large"
+            onClick={() => router.push('/user/center')}
+            className="w-full bg-indigo-600 hover:bg-indigo-500"
+          >
+            前往上传简历
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

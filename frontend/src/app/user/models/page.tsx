@@ -411,7 +411,11 @@ export default function UserModelsPage() {
                 >
                   <Input placeholder="如：My GPT-4 Model" maxLength={100} />
                 </Form.Item>
-                <Form.Item label="API 秘钥" name="apiSecret">
+                <Form.Item
+                  label="API 秘钥"
+                  name="apiSecret"
+                  rules={[{ required: true, message: '请输入API秘钥' }]}
+                >
                   <Input.Password placeholder="请输入平台 API Key" maxLength={500} />
                 </Form.Item>
                 <Form.Item
@@ -446,7 +450,11 @@ export default function UserModelsPage() {
                 <Form.Item label="状态" name="is_default" valuePropName="checked">
                   <Switch checkedChildren="启用" unCheckedChildren="停用" />
                 </Form.Item>
-                <Form.Item label="基础 URI" name="baseURL">
+                <Form.Item
+                  label="基础 URI"
+                  name="baseURL"
+                  rules={[{ required: true, message: '请输入基础 URI' }]}
+                >
                   <Input placeholder="API 基础接口地址，如：https://api.xxx.com" maxLength={500} />
                 </Form.Item>
               </div>
@@ -596,7 +604,11 @@ export default function UserModelsPage() {
                 >
                   <Input placeholder="如：My GPT-4 Model" maxLength={100} />
                 </Form.Item>
-                <Form.Item label="API 秘钥" name="apiSecret">
+                <Form.Item
+                  label="API 秘钥"
+                  name="apiSecret"
+                  rules={[{ required: true, message: '请输入API秘钥' }]}
+                >
                   <Input.Password placeholder="留空则不更新密钥" maxLength={500} />
                 </Form.Item>
                 <Form.Item

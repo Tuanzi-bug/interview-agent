@@ -274,7 +274,10 @@ const Navbar: FC = () => {
                   <Form.Item
                     label="邮箱"
                     name="email"
-                    rules={[{ required: true, message: '请输入邮箱' }]}
+                    rules={[
+                      { required: true, message: '请输入邮箱' },
+                      { type: 'email', message: '请输入有效的邮箱格式' },
+                    ]}
                   >
                     <Input placeholder="请输入邮箱" />
                   </Form.Item>
@@ -311,7 +314,10 @@ const Navbar: FC = () => {
                   <Form.Item
                     label="邮箱"
                     name="email"
-                    rules={[{ required: true, message: '请输入邮箱' }]}
+                    rules={[
+                      { required: true, message: '请输入邮箱' },
+                      { type: 'email', message: '请输入有效的邮箱格式' },
+                    ]}
                   >
                     <Input placeholder="请输入邮箱" />
                   </Form.Item>

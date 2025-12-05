@@ -283,8 +283,9 @@ export default function InterviewRecordsPage() {
                               className="text-lg font-bold text-slate-800 mb-2 line-clamp-1"
                               title={it.title || it.companyName}
                             >
-                              {it.companyName || '未命名公司'}
-                              {it.title ? ` - ${it.title}` : ''}
+                              {it.type === '专项面试' && !it.companyName
+                                ? it.title
+                                : `${it.companyName || '未命名公司'}${it.title ? ` - ${it.title}` : ''}`}
                             </h3>
 
                             <div className="space-y-2 mb-6">
