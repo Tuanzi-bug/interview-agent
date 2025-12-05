@@ -11,5 +11,9 @@ module.exports = {
   rules: {
     'prettier/prettier': 'error',
     '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-unused-vars': 'warn',
+    'no-constant-condition': 'warn',
+    'no-empty': 'warn',
+    'react/no-unescaped-entities': 'warn',
   },
 };

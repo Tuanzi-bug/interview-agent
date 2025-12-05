@@ -13,7 +13,8 @@ const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const url = config.url || '';
-    const isAuthFree = url.includes('/user/register') || url.includes('/user/login') || url.includes('/user/logout');
+    const isAuthFree =
+      url.includes('/user/register') || url.includes('/user/login') || url.includes('/user/logout');
     const token = localStorage.getItem('token');
     if (token && !isAuthFree) {
       config.headers = (config.headers || {}) as any;

@@ -10,14 +10,19 @@ const staticData = {
   questions: [
     {
       title: '我看你简历上提到了RAG驱动AI旅行助手项目，你主要负责的部分吗？',
-      question: '我看你简历上提到了RAG驱动AI旅行助手项目，能先跟我简单介绍一下这个项目的背景和你主要负责的部分吗？',
+      question:
+        '我看你简历上提到了RAG驱动AI旅行助手项目，能先跟我简单介绍一下这个项目的背景和你主要负责的部分吗？',
       idea: [
-        { label: '背景', value: '项目背景兼顾的真实性、个人职责的清晰度、技术方案的合理性、项目成果的可信度' },
+        {
+          label: '背景',
+          value: '项目背景兼顾的真实性、个人职责的清晰度、技术方案的合理性、项目成果的可信度',
+        },
         { label: '职责', value: '负责AI助手的研发落地，提升客户体验与员工效率' },
         { label: '挑战', value: '解决检索准确性与响应稳定性问题，构建可解释的AI响应' },
         { label: '成果', value: '整体满意度提升，业务指标优化，成功率提升' },
       ],
-      reference: '该项目为RAG驱动的旅行助手，整合检索与生成，在稳定性与响应速度上做了优化，通过流式SSE提升交互体验，核心链路可用性达到99%以上。',
+      reference:
+        '该项目为RAG驱动的旅行助手，整合检索与生成，在稳定性与响应速度上做了优化，通过流式SSE提升交互体验，核心链路可用性达到99%以上。',
       followups: [
         '这个AI助手为何选择RAG而不是纯生成式？',
         '你在项目中的技术决策有哪些？如何权衡准确性与性能？',
@@ -33,11 +38,9 @@ const staticData = {
         { label: '挑战', value: '异构数据的质量与时效性问题' },
         { label: '成果', value: '答复准确率与一致性提升' },
       ],
-      reference: '采用分层检索与重排策略，BM25+向量检索结合，针对问句类别使用不同的融合权重与投票机制。',
-      followups: [
-        '你如何评估融合策略的效果？',
-        '数据时效性问题如何处理？',
-      ],
+      reference:
+        '采用分层检索与重排策略，BM25+向量检索结合，针对问句类别使用不同的融合权重与投票机制。',
+      followups: ['你如何评估融合策略的效果？', '数据时效性问题如何处理？'],
     },
     {
       title: '在RAG系统中如何处理并发与延迟问题？',
@@ -49,17 +52,17 @@ const staticData = {
         { label: '成果', value: '端到端延迟稳定在 100-200ms 量级（流式首包更快）' },
       ],
       reference: '采用异步管道与消息队列、向量缓存与热点文档预取，首包用SSE推送提升感知速度。',
-      followups: [
-        '为什么选择SSE而非WebSocket？',
-        '缓存失效策略如何设计？',
-      ],
+      followups: ['为什么选择SSE而非WebSocket？', '缓存失效策略如何设计？'],
     },
   ],
 };
 
 export default function PressDetailPage() {
   const [selected, setSelected] = useState(0);
-  const current = useMemo(() => staticData.questions[selected] || staticData.questions[0], [selected]);
+  const current = useMemo(
+    () => staticData.questions[selected] || staticData.questions[0],
+    [selected]
+  );
 
   return (
     <div className="min-h-screen relative font-sans">
@@ -76,10 +79,14 @@ export default function PressDetailPage() {
           <p className="text-slate-500 mt-2 ml-11">查看为您生成的精准面试题目与详细解析</p>
         </div>
 
-        <Row gutter={[24, 24]} className="mt-2 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+        <Row
+          gutter={[24, 24]}
+          className="mt-2 animate-fade-in-up"
+          style={{ animationDelay: '0.1s' }}
+        >
           <Col xs={24} md={7} lg={6}>
-            <AntCard 
-              className="rounded-2xl border-slate-100 shadow-lg shadow-slate-200/50 h-full" 
+            <AntCard
+              className="rounded-2xl border-slate-100 shadow-lg shadow-slate-200/50 h-full"
               styles={{ body: { padding: 0 } }}
             >
               <div className="p-5 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
@@ -97,13 +104,13 @@ export default function PressDetailPage() {
                     <List.Item
                       onClick={() => setSelected(index)}
                       className={`transition-colors duration-200 cursor-pointer border-l-4 px-4 py-3 hover:bg-blue-50/50 ${
-                        index === selected 
-                          ? 'bg-blue-50 border-blue-500' 
-                          : 'border-transparent'
+                        index === selected ? 'bg-blue-50 border-blue-500' : 'border-transparent'
                       }`}
                     >
                       <div className="w-full">
-                        <div className={`font-medium mb-1 line-clamp-2 ${index === selected ? 'text-blue-700' : 'text-slate-700'}`}>
+                        <div
+                          className={`font-medium mb-1 line-clamp-2 ${index === selected ? 'text-blue-700' : 'text-slate-700'}`}
+                        >
                           <span className="mr-2 text-slate-400">0{index + 1}.</span>
                           {item.title}
                         </div>
@@ -115,8 +122,8 @@ export default function PressDetailPage() {
             </AntCard>
           </Col>
           <Col xs={24} md={17} lg={18}>
-            <AntCard 
-              className="rounded-2xl border-slate-100 shadow-lg shadow-slate-200/50 min-h-[600px]" 
+            <AntCard
+              className="rounded-2xl border-slate-100 shadow-lg shadow-slate-200/50 min-h-[600px]"
               styles={{ body: { padding: 32 } }}
             >
               <div className="flex flex-col gap-6">
@@ -126,9 +133,21 @@ export default function PressDetailPage() {
                     {current.question}
                   </h2>
                   <Space wrap>
-                    <Tag color="blue" className="px-3 py-1 rounded-full border-0 bg-blue-50 text-blue-600 font-medium">整体思路</Tag>
-                    <Tag color="green" className="px-3 py-1 rounded-full border-0 bg-green-50 text-green-600 font-medium">参考答案</Tag>
-                    <Tag className="px-3 py-1 rounded-full border-slate-200 text-slate-500 hover:text-blue-600 cursor-pointer transition-colors">收藏单题</Tag>
+                    <Tag
+                      color="blue"
+                      className="px-3 py-1 rounded-full border-0 bg-blue-50 text-blue-600 font-medium"
+                    >
+                      整体思路
+                    </Tag>
+                    <Tag
+                      color="green"
+                      className="px-3 py-1 rounded-full border-0 bg-green-50 text-green-600 font-medium"
+                    >
+                      参考答案
+                    </Tag>
+                    <Tag className="px-3 py-1 rounded-full border-slate-200 text-slate-500 hover:text-blue-600 cursor-pointer transition-colors">
+                      收藏单题
+                    </Tag>
                   </Space>
                 </div>
 

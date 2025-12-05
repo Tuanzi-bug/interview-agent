@@ -3,36 +3,59 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Typography, Row, Col, Card as AntCard, Form, Select, Button, Tag, message, Alert } from 'antd';
+import {
+  Typography,
+  Row,
+  Col,
+  Card as AntCard,
+  Form,
+  Select,
+  Button,
+  Tag,
+  message,
+  Alert,
+} from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 
 const { Title, Paragraph, Text } = Typography;
 
 const GROUPED_OPTIONS = [
-  { label: '标准语言', options: [
-    { value: 'Java', label: 'Java' },
-    { value: 'Go', label: 'Go' },
-    { value: 'C/C++', label: 'C/C++' },
-    { value: 'Rust', label: 'Rust' },
-    { value: 'PHP', label: 'PHP' },
-    { value: 'Node.js', label: 'Node.js' },
-  ]},
-  { label: '后端组件', options: [
-    { value: 'Redis', label: 'Redis' },
-    { value: 'MySQL', label: 'MySQL' },
-    { value: 'Kafka', label: 'Kafka' },
-    { value: 'MongoDB', label: 'MongoDB' },
-  ]},
-  { label: '云原生与运维', options: [
-    { value: 'Docker', label: 'Docker' },
-    { value: 'Kubernetes', label: 'Kubernetes' },
-    { value: 'Nginx', label: 'Nginx' },
-  ]},
-  { label: '计算机基础', options: [
-    { value: '操作系统', label: '操作系统' },
-    { value: '计算机网络', label: '计算机网络' },
-    { value: '数据结构与算法', label: '数据结构与算法' },
-  ]},
+  {
+    label: '标准语言',
+    options: [
+      { value: 'Java', label: 'Java' },
+      { value: 'Go', label: 'Go' },
+      { value: 'C/C++', label: 'C/C++' },
+      { value: 'Rust', label: 'Rust' },
+      { value: 'PHP', label: 'PHP' },
+      { value: 'Node.js', label: 'Node.js' },
+    ],
+  },
+  {
+    label: '后端组件',
+    options: [
+      { value: 'Redis', label: 'Redis' },
+      { value: 'MySQL', label: 'MySQL' },
+      { value: 'Kafka', label: 'Kafka' },
+      { value: 'MongoDB', label: 'MongoDB' },
+    ],
+  },
+  {
+    label: '云原生与运维',
+    options: [
+      { value: 'Docker', label: 'Docker' },
+      { value: 'Kubernetes', label: 'Kubernetes' },
+      { value: 'Nginx', label: 'Nginx' },
+    ],
+  },
+  {
+    label: '计算机基础',
+    options: [
+      { value: '操作系统', label: '操作系统' },
+      { value: '计算机网络', label: '计算机网络' },
+      { value: '数据结构与算法', label: '数据结构与算法' },
+    ],
+  },
 ];
 
 export default function SpecialInterviewPage() {
@@ -74,16 +97,18 @@ export default function SpecialInterviewPage() {
     try {
       const values = await form.validateFields();
       setStarting(true);
-      
+
       const params = {
         type: '专项面试',
         domain: values.stack,
-        difficulty: values.level
+        difficulty: values.level,
       };
-      
+
       (window as any).__interviewParams = { ...params };
-      try { sessionStorage.setItem('interviewParams', JSON.stringify(params)); } catch {}
-      
+      try {
+        sessionStorage.setItem('interviewParams', JSON.stringify(params));
+      } catch {}
+
       router.push('/interview/special/start');
     } catch (e) {
       message.error('请选择专项类别和难度等级');
@@ -113,13 +138,19 @@ export default function SpecialInterviewPage() {
 
           <Row gutter={[48, 32]}>
             {/* Left Side: Info & Features */}
-            <Col xs={24} lg={9} className="relative z-10 border-b lg:border-b-0 lg:border-r border-slate-100 pb-8 lg:pb-0 lg:pr-10">
+            <Col
+              xs={24}
+              lg={9}
+              className="relative z-10 border-b lg:border-b-0 lg:border-r border-slate-100 pb-8 lg:pb-0 lg:pr-10"
+            >
               <div className="h-full flex flex-col">
                 <div className="mb-6">
-                  <Title level={4} className="!mb-2 !font-bold text-slate-800">专项突击优势</Title>
+                  <Title level={4} className="!mb-2 !font-bold text-slate-800">
+                    专项突击优势
+                  </Title>
                   <Text className="text-slate-400 text-sm">针对特定技术栈的深度强化训练</Text>
                 </div>
-                
+
                 <div className="space-y-6 flex-1">
                   {[
                     { title: '精准拆解', desc: '直击岗位核心高频要点' },
@@ -132,7 +163,9 @@ export default function SpecialInterviewPage() {
                         <CheckCircleOutlined className="text-lg" />
                       </div>
                       <div>
-                        <div className="font-medium text-slate-700 mb-1 group-hover:text-purple-600 transition-colors">{t.title}</div>
+                        <div className="font-medium text-slate-700 mb-1 group-hover:text-purple-600 transition-colors">
+                          {t.title}
+                        </div>
                         <div className="text-sm text-slate-400 leading-relaxed">{t.desc}</div>
                       </div>
                     </div>
@@ -140,9 +173,9 @@ export default function SpecialInterviewPage() {
                 </div>
 
                 <div className="mt-8 pt-8 border-t border-slate-50 hidden lg:block">
-                   <div className="bg-slate-50 rounded-xl p-4 text-xs text-slate-500 leading-relaxed">
-                     💡 提示：专项面试适合在综合面试前进行单点突破，或在复习阶段查漏补缺。
-                   </div>
+                  <div className="bg-slate-50 rounded-xl p-4 text-xs text-slate-500 leading-relaxed">
+                    💡 提示：专项面试适合在综合面试前进行单点突破，或在复习阶段查漏补缺。
+                  </div>
                 </div>
               </div>
             </Col>
@@ -150,13 +183,26 @@ export default function SpecialInterviewPage() {
             {/* Right Side: Form */}
             <Col xs={24} lg={15} className="relative z-10">
               <div className="lg:pl-4">
-                <Title level={4} className="!mb-8 !font-bold text-slate-800 flex items-center gap-2">
+                <Title
+                  level={4}
+                  className="!mb-8 !font-bold text-slate-800 flex items-center gap-2"
+                >
                   <span className="w-1.5 h-6 bg-purple-500 rounded-full block"></span>
                   面试配置
                 </Title>
-                
-                <Form form={form} layout="vertical" size="large" initialValues={{ stack: stack, level: '简单' }} className="flex flex-col gap-4">
-                  <Form.Item label={<span className="font-medium text-slate-700">专项类别</span>} name="stack" className="!mb-2">
+
+                <Form
+                  form={form}
+                  layout="vertical"
+                  size="large"
+                  initialValues={{ stack: stack, level: '简单' }}
+                  className="flex flex-col gap-4"
+                >
+                  <Form.Item
+                    label={<span className="font-medium text-slate-700">专项类别</span>}
+                    name="stack"
+                    className="!mb-2"
+                  >
                     <Select
                       popupMatchSelectWidth={false}
                       className="!h-12"
@@ -167,11 +213,19 @@ export default function SpecialInterviewPage() {
                     />
                   </Form.Item>
 
-                  <Form.Item label={<span className="font-medium text-slate-700">难度等级</span>} name="level" className="!mb-6">
-                    <Select 
+                  <Form.Item
+                    label={<span className="font-medium text-slate-700">难度等级</span>}
+                    name="level"
+                    className="!mb-6"
+                  >
+                    <Select
                       className="!h-12"
                       variant="filled"
-                      options={[{ value: '简单', label: '简单' }, { value: '中等', label: '中等' }, { value: '复杂', label: '复杂' }]} 
+                      options={[
+                        { value: '简单', label: '简单' },
+                        { value: '中等', label: '中等' },
+                        { value: '复杂', label: '复杂' },
+                      ]}
                     />
                   </Form.Item>
 
@@ -181,7 +235,11 @@ export default function SpecialInterviewPage() {
                         message="模型未配置"
                         description={
                           <span>
-                            请去 <Link href="/user/models" className="text-blue-500 underline">用户模型页面</Link> 配置模型
+                            请去{' '}
+                            <Link href="/user/models" className="text-blue-500 underline">
+                              用户模型页面
+                            </Link>{' '}
+                            配置模型
                           </span>
                         }
                         type="warning"
@@ -191,12 +249,14 @@ export default function SpecialInterviewPage() {
                     )}
                     {checkingConfig && (
                       <div className="mb-4 flex justify-center">
-                         <Tag color="default" className="px-3 py-1 rounded-full">正在检查模型配置...</Tag>
+                        <Tag color="default" className="px-3 py-1 rounded-full">
+                          正在检查模型配置...
+                        </Tag>
                       </div>
                     )}
-                    
-                    <Button 
-                      type="primary" 
+
+                    <Button
+                      type="primary"
                       block
                       size="large"
                       className="!h-14 !text-lg !font-medium !rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 hover:!from-purple-600 hover:!to-pink-700 border-0 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/40 transition-all duration-300 transform hover:-translate-y-0.5"
@@ -219,4 +279,3 @@ export default function SpecialInterviewPage() {
     </div>
   );
 }
-

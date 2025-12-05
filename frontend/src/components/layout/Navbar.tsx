@@ -1,6 +1,18 @@
 'use client';
 
-import { Layout, Typography, Button, Badge, Dropdown, Modal, Tabs, Form, Input, message, Steps } from 'antd';
+import {
+  Layout,
+  Typography,
+  Button,
+  Badge,
+  Dropdown,
+  Modal,
+  Tabs,
+  Form,
+  Input,
+  message,
+  Steps,
+} from 'antd';
 import Link from 'next/link';
 import { BellOutlined, UserOutlined, DownOutlined, TeamOutlined } from '@ant-design/icons';
 import type { FC } from 'react';
@@ -38,7 +50,9 @@ const Navbar: FC = () => {
         return;
       }
       localStorage.setItem('token', token);
-      try { document.cookie = `token=${token};path=/;max-age=${60 * 60 * 24}`; } catch {}
+      try {
+        document.cookie = `token=${token};path=/;max-age=${60 * 60 * 24}`;
+      } catch {}
       if (data?.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
@@ -64,7 +78,9 @@ const Navbar: FC = () => {
         return;
       }
       localStorage.setItem('token', token);
-      try { document.cookie = `token=${token};path=/;max-age=${60 * 60 * 24}`; } catch {}
+      try {
+        document.cookie = `token=${token};path=/;max-age=${60 * 60 * 24}`;
+      } catch {}
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
       setAuthed(true);
@@ -79,8 +95,7 @@ const Navbar: FC = () => {
   const logout = async () => {
     try {
       await apiClient.post('/user/logout', {});
-    } catch (e) {
-    }
+    } catch (e) {}
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setAuthed(false);
@@ -97,77 +112,103 @@ const Navbar: FC = () => {
             <span className="text-white text-xl font-bold">面</span>
           </div>
           <div className="flex flex-col justify-center h-10">
-            <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600 leading-none mb-0.5 pt-1">面试吧</span>
-            <span className="text-[10px] text-slate-500 tracking-wider uppercase font-medium leading-none scale-90 origin-left">Interview Master</span>
+            <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600 leading-none mb-0.5 pt-1">
+              面试吧
+            </span>
+            <span className="text-[10px] text-slate-500 tracking-wider uppercase font-medium leading-none scale-90 origin-left">
+              Interview Master
+            </span>
           </div>
         </div>
 
         <nav className="hidden md:flex items-center gap-8">
-          <Link href="/" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors relative group">
+          <Link
+            href="/"
+            className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors relative group"
+          >
             首页
             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full" />
           </Link>
-          <Link href="/resume" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors relative group">
+          <Link
+            href="/resume"
+            className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors relative group"
+          >
             简历押题
             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full" />
           </Link>
           <Dropdown
             menu={{
               items: [
-                { 
-                  key: 'social', 
+                {
+                  key: 'social',
                   label: (
                     <Link href="/interview/social" className="flex items-center gap-2 py-1">
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600"><UserOutlined /></div>
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                        <UserOutlined />
+                      </div>
                       <div className="flex flex-col">
                         <span className="font-medium">社招简历面试</span>
                         <span className="text-xs text-slate-400">针对社招人员的深度面试</span>
                       </div>
                     </Link>
-                  ) 
+                  ),
                 },
-                { 
-                  key: 'campus', 
+                {
+                  key: 'campus',
                   label: (
                     <Link href="/interview/campus" className="flex items-center gap-2 py-1">
-                      <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600"><TeamOutlined /></div>
+                      <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600">
+                        <TeamOutlined />
+                      </div>
                       <div className="flex flex-col">
                         <span className="font-medium">校招简历面试</span>
                         <span className="text-xs text-slate-400">针对应届生的基础面试</span>
                       </div>
                     </Link>
-                  ) 
+                  ),
                 },
               ],
-              className: "p-2"
+              className: 'p-2',
             }}
             overlayClassName="pt-2"
           >
             <a className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-1 cursor-pointer group">
-              综合面试 <DownOutlined className="text-xs transition-transform group-hover:rotate-180" />
-              <Badge count={"HOT"} color="#fa541c" offset={[10, -8]} className="scale-75 origin-left" />
+              综合面试{' '}
+              <DownOutlined className="text-xs transition-transform group-hover:rotate-180" />
+              <Badge
+                count={'HOT'}
+                color="#fa541c"
+                offset={[10, -8]}
+                className="scale-75 origin-left"
+              />
             </a>
           </Dropdown>
-          <Link href="/interview/special" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors relative group">
+          <Link
+            href="/interview/special"
+            className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors relative group"
+          >
             专项面试
             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full" />
           </Link>
-          <Link href="/" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors relative group">
+          <Link
+            href="/"
+            className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors relative group"
+          >
             使用手册
             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full" />
           </Link>
         </nav>
 
         <div className="flex items-center gap-4">
-          <Button 
-            type="text" 
-            shape="circle" 
-            icon={<BellOutlined className="text-slate-600 text-lg" />} 
+          <Button
+            type="text"
+            shape="circle"
+            icon={<BellOutlined className="text-slate-600 text-lg" />}
             className="hover:bg-slate-100 flex items-center justify-center"
           />
           {authed ? (
             <Dropdown
-              trigger={["hover"]}
+              trigger={['hover']}
               menu={{
                 items: [
                   { key: 'center', label: <Link href="/user/center">个人中心</Link> },
@@ -176,20 +217,32 @@ const Navbar: FC = () => {
                   { key: 'notes', label: <Link href="/user/notes">笔记列表</Link> },
                   { key: 'models', label: <Link href="/user/models">用户模型</Link> },
                   { type: 'divider' },
-                  { key: 'logout', label: <a onClick={logout} className="text-red-500">退出登录</a> },
+                  {
+                    key: 'logout',
+                    label: (
+                      <a onClick={logout} className="text-red-500">
+                        退出登录
+                      </a>
+                    ),
+                  },
                 ],
-                className: "w-40"
+                className: 'w-40',
               }}
             >
               <Button className="border-slate-200 hover:border-blue-400 hover:text-blue-600 px-4 h-9 rounded-full flex items-center gap-2 transition-all">
                 <UserOutlined />
-                <span className="max-w-[100px] truncate">{user?.username || user?.email?.split('@')[0] || '用户'}</span>
+                <span className="max-w-[100px] truncate">
+                  {user?.username || user?.email?.split('@')[0] || '用户'}
+                </span>
               </Button>
             </Dropdown>
           ) : (
-            <Button 
-              type="primary" 
-              onClick={() => { setActiveKey('login'); setOpenAuth(true); }}
+            <Button
+              type="primary"
+              onClick={() => {
+                setActiveKey('login');
+                setOpenAuth(true);
+              }}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-0 h-9 px-6 rounded-full shadow-lg shadow-blue-200 font-medium transition-all hover:scale-105"
             >
               登录 / 注册
@@ -204,41 +257,79 @@ const Navbar: FC = () => {
         title="账号登录 / 注册"
         destroyOnClose
       >
-        <Tabs activeKey={activeKey} onChange={(k) => setActiveKey(k as 'login' | 'register')} items={[
-          {
-            key: 'login',
-            label: '登录',
-            children: (
-              <Form form={loginForm} layout="vertical" onFinish={doLogin} initialValues={{ email: '', password: '' }}>
-                <Form.Item label="邮箱" name="email" rules={[{ required: true, message: '请输入邮箱' }]}>
-                  <Input placeholder="请输入邮箱" />
-                </Form.Item>
-                <Form.Item label="密码" name="password" rules={[{ required: true, message: '请输入密码' }]}>
-                  <Input.Password placeholder="请输入密码" />
-                </Form.Item>
-                <Button type="primary" htmlType="submit" className="w-full">登录</Button>
-              </Form>
-            ),
-          },
-          {
-            key: 'register',
-            label: '注册',
-            children: (
-              <Form form={registerForm} layout="vertical" onFinish={doRegister} initialValues={{ username: '', email: '', password: '' }}>
-                <Form.Item label="用户名" name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-                  <Input placeholder="请输入用户名" />
-                </Form.Item>
-                <Form.Item label="邮箱" name="email" rules={[{ required: true, message: '请输入邮箱' }]}>
-                  <Input placeholder="请输入邮箱" />
-                </Form.Item>
-                <Form.Item label="密码" name="password" rules={[{ required: true, message: '请输入密码' }]}>
-                  <Input.Password placeholder="请输入密码" />
-                </Form.Item>
-                <Button type="primary" htmlType="submit" className="w-full">注册并登录</Button>
-              </Form>
-            ),
-          },
-        ]} />
+        <Tabs
+          activeKey={activeKey}
+          onChange={(k) => setActiveKey(k as 'login' | 'register')}
+          items={[
+            {
+              key: 'login',
+              label: '登录',
+              children: (
+                <Form
+                  form={loginForm}
+                  layout="vertical"
+                  onFinish={doLogin}
+                  initialValues={{ email: '', password: '' }}
+                >
+                  <Form.Item
+                    label="邮箱"
+                    name="email"
+                    rules={[{ required: true, message: '请输入邮箱' }]}
+                  >
+                    <Input placeholder="请输入邮箱" />
+                  </Form.Item>
+                  <Form.Item
+                    label="密码"
+                    name="password"
+                    rules={[{ required: true, message: '请输入密码' }]}
+                  >
+                    <Input.Password placeholder="请输入密码" />
+                  </Form.Item>
+                  <Button type="primary" htmlType="submit" className="w-full">
+                    登录
+                  </Button>
+                </Form>
+              ),
+            },
+            {
+              key: 'register',
+              label: '注册',
+              children: (
+                <Form
+                  form={registerForm}
+                  layout="vertical"
+                  onFinish={doRegister}
+                  initialValues={{ username: '', email: '', password: '' }}
+                >
+                  <Form.Item
+                    label="用户名"
+                    name="username"
+                    rules={[{ required: true, message: '请输入用户名' }]}
+                  >
+                    <Input placeholder="请输入用户名" />
+                  </Form.Item>
+                  <Form.Item
+                    label="邮箱"
+                    name="email"
+                    rules={[{ required: true, message: '请输入邮箱' }]}
+                  >
+                    <Input placeholder="请输入邮箱" />
+                  </Form.Item>
+                  <Form.Item
+                    label="密码"
+                    name="password"
+                    rules={[{ required: true, message: '请输入密码' }]}
+                  >
+                    <Input.Password placeholder="请输入密码" />
+                  </Form.Item>
+                  <Button type="primary" htmlType="submit" className="w-full">
+                    注册并登录
+                  </Button>
+                </Form>
+              ),
+            },
+          ]}
+        />
       </Modal>
 
       <Modal
@@ -252,16 +343,19 @@ const Navbar: FC = () => {
         <div className="py-6 px-4">
           <div className="mb-8 text-center">
             <Title level={4}>开启您的智能面试之旅</Title>
-            <Typography.Text type="secondary">只需简单两步，让 AI 为您定制专属面试计划</Typography.Text>
+            <Typography.Text type="secondary">
+              只需简单两步，让 AI 为您定制专属面试计划
+            </Typography.Text>
           </div>
-          
+
           <Steps
             direction="vertical"
             current={0}
             items={[
               {
                 title: '第一步：配置用户模型',
-                description: '配置您的大模型key(火山、百炼都有免费大模型)，AI 将根据您的模型生成面试题目。',
+                description:
+                  '配置您的大模型key(火山、百炼都有免费大模型)，AI 将根据您的模型生成面试题目。',
               },
               {
                 title: '第二步：上传个人简历',
@@ -269,11 +363,11 @@ const Navbar: FC = () => {
               },
             ]}
           />
-          
+
           <div className="mt-8 flex justify-center">
-            <Button 
-              type="primary" 
-              size="large" 
+            <Button
+              type="primary"
+              size="large"
               onClick={() => {
                 setGuideModalOpen(false);
                 router.push('/user/models');

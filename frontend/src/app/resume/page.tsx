@@ -3,7 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, message } from 'antd';
-import { FileTextOutlined, RocketOutlined, ThunderboltOutlined, ReadOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import {
+  FileTextOutlined,
+  RocketOutlined,
+  ThunderboltOutlined,
+  ReadOutlined,
+  CheckCircleOutlined,
+} from '@ant-design/icons';
 import apiClient from '@/services/api/client';
 
 const { Title, Paragraph, Text } = Typography;
@@ -48,12 +54,12 @@ export default function ResumePressPage() {
         language: values.language,
         job_title: values.job,
         difficulty: values.level,
-        company_name: values.company_name
+        company_name: values.company_name,
       };
-      
+
       await apiClient.post('/prediction/start', payload);
       message.success('开始生成押题...');
-      router.push('/user/press'); 
+      router.push('/user/press');
     } catch (e: any) {
       message.error(e?.message || '提交失败，请重试');
     } finally {
@@ -80,8 +86,8 @@ export default function ResumePressPage() {
 
         <Row gutter={[32, 32]} className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
           <Col xs={24} lg={16}>
-            <AntCard 
-              className="rounded-3xl border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden" 
+            <AntCard
+              className="rounded-3xl border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden"
               styles={{ body: { padding: 40 } }}
             >
               <div className="bg-indigo-50/50 rounded-2xl p-5 mb-8 border border-indigo-100 flex items-start gap-3">
@@ -95,112 +101,117 @@ export default function ResumePressPage() {
                 </div>
               </div>
 
-              <Form 
-                form={form} 
-                layout="vertical" 
+              <Form
+                form={form}
+                layout="vertical"
                 onFinish={onFinish}
-                initialValues={{ language: 'Java', job: '后端开发', level: '进阶', prediction_type: '校招' }}
+                initialValues={{
+                  language: 'Java',
+                  job: '后端开发',
+                  level: '进阶',
+                  prediction_type: '校招',
+                }}
                 className="flex flex-col gap-4"
               >
-                <Form.Item 
-                  label={<span className="font-bold text-slate-700">选择押题的简历</span>} 
+                <Form.Item
+                  label={<span className="font-bold text-slate-700">选择押题的简历</span>}
                   name="resume_id"
                   rules={[{ required: true, message: '请选择简历' }]}
                 >
-                  <Select 
+                  <Select
                     size="large"
                     variant="filled"
                     className="!h-12"
-                    options={resumes.map(r => ({ value: r.id, label: r.file_name }))}
+                    options={resumes.map((r) => ({ value: r.id, label: r.file_name }))}
                     placeholder={resumes.length === 0 ? '加载中...' : '请选择简历'}
-                    popupMatchSelectWidth={false} 
+                    popupMatchSelectWidth={false}
                   />
                 </Form.Item>
 
-                <Form.Item 
-                  label={<span className="font-bold text-slate-700">面试类型</span>} 
+                <Form.Item
+                  label={<span className="font-bold text-slate-700">面试类型</span>}
                   name="prediction_type"
                   rules={[{ required: true, message: '请选择面试类型' }]}
                 >
-                  <Select 
+                  <Select
                     size="large"
                     variant="filled"
                     className="!h-12"
                     options={[
-                      { value: '校招', label: '校招' }, 
-                      { value: '社招', label: '社招' }
-                    ]} 
+                      { value: '校招', label: '校招' },
+                      { value: '社招', label: '社招' },
+                    ]}
                   />
                 </Form.Item>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Form.Item 
-                    label={<span className="font-bold text-slate-700">编程语言</span>} 
+                  <Form.Item
+                    label={<span className="font-bold text-slate-700">编程语言</span>}
                     name="language"
                     rules={[{ required: true, message: '请选择语言' }]}
                   >
-                    <Select 
+                    <Select
                       size="large"
                       variant="filled"
                       className="!h-12"
                       options={[
-                        { value: 'Java', label: 'Java' }, 
-                        { value: 'Golang', label: 'Golang' }, 
+                        { value: 'Java', label: 'Java' },
+                        { value: 'Golang', label: 'Golang' },
                         { value: 'Python', label: 'Python' },
                         { value: 'C++', label: 'C++' },
-                        { value: 'Frontend', label: '前端(JS/TS)' }
-                      ]} 
+                        { value: 'Frontend', label: '前端(JS/TS)' },
+                      ]}
                     />
                   </Form.Item>
 
-                  <Form.Item 
-                    label={<span className="font-bold text-slate-700">岗位意向</span>} 
+                  <Form.Item
+                    label={<span className="font-bold text-slate-700">岗位意向</span>}
                     name="job"
                     rules={[{ required: true, message: '请输入岗位意向' }]}
                   >
-                    <Input 
-                      size="large" 
-                      variant="filled" 
+                    <Input
+                      size="large"
+                      variant="filled"
                       className="!h-12 !bg-slate-50 hover:!bg-slate-100 focus:!bg-white border-transparent hover:border-indigo-300 focus:border-indigo-500"
-                      placeholder="如：Java后端开发" 
+                      placeholder="如：Java后端开发"
                     />
                   </Form.Item>
 
-                  <Form.Item 
-                    label={<span className="font-bold text-slate-700">难度等级</span>} 
+                  <Form.Item
+                    label={<span className="font-bold text-slate-700">难度等级</span>}
                     name="level"
                     rules={[{ required: true, message: '请选择难度' }]}
                   >
-                    <Select 
+                    <Select
                       size="large"
                       variant="filled"
                       className="!h-12"
                       options={[
-                        { value: '入门', label: '入门' }, 
-                        { value: '中级', label: '中级' }, 
+                        { value: '入门', label: '入门' },
+                        { value: '中级', label: '中级' },
                         { value: '进阶', label: '进阶' },
-                        { value: '专家', label: '专家' }
-                      ]} 
+                        { value: '专家', label: '专家' },
+                      ]}
                     />
                   </Form.Item>
 
-                  <Form.Item 
-                    label={<span className="font-bold text-slate-700">目标公司</span>} 
+                  <Form.Item
+                    label={<span className="font-bold text-slate-700">目标公司</span>}
                     name="company_name"
                     rules={[{ required: true, message: '请输入目标公司' }]}
                   >
-                    <Input 
-                      size="large" 
-                      variant="filled" 
+                    <Input
+                      size="large"
+                      variant="filled"
                       className="!h-12 !bg-slate-50 hover:!bg-slate-100 focus:!bg-white border-transparent hover:border-indigo-300 focus:border-indigo-500"
-                      placeholder="如：字节跳动" 
+                      placeholder="如：字节跳动"
                     />
                   </Form.Item>
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-slate-100">
-                  <Button 
-                    type="primary" 
+                  <Button
+                    type="primary"
                     htmlType="submit"
                     loading={loading}
                     size="large"
@@ -225,28 +236,30 @@ export default function ResumePressPage() {
                   desc: '深入解析简历条目，生成对应问答清单，直击考点。',
                   icon: <FileTextOutlined className="text-2xl text-blue-500" />,
                   bg: 'bg-blue-50',
-                  border: 'border-blue-100'
+                  border: 'border-blue-100',
                 },
                 {
                   title: '快速剖析',
                   desc: '结合岗位要求与项目经历，输出结构化追问路径。',
                   icon: <ThunderboltOutlined className="text-2xl text-amber-500" />,
                   bg: 'bg-amber-50',
-                  border: 'border-amber-100'
+                  border: 'border-amber-100',
                 },
                 {
                   title: '直接学习',
                   desc: '对题清单搭配参考答案与延伸阅读，立即提升。',
                   icon: <ReadOutlined className="text-2xl text-emerald-500" />,
                   bg: 'bg-emerald-50',
-                  border: 'border-emerald-100'
-                }
+                  border: 'border-emerald-100',
+                },
               ].map((item, idx) => (
-                <div 
+                <div
                   key={idx}
                   className="bg-white p-6 rounded-2xl border border-slate-100 shadow-lg shadow-slate-100/50 hover:-translate-y-1 transition-all duration-300"
                 >
-                  <div className={`w-12 h-12 ${item.bg} rounded-xl flex items-center justify-center mb-4 border ${item.border}`}>
+                  <div
+                    className={`w-12 h-12 ${item.bg} rounded-xl flex items-center justify-center mb-4 border ${item.border}`}
+                  >
                     {item.icon}
                   </div>
                   <h3 className="text-lg font-bold text-slate-800 mb-2">{item.title}</h3>
