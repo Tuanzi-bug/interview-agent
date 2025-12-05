@@ -256,33 +256,6 @@ struct DeleteResumeResponse {
 // ==================== 服务定义 ====================
 
 service InterviewsService {
-    // 启动面试流程（流式）
-    StartInterviewResponse StartInterviewStream(1: StartInterviewRequest request) (
-        api.post="/api/interview/start/stream",
-        api.category="interviews",
-        api.gen_path="interviews"
-    )
-
-    // 提交面试回答
-    SubmitInterviewAnswerResponse SubmitInterviewAnswer(1: SubmitInterviewAnswerRequest request) (
-        api.post="/api/interview/submit/answer",
-        api.category="interviews",
-        api.gen_path="interviews"
-    )
-
-    // 获取面试评估
-    GetInterviewEvaluationResponse GetInterviewEvaluation(1: GetInterviewEvaluationRequest request) (
-        api.get="/api/interview/evaluation",
-        api.category="interviews",
-        api.gen_path="interviews"
-    )
-
-    // 获取答题记录
-    GetAnswerRecordResponse GetAnswerRecord(1: GetAnswerRecordRequest request) (
-        api.get="/api/interview/answer-record",
-        api.category="interviews",
-        api.gen_path="interviews"
-    )
 
     // 获取面试记录列表
     ListInterviewRecordsResponse GetInterviewRecords(1: ListInterviewRecordsRequest request) (

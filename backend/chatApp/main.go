@@ -1,7 +1,6 @@
 package main
 
 import (
-	"ai-eino-interview-agent/chatApp/agent/testAgent"
 	"ai-eino-interview-agent/internal/config"
 	"ai-eino-interview-agent/internal/eino/milvus"
 	"ai-eino-interview-agent/internal/repository"
@@ -23,12 +22,9 @@ func main() {
 	initApp()
 
 	ctx := context.Background()
-	var userId uint
-
-	userId = 2
 
 	// 1. 创建 Milvus Agent
-	agent := testAgent.NewMilvuesAgent(userId)
+	var agent adk.Agent
 
 	// 2. 创建 Runner
 	runner := adk.NewRunner(ctx, adk.RunnerConfig{

@@ -25,15 +25,6 @@ type InterviewManager interface {
 		record *interviewsapi.InterviewRecordDTO,
 	) (uint64, error)
 
-	// SaveInterviewDialogues 保存面试对话和问题主题
-	SaveInterviewDialogues(
-		ctx context.Context,
-		userID uint,
-		recordID uint64,
-		questions []interface{},
-		dialogues []interface{},
-	) error
-
 	// UpdateInterviewRecord 更新面试记录
 	UpdateInterviewRecord(
 		ctx context.Context,
