@@ -6,8 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-
-	"ai-eino-interview-agent/chatApp/agent/service"
 )
 
 // SendSSEEvent 发送 SSE 事件
@@ -51,22 +49,6 @@ func SendCompleteEvent(writer io.Writer) {
 	}
 }
 
-// SendQuestionEvent 发送问题事件
-func SendQuestionEvent(writer io.Writer, questionIndex int, q service.QuestionData) {
-	err := SendSSEEvent(writer, map[string]interface{}{
-		"type":  "question",
-		"index": questionIndex,
-		"data": map[string]interface{}{
-			"question_text":  q.QuestionText,
-			"eval_dimension": q.EvalDimension,
-			"order":          q.Order,
-		},
-	})
-	if err != nil {
-		return
-	}
-}
-
 // SendReadyEventWithSession 发送就绪事件
 func SendReadyEventWithSession(writer io.Writer, questionIndex int, sessionID string) {
 	err := SendSSEEvent(writer, map[string]interface{}{
@@ -74,17 +56,6 @@ func SendReadyEventWithSession(writer io.Writer, questionIndex int, sessionID st
 		"message":        "请回答上述问题",
 		"question_index": questionIndex,
 		"session_id":     sessionID,
-	})
-	if err != nil {
-		return
-	}
-}
-
-// SendTopicCompleteEvent 发送主题完成事件
-func SendTopicCompleteEvent(writer io.Writer) {
-	err := SendSSEEvent(writer, map[string]interface{}{
-		"type":    "topic_complete",
-		"message": "当前主题的面试已完成。输入 'continue' 继续下一个主题，或输入 'quit' 结束面试。",
 	})
 	if err != nil {
 		return

@@ -66,7 +66,6 @@ func migrateDatabase() error {
 		&model.UserModel{},
 		&model.InterviewRecord{},
 		&model.InterviewDialogue{},
-		&model.InterviewQuestionTopic{},
 		&model.InterviewEvaluation{},
 		&model.AnswerReport{},
 		&model.Resume{},

@@ -16,12 +16,9 @@ type InterviewAgentType string
 
 const (
 	// Comprehensive 综合面试类型
-	ComprehensiveGoSchool   InterviewAgentType = "comprehensive_go_school"   // Go 校招
-	ComprehensiveGoSocial   InterviewAgentType = "comprehensive_go_social"   // Go 社招
-	ComprehensiveJavaSchool InterviewAgentType = "comprehensive_java_school" // Java 校招
-	ComprehensiveJavaSocial InterviewAgentType = "comprehensive_java_social" // Java 社招
-	ComprehensiveSchool     InterviewAgentType = "comprehensive_school"      // 综合校招
-	ComprehensiveSocial     InterviewAgentType = "comprehensive_social"      // 综合社招
+
+	ComprehensiveSchool InterviewAgentType = "comprehensive_school" // 综合校招
+	ComprehensiveSocial InterviewAgentType = "comprehensive_social" // 综合社招
 
 	// Specialized 专项面试类型
 	SpecializedGo    InterviewAgentType = "specialized_go"    // Go 专项
@@ -54,14 +51,6 @@ func NewInterviewAgentService(userId uint) *InterviewAgentService {
 func (s *InterviewAgentService) GetInterviewAgent(agentType InterviewAgentType, needResumeTool bool) (adk.Agent, error) {
 	switch agentType {
 	// Comprehensive 综合面试智能体
-	case ComprehensiveGoSchool:
-		return comprehensive.NewGoSchoolAgent(s.userId, needResumeTool), nil
-	case ComprehensiveGoSocial:
-		return comprehensive.NewGoSocialAgent(s.userId, needResumeTool), nil
-	case ComprehensiveJavaSchool:
-		return comprehensive.NewJavaSchoolAgent(s.userId, needResumeTool), nil
-	case ComprehensiveJavaSocial:
-		return comprehensive.NewJavaSocialAgent(s.userId, needResumeTool), nil
 	case ComprehensiveSchool:
 		return comprehensive.NewSchoolComprehensiveAgent(s.userId, needResumeTool), nil
 	case ComprehensiveSocial:
