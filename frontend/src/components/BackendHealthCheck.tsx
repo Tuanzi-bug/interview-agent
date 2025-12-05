@@ -102,17 +102,6 @@ export default function BackendHealthCheck() {
 
       {result && (
         <Descriptions column={1} bordered>
-          <Descriptions.Item label="后端服务连接">
-            <StatusTag status={result.backendReachable} />
-            {!result.backendReachable && (
-              <span className="ml-2 text-red-500">请确认后端运行在 {process.env.NEXT_PUBLIC_API_BASE_URL || '/api'}</span>
-            )}
-          </Descriptions.Item>
-
-          <Descriptions.Item label="登录接口">
-            <StatusTag status={result.loginEndpoint} />
-          </Descriptions.Item>
-
           <Descriptions.Item label="面试接口">
             <StatusTag status={result.interviewEndpoint} />
             {!result.interviewEndpoint && (

@@ -226,10 +226,9 @@ export default function InterviewResultDetailPage() {
       setEvaluation(evalRes);
 
       // 3. Fetch Answer Records
-      const recordRes: any = await apiClient.get(
-        '/mianshi/answer-record',
-        { params: { report_id: id } }
-      );
+      const recordRes: any = await apiClient.get('/mianshi/answer-record', {
+        params: { report_id: id },
+      });
       if (recordRes && recordRes.records) {
         setAnswerRecords(recordRes.records);
       } else if (Array.isArray(recordRes)) {

@@ -191,10 +191,7 @@ export default function UserModelsPage() {
                   provider_name: detail?.provider_name ?? detail?.providerName ?? row.providerName,
                   is_default: checked ? 1 : 0,
                 };
-                await apiClient.put(
-                  `/user/model/update/${row.id}`,
-                  payload
-                );
+                await apiClient.put(`/user/model/update/${row.id}`, payload);
                 message.success('状态已更新');
                 fetchList(page, pageSize);
               } catch (e: any) {
@@ -553,10 +550,7 @@ export default function UserModelsPage() {
                 message.error('未选择编辑的模型');
                 return;
               }
-              await apiClient.put(
-                `/user/model/update/${editingId}`,
-                payload
-              );
+              await apiClient.put(`/user/model/update/${editingId}`, payload);
               message.success('更新成功');
               setOpenEdit(false);
               editForm.resetFields();
