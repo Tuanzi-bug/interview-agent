@@ -14,19 +14,43 @@ import {
   Pagination,
   Spin,
 } from 'antd';
-import { CheckCircleOutlined } from '@ant-design/icons';
+import { ReloadOutlined, SmileOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import apiClient from '@/services/api/client';
 import { API_BASE_URL } from '@/config/api';
 
 const { Title } = Typography;
 
+const QUOTES = [
+  "面试是双向选择，保持自信，展现最好的自己。",
+  "每一次面试都是一次成长的机会，无论结果如何，你都在进步。",
+  "相信自己的积累，你比想象中更优秀。",
+  "保持平常心，最好的机会往往在不经意间到来。",
+  "失败只是暂时的，坚持下去，成功就在拐角处。",
+  "准备充分，心态平和，你一定行！",
+  "每一个Offer背后，都有无数次的努力与尝试。",
+  "面试官也是未来的同事，像朋友一样交流吧。",
+  "星光不问赶路人，时光不负有心人。",
+  "沉着冷静，你的潜力无限大。"
+];
+
 export default function InterviewRecordsPage() {
+  const [quote, setQuote] = useState('');
   const [filter, setFilter] = useState('全部');
+
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1); // 前端分页当前页
   const pageSize = 6; // 前端分页：每页显示6条
+
+  const refreshQuote = () => {
+    const random = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+    setQuote(random);
+  };
+
+  useEffect(() => {
+    refreshQuote();
+  }, []);
 
   const fetchList = async () => {
     setLoading(true);
@@ -139,34 +163,39 @@ export default function InterviewRecordsPage() {
                   </div>
                 </div>
               </Col>
-              <Col xs={24} md={14}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {[
-                    {
-                      text: '你的面试次数在全站用户中位于靠前 0%',
-                      icon: <CheckCircleOutlined className="text-green-500 text-lg" />,
-                    },
-                    {
-                      text: '你的近7天没有进行面试',
-                      icon: <CheckCircleOutlined className="text-green-500 text-lg" />,
-                    },
-                    {
-                      text: '你的面试均分在全站用户中位于靠前 0%',
-                      icon: <CheckCircleOutlined className="text-green-500 text-lg" />,
-                    },
-                    {
-                      text: '你的提高分数为 0分',
-                      icon: <CheckCircleOutlined className="text-green-500 text-lg" />,
-                    },
-                  ].map((t, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3 bg-white/60 p-3 rounded-xl border border-slate-100/50"
-                    >
-                      {t.icon}
-                      <span className="text-sm text-slate-700 font-medium">{t.text}</span>
+              <Col xs={24} md={14} className="flex">
+                <div className="w-full bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-slate-100 relative overflow-hidden group flex flex-col justify-center">
+                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <Button
+                      type="text"
+                      icon={<ReloadOutlined />}
+                      onClick={refreshQuote}
+                      className="text-slate-400 hover:text-blue-600 bg-white/50 hover:bg-white rounded-full"
+                      title="换一句"
+                    />
+                  </div>
+                  <div className="flex items-start gap-5">
+                    <div className="bg-gradient-to-br from-blue-100 to-indigo-100 p-4 rounded-full text-blue-600 shrink-0 shadow-inner">
+                      <SmileOutlined className="text-2xl" />
                     </div>
-                  ))}
+                    <div className="flex-1 pt-1">
+                      <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+                        每日寄语
+                        <span className="text-xs font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                          Motivation
+                        </span>
+                      </h3>
+                      <p className="text-slate-600 text-base leading-relaxed italic relative">
+                        <span className="text-3xl text-slate-300 absolute -top-2 -left-2 font-serif">
+                          &quot;
+                        </span>
+                        <span className="relative z-10 pl-4">{quote}</span>
+                        <span className="text-3xl text-slate-300 absolute -bottom-4 -right-2 font-serif">
+                          &quot;
+                        </span>
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </Col>
             </Row>
