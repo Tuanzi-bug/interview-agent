@@ -9,7 +9,7 @@ export const INTERVIEW_API = {
   // 结束面试
   END_INTERVIEW: `${API_BASE_URL}/mianshi/interview/end`,
   // 提交答案
-  SUBMIT_ANSWER: `${API_BASE_URL}/interview/submit/answer`,
+  SUBMIT_ANSWER: `${API_BASE_URL}/mianshi/answer/submit`,
   // 获取答题记录
   GET_ANSWER_RECORD: `${API_BASE_URL}/interview/answer-record`,
 };
