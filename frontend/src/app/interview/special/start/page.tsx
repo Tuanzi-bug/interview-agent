@@ -285,6 +285,17 @@ export default function SpecialInterviewStartPage() {
     setSubmitting(true);
     setAnsweredCount((prev) => prev + 1);
     const currentAnswer = answer;
+
+    // Add answer to conversation history immediately
+    setConversationHistory((prev) => [
+      ...prev,
+      {
+        type: 'answer',
+        content: currentAnswer,
+        timestamp: Date.now(),
+      },
+    ]);
+
     setAnswer('');
     setWaitingNextQuestion(true);
 
