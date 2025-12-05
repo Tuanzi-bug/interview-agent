@@ -71,7 +71,6 @@ func migrateDatabase() error {
 		&model.Resume{},
 		&model.PredictionRecord{},
 		&model.PredictionQuestion{},
-		&model.Demo{},
 	)
 }
 
