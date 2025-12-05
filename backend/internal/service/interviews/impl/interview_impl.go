@@ -433,7 +433,6 @@ func (s *InterviewServiceImpl) SaveInterviewDialogueWithParent(
 	// 1. 保存主问题（ParentID = 0）
 	mainQuestion.UserID = userID
 	mainQuestion.ReportID = reportID
-	mainQuestion.ParentID = 0
 
 	if err := model.InterviewDialogueDao.Create(mainQuestion); err != nil {
 		return fmt.Errorf("failed to save main question: %w", err)
@@ -443,7 +442,6 @@ func (s *InterviewServiceImpl) SaveInterviewDialogueWithParent(
 	for _, followUp := range followUpQuestions {
 		followUp.UserID = userID
 		followUp.ReportID = reportID
-		followUp.ParentID = mainQuestion.ID
 
 		if err := model.InterviewDialogueDao.Create(followUp); err != nil {
 			return fmt.Errorf("failed to save follow-up question: %w", err)
