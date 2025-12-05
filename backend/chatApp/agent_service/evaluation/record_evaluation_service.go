@@ -34,11 +34,9 @@ func GenerateRecordEvaluation(ctx context.Context, userId uint, reportId uint64)
 
 请按照以下步骤进行：
 1. 首先调用 get_mianshi_info 工具获取面试的完整问题和对话记录
-2. 遍历所有parent_id为0的父问题，对每个父问题和其追问进行评估
-3. 收集该父问题题下的所有对话（parent_id为父问题的id）（包括提问和回答）
-4. 仔细分析候选人的回答内容
-5. 根据回答质量进行综合评估
-6. 生成详细的评估反馈
+2. 仔细分析候选人的回答内容
+3. 根据回答质量进行综合评估
+4. 生成详细的评估反馈
 
 评估应包含：
 - 评分（0-100分）

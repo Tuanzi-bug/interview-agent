@@ -12,6 +12,7 @@ import (
 // PredictionQuestion 结构体用于解析 AI 返回的 JSON
 type PredictionQuestion struct {
 	Question        string `json:"question"`
+	Content         string `json:"content"`
 	Focus           string `json:"focus"`
 	ThinkingPath    string `json:"thinking_path"`
 	ReferenceAnswer string `json:"reference_answer"`
@@ -46,6 +47,7 @@ func NewPredictionAgent(userId uint) adk.Agent {
   "questions": [
     {
       "question": "问题内容",
+      "content": "【重点考察】考察方向标题
       "focus": "重点考察（例如：项目经历真实性验证、基础知识掌握等）",
       "thinking_path": "回答思路",
       "reference_answer": "参考答案",

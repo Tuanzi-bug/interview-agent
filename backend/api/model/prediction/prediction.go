@@ -435,11 +435,12 @@ func (p *PredictRequest) String() string {
 type PredictionQuestion struct {
 	ID              int64  `thrift:"id,1,required" form:"id,required" json:"id,required" query:"id,required"`
 	Question        string `thrift:"question,2,required" form:"question,required" json:"question,required" query:"question,required"`
-	Focus           string `thrift:"focus,3,required" form:"focus,required" json:"focus,required" query:"focus,required"`
-	ThinkingPath    string `thrift:"thinking_path,4,required" form:"thinking_path,required" json:"thinking_path,required" query:"thinking_path,required"`
-	ReferenceAnswer string `thrift:"reference_answer,5,required" form:"reference_answer,required" json:"reference_answer,required" query:"reference_answer,required"`
-	FollowUp        string `thrift:"follow_up,6,required" form:"follow_up,required" json:"follow_up,required" query:"follow_up,required"`
-	Sort            int32  `thrift:"sort,7,required" form:"sort,required" json:"sort,required" query:"sort,required"`
+	Content         string `thrift:"content,3,required" form:"content,required" json:"content,required" query:"content,required"`
+	Focus           string `thrift:"focus,4,required" form:"focus,required" json:"focus,required" query:"focus,required"`
+	ThinkingPath    string `thrift:"thinking_path,5,required" form:"thinking_path,required" json:"thinking_path,required" query:"thinking_path,required"`
+	ReferenceAnswer string `thrift:"reference_answer,6,required" form:"reference_answer,required" json:"reference_answer,required" query:"reference_answer,required"`
+	FollowUp        string `thrift:"follow_up,7,required" form:"follow_up,required" json:"follow_up,required" query:"follow_up,required"`
+	Sort            int32  `thrift:"sort,8,required" form:"sort,required" json:"sort,required" query:"sort,required"`
 }
 
 func NewPredictionQuestion() *PredictionQuestion {
@@ -455,6 +456,10 @@ func (p *PredictionQuestion) GetID() (v int64) {
 
 func (p *PredictionQuestion) GetQuestion() (v string) {
 	return p.Question
+}
+
+func (p *PredictionQuestion) GetContent() (v string) {
+	return p.Content
 }
 
 func (p *PredictionQuestion) GetFocus() (v string) {
@@ -480,11 +485,12 @@ func (p *PredictionQuestion) GetSort() (v int32) {
 var fieldIDToName_PredictionQuestion = map[int16]string{
 	1: "id",
 	2: "question",
-	3: "focus",
-	4: "thinking_path",
-	5: "reference_answer",
-	6: "follow_up",
-	7: "sort",
+	3: "content",
+	4: "focus",
+	5: "thinking_path",
+	6: "reference_answer",
+	7: "follow_up",
+	8: "sort",
 }
 
 func (p *PredictionQuestion) Read(iprot thrift.TProtocol) (err error) {
@@ -493,6 +499,7 @@ func (p *PredictionQuestion) Read(iprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	var issetID bool = false
 	var issetQuestion bool = false
+	var issetContent bool = false
 	var issetFocus bool = false
 	var issetThinkingPath bool = false
 	var issetReferenceAnswer bool = false
@@ -536,7 +543,7 @@ func (p *PredictionQuestion) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetFocus = true
+				issetContent = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -545,7 +552,7 @@ func (p *PredictionQuestion) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetThinkingPath = true
+				issetFocus = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -554,7 +561,7 @@ func (p *PredictionQuestion) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetReferenceAnswer = true
+				issetThinkingPath = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -563,13 +570,22 @@ func (p *PredictionQuestion) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetFollowUp = true
+				issetReferenceAnswer = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
 		case 7:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetFollowUp = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 				issetSort = true
@@ -599,28 +615,33 @@ func (p *PredictionQuestion) Read(iprot thrift.TProtocol) (err error) {
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetFocus {
+	if !issetContent {
 		fieldId = 3
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetThinkingPath {
+	if !issetFocus {
 		fieldId = 4
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetReferenceAnswer {
+	if !issetThinkingPath {
 		fieldId = 5
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetFollowUp {
+	if !issetReferenceAnswer {
 		fieldId = 6
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetSort {
+	if !issetFollowUp {
 		fieldId = 7
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetSort {
+		fieldId = 8
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -671,7 +692,7 @@ func (p *PredictionQuestion) ReadField3(iprot thrift.TProtocol) error {
 	} else {
 		_field = v
 	}
-	p.Focus = _field
+	p.Content = _field
 	return nil
 }
 func (p *PredictionQuestion) ReadField4(iprot thrift.TProtocol) error {
@@ -682,7 +703,7 @@ func (p *PredictionQuestion) ReadField4(iprot thrift.TProtocol) error {
 	} else {
 		_field = v
 	}
-	p.ThinkingPath = _field
+	p.Focus = _field
 	return nil
 }
 func (p *PredictionQuestion) ReadField5(iprot thrift.TProtocol) error {
@@ -693,7 +714,7 @@ func (p *PredictionQuestion) ReadField5(iprot thrift.TProtocol) error {
 	} else {
 		_field = v
 	}
-	p.ReferenceAnswer = _field
+	p.ThinkingPath = _field
 	return nil
 }
 func (p *PredictionQuestion) ReadField6(iprot thrift.TProtocol) error {
@@ -704,10 +725,21 @@ func (p *PredictionQuestion) ReadField6(iprot thrift.TProtocol) error {
 	} else {
 		_field = v
 	}
-	p.FollowUp = _field
+	p.ReferenceAnswer = _field
 	return nil
 }
 func (p *PredictionQuestion) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.FollowUp = _field
+	return nil
+}
+func (p *PredictionQuestion) ReadField8(iprot thrift.TProtocol) error {
 
 	var _field int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -751,6 +783,10 @@ func (p *PredictionQuestion) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 	}
@@ -806,10 +842,10 @@ WriteFieldEndError:
 }
 
 func (p *PredictionQuestion) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("focus", thrift.STRING, 3); err != nil {
+	if err = oprot.WriteFieldBegin("content", thrift.STRING, 3); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteString(p.Focus); err != nil {
+	if err := oprot.WriteString(p.Content); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -823,10 +859,10 @@ WriteFieldEndError:
 }
 
 func (p *PredictionQuestion) writeField4(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("thinking_path", thrift.STRING, 4); err != nil {
+	if err = oprot.WriteFieldBegin("focus", thrift.STRING, 4); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteString(p.ThinkingPath); err != nil {
+	if err := oprot.WriteString(p.Focus); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -840,10 +876,10 @@ WriteFieldEndError:
 }
 
 func (p *PredictionQuestion) writeField5(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("reference_answer", thrift.STRING, 5); err != nil {
+	if err = oprot.WriteFieldBegin("thinking_path", thrift.STRING, 5); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteString(p.ReferenceAnswer); err != nil {
+	if err := oprot.WriteString(p.ThinkingPath); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -857,10 +893,10 @@ WriteFieldEndError:
 }
 
 func (p *PredictionQuestion) writeField6(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("follow_up", thrift.STRING, 6); err != nil {
+	if err = oprot.WriteFieldBegin("reference_answer", thrift.STRING, 6); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteString(p.FollowUp); err != nil {
+	if err := oprot.WriteString(p.ReferenceAnswer); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -874,10 +910,10 @@ WriteFieldEndError:
 }
 
 func (p *PredictionQuestion) writeField7(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("sort", thrift.I32, 7); err != nil {
+	if err = oprot.WriteFieldBegin("follow_up", thrift.STRING, 7); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteI32(p.Sort); err != nil {
+	if err := oprot.WriteString(p.FollowUp); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -888,6 +924,23 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *PredictionQuestion) writeField8(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("sort", thrift.I32, 8); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.Sort); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
 
 func (p *PredictionQuestion) String() string {

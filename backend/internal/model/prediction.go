@@ -32,6 +32,7 @@ type PredictionQuestion struct {
 	ID              uint64    `json:"id" gorm:"primaryKey;autoIncrement;comment:题目ID"`
 	RecordID        uint64    `json:"record_id" gorm:"index;not null;comment:押题记录ID"`
 	Question        string    `json:"question" gorm:"type:text;not null;comment:问题"`
+	Content         string    `json:"content" gorm:"type:text;comment:重点考察内容"`
 	Focus           string    `json:"focus" gorm:"type:text;comment:重点考察"`
 	ThinkingPath    string    `json:"thinking_path" gorm:"type:text;comment:回答思路"`
 	ReferenceAnswer string    `json:"reference_answer" gorm:"type:text;comment:参考答案"`
@@ -93,7 +94,7 @@ func (d *_Prediction) GetPredictionRecordsByUserID(userID uint, page, pageSize i
 	db := getDB().Model(&PredictionRecord{}).Where("user_id = ?", userID)
 	db.Count(&total)
 
-	err := db.Order("created_at desc").
+	err := db.Order("created_at asc").
 		Offset((page-1)*pageSize).
 		Limit(pageSize).
 		Preload("Questions", func(db *gorm.DB) *gorm.DB {
