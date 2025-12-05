@@ -118,6 +118,7 @@ export default function UserCenterPage() {
     try {
       const res: any = await apiClient.post('/resume/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 180000, // 3 分钟超时
       });
       message.success('简历上传成功');
       fetchResumes();
