@@ -200,7 +200,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://101.42.249.106/api
+      NEXT_PUBLIC_API_BASE_URL: /api
     depends_on:
       - backend
     networks:
