@@ -224,7 +224,8 @@ export default function SocialInterviewStartPage() {
   
   const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
   const ss = String(elapsed % 60).padStart(2, '0');
-  const percent = Math.min(100, answeredCount > 0 ? Math.round((answeredCount / Math.max(answeredCount, 1)) * 100) : 0);
+  const currentQuestionNumber = conversationHistory.filter(item => item.type === 'question').length;
+  const percent = Math.min(100, Math.round((currentQuestionNumber / 20) * 100));
 
   const onSubmit = async (act?: 'next' | 'quit') => {
     if (!sessionId) {
