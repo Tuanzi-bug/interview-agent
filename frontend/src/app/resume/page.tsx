@@ -62,7 +62,9 @@ export default function ResumePressPage() {
         company_name: values.company_name,
       };
 
-      await apiClient.post('/prediction/start', payload);
+      await apiClient.post('/prediction/start', payload, {
+        timeout: 180000, // 3 分钟超时
+      });
       message.success('开始生成押题...');
       router.push('/user/press');
     } catch (e: any) {
