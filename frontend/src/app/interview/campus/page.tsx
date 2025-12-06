@@ -1,6 +1,19 @@
 'use client';
 
-import { Typography, Row, Col, Form, Select, Input, Button, Tag, message, Spin, Alert, Modal } from 'antd';
+import {
+  Typography,
+  Row,
+  Col,
+  Form,
+  Select,
+  Input,
+  Button,
+  Tag,
+  message,
+  Spin,
+  Alert,
+  Modal,
+} from 'antd';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -302,9 +315,7 @@ export default function CampusInterviewPage() {
         centered
       >
         <div className="text-center py-6">
-          <div className="mb-4 text-slate-600 text-lg">
-            检测到您尚未上传简历，无法进行面试。
-          </div>
+          <div className="mb-4 text-slate-600 text-lg">检测到您尚未上传简历，无法进行面试。</div>
           <div className="mb-8 text-slate-500">
             请前往个人中心上传您的简历，AI 将根据您的简历内容生成针对性的面试题目。
           </div>

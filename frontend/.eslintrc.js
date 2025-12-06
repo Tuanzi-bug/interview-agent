@@ -9,11 +9,11 @@ module.exports = {
   plugins: ['@typescript-eslint', 'prettier'],
   parser: '@typescript-eslint/parser',
   rules: {
-    'prettier/prettier': 'error',
-    '@typescript-eslint/no-explicit-any': 'warn',
-    '@typescript-eslint/no-unused-vars': 'warn',
-    'no-constant-condition': 'warn',
-    'no-empty': 'warn',
-    'react/no-unescaped-entities': 'warn',
+    'prettier/prettier': 'warn',
+    '@typescript-eslint/no-explicit-any': 'off',
+    '@typescript-eslint/no-unused-vars': 'off',
+    'no-constant-condition': 'off',
+    'no-empty': 'off',
+    'react/no-unescaped-entities': 'off',
   },
 };

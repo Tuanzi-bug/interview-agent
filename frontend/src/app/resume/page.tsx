@@ -2,7 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, message, Modal } from 'antd';
+import {
+  Typography,
+  Row,
+  Col,
+  Card as AntCard,
+  Form,
+  Select,
+  Input,
+  Button,
+  message,
+  Modal,
+} from 'antd';
 import {
   FileTextOutlined,
   RocketOutlined,
@@ -285,9 +296,7 @@ export default function ResumePressPage() {
         centered
       >
         <div className="text-center py-6">
-          <div className="mb-4 text-slate-600 text-lg">
-            检测到您尚未上传简历，无法进行押题。
-          </div>
+          <div className="mb-4 text-slate-600 text-lg">检测到您尚未上传简历，无法进行押题。</div>
           <div className="mb-8 text-slate-500">
             请前往个人中心上传您的简历，AI 将根据您的简历内容生成针对性的面试题目。
           </div>
