@@ -21,6 +21,10 @@ apiClient.interceptors.request.use(
       (config.headers as any).Authorization = `Bearer ${token}`;
       (config.headers as any)['X-Auth-Token'] = token;
     }
+    // 为面试评估和答题记录接口设置 3 分钟超时
+    if (url.includes('/mianshi/evaluation') || url.includes('/mianshi/answer-record')) {
+      config.timeout = 180000; // 3 分钟 = 180 秒
+    }
     return config;
   },
   (error) => {
