@@ -22,7 +22,11 @@ func GenerateRecordEvaluation(ctx context.Context, userId uint, reportId uint64)
 	defer cancel()
 
 	// 创建答题记录评估智能体
-	agent := record_evaluation.NewRecordEvaluationAgent(userId)
+	agent, err := record_evaluation.NewRecordEvaluationAgent(userId)
+	if err != nil {
+		log.Printf("[GenerateRecordEvaluation] 创建智能体失败: %v", err)
+		return nil, err
+	}
 
 	// 创建 runner
 	runner := adk.NewRunner(timeoutCtx, adk.RunnerConfig{

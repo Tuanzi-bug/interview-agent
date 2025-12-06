@@ -5,7 +5,6 @@ import (
 	tool2 "ai-eino-interview-agent/chatApp/tool"
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/cloudwego/eino/adk"
 	componenttool "github.com/cloudwego/eino/components/tool"
@@ -14,7 +13,7 @@ import (
 
 // NewSchoolComprehensiveAgent 创建校招综合面试官智能体
 // 专注于评估应届毕业生的综合能力，包括基础知识、学习潜力和职业素养
-func NewSchoolComprehensiveAgent(userId uint, needResumeTool bool) adk.Agent {
+func NewSchoolComprehensiveAgent(userId uint, needResumeTool bool) (adk.Agent, error) {
 	ctx := context.Background()
 
 	var toolsConfig adk.ToolsConfig
@@ -30,7 +29,7 @@ func NewSchoolComprehensiveAgent(userId uint, needResumeTool bool) adk.Agent {
 
 	model, err := chat.CreatOpenAiChatModel(ctx, userId)
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to create OpenAI chat model: %w", err))
+		return nil, fmt.Errorf("failed to create OpenAI chat model: %w", err)
 	}
 
 	baseAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
@@ -42,7 +41,7 @@ func NewSchoolComprehensiveAgent(userId uint, needResumeTool bool) adk.Agent {
 		MaxIterations: 15,
 	})
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to create school comprehensive agent: %w", err))
+		return nil, fmt.Errorf("failed to create school comprehensive agent: %w", err)
 	}
-	return baseAgent
+	return baseAgent, nil
 }

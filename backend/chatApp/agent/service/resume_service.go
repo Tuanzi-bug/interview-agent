@@ -58,7 +58,11 @@ func ParseResumeAndSave(ctx context.Context, userId uint, resumeFilePath string,
 	defer cancel()
 
 	// 创建简历解析智能体
-	agent := resume.NewResumeParserAgent(userId)
+	agent, err := resume.NewResumeParserAgent(userId)
+	if err != nil {
+		log.Printf("[ParseResumeAndSave] 创建简历解析智能体失败: %v", err)
+		return 0, nil, err
+	}
 
 	// 创建 runner
 	runner := adk.NewRunner(timeoutCtx, adk.RunnerConfig{
