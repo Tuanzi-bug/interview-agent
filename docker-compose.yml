@@ -175,21 +175,6 @@ services:
     networks:
       - app-network
 
-  # 13. Nginx 反向代理
-  nginx:
-    image: nginx:alpine
-    container_name: app-nginx
-    restart: always
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/app.conf
-    depends_on:
-      - backend
-      - frontend
-    networks:
-      - app-network
-
   # 14. 前端应用
   frontend:
     build:
