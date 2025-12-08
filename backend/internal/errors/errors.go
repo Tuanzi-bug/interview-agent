@@ -21,6 +21,10 @@ const (
 	ErrCodeValidation   ErrorCode = "VALIDATION_ERROR"
 	ErrCodeFeishuError  ErrorCode = "FEISHU_ERROR"
 	ErrCodeOpenAIError  ErrorCode = "OPENAI_ERROR"
+	// 模型API相关错误码
+	ErrCodeInsufficientTokens    ErrorCode = "INSUFFICIENT_TOKENS"     // 模型API配额不足或令牌用尽
+	ErrCodeRateLimitExceeded     ErrorCode = "RATE_LIMIT_EXCEEDED"     // 模型API请求频率限制超出
+	ErrCodeContextLengthExceeded ErrorCode = "CONTEXT_LENGTH_EXCEEDED" // 模型API上下文长度超出限制
 )
 
 // AppError 应用错误结构
@@ -102,6 +106,30 @@ func NewOpenAIError(message string, err error) *AppError {
 
 func NewModelError(message string, err error) *AppError {
 	return WrapError(err, ErrCodeModelError, message, http.StatusInternalServerError)
+}
+
+// NewInsufficientTokensError 创建令牌不足错误
+// 用于处理模型API配额不足或令牌用尽的情况
+// 返回HTTP 402 (Payment Required)状态码
+// 前端可根据此错误提示用户检查账户余额或充值
+func NewInsufficientTokensError(message string, err error) *AppError {
+	return WrapError(err, ErrCodeInsufficientTokens, message, http.StatusPaymentRequired)
+}
+
+// NewRateLimitExceededError 创建请求频率限制超出错误
+// 用于处理模型API请求频率限制被超出的情况
+// 返回HTTP 429 (Too Many Requests)状态码
+// 前端可根据此错误提示用户稍后重试
+func NewRateLimitExceededError(message string, err error) *AppError {
+	return WrapError(err, ErrCodeRateLimitExceeded, message, http.StatusTooManyRequests)
+}
+
+// NewContextLengthExceededError 创建上下文长度超出错误
+// 用于处理模型API上下文长度超出限制的情况
+// 返回HTTP 413 (Payload Too Large)状态码
+// 前端可根据此错误提示用户输入内容过长，需要简化或分割
+func NewContextLengthExceededError(message string, err error) *AppError {
+	return WrapError(err, ErrCodeContextLengthExceeded, message, http.StatusRequestEntityTooLarge)
 }
 
 // As 检查错误链中是否存在指定类型的错误

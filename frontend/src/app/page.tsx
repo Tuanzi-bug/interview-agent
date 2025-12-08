@@ -1,12 +1,26 @@
 'use client';
 
 import { Typography, Button, Card as AntCard, Rate, Collapse, Avatar, Tag, Badge } from 'antd';
-import { 
-  BulbOutlined, FileTextOutlined, CodeOutlined, CompassOutlined, 
-  FlagOutlined, EyeOutlined, ThunderboltOutlined, SmileOutlined, 
-  SwitcherOutlined, SendOutlined, TeamOutlined, ExperimentOutlined, 
-  UserOutlined, RocketOutlined, TrophyOutlined, FireOutlined,
-  CheckCircleFilled, RightOutlined, PlayCircleFilled
+import {
+  BulbOutlined,
+  FileTextOutlined,
+  CodeOutlined,
+  CompassOutlined,
+  FlagOutlined,
+  EyeOutlined,
+  ThunderboltOutlined,
+  SmileOutlined,
+  SwitcherOutlined,
+  SendOutlined,
+  TeamOutlined,
+  ExperimentOutlined,
+  UserOutlined,
+  RocketOutlined,
+  TrophyOutlined,
+  FireOutlined,
+  CheckCircleFilled,
+  RightOutlined,
+  PlayCircleFilled,
 } from '@ant-design/icons';
 import Link from 'next/link';
 import type { FC } from 'react';
@@ -65,26 +79,38 @@ export default function Home() {
         <div className="max-w-7xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 shadow-sm mb-8 animate-fade-in-up">
             <Badge status="processing" color="blue" />
-            <span className="text-sm font-medium text-slate-600">AI 驱动的面试备战平台 2.0 全新上线</span>
+            <span className="text-sm font-medium text-slate-600">
+              AI 驱动的面试备战平台 2.0 全新上线
+            </span>
           </div>
-          
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-8 leading-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+
+          <h1
+            className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-8 leading-tight animate-fade-in-up"
+            style={{ animationDelay: '0.1s' }}
+          >
             面试从未如此 <br className="hidden md:block" />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
               简单且自信
             </span>
           </h1>
-          
-          <p className="mt-4 max-w-2xl mx-auto text-xl text-slate-500 mb-10 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+
+          <p
+            className="mt-4 max-w-2xl mx-auto text-xl text-slate-500 mb-10 animate-fade-in-up"
+            style={{ animationDelay: '0.2s' }}
+          >
             基于真实大厂面试题库，通过 AI 模拟真实面试场景。
-            <br />从简历分析到专项突破，全方位提升你的面试通过率。
+            <br />
+            从简历分析到专项突破，全方位提升你的面试通过率。
           </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+
+          <div
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up"
+            style={{ animationDelay: '0.3s' }}
+          >
             <Link href="/resume">
-              <Button 
-                type="primary" 
-                size="large" 
+              <Button
+                type="primary"
+                size="large"
                 className="h-14 px-8 text-lg rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:scale-105 hover:shadow-xl transition-all border-0"
                 icon={<RocketOutlined />}
               >
@@ -92,8 +118,8 @@ export default function Home() {
               </Button>
             </Link>
             <Link href="/interview/social">
-              <Button 
-                size="large" 
+              <Button
+                size="large"
                 className="h-14 px-8 text-lg rounded-full bg-white hover:bg-slate-50 border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-600 hover:scale-105 transition-all shadow-sm hover:shadow-md"
                 icon={<PlayCircleFilled className="text-slate-400" />}
               >
@@ -103,13 +129,36 @@ export default function Home() {
           </div>
 
           {/* Stats Bar */}
-          <div className="mt-20 max-w-4xl mx-auto bg-white/60 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl shadow-slate-200/50 p-8 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+          <div
+            className="mt-20 max-w-4xl mx-auto bg-white/60 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl shadow-slate-200/50 p-8 animate-fade-in-up"
+            style={{ animationDelay: '0.4s' }}
+          >
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {[
-                { label: '注册用户', value: '12,000+', color: 'text-blue-600', icon: <UserOutlined /> },
-                { label: '模拟面试', value: '50,000+', color: 'text-indigo-600', icon: <ExperimentOutlined /> },
-                { label: '题库收录', value: '100,000+', color: 'text-purple-600', icon: <FileTextOutlined /> },
-                { label: 'Offer斩获', value: '2,000+', color: 'text-green-600', icon: <TrophyOutlined /> },
+                {
+                  label: '注册用户',
+                  value: '12,000+',
+                  color: 'text-blue-600',
+                  icon: <UserOutlined />,
+                },
+                {
+                  label: '模拟面试',
+                  value: '50,000+',
+                  color: 'text-indigo-600',
+                  icon: <ExperimentOutlined />,
+                },
+                {
+                  label: '题库收录',
+                  value: '100,000+',
+                  color: 'text-purple-600',
+                  icon: <FileTextOutlined />,
+                },
+                {
+                  label: 'Offer斩获',
+                  value: '2,000+',
+                  color: 'text-green-600',
+                  icon: <TrophyOutlined />,
+                },
               ].map((stat, idx) => (
                 <div key={idx} className="flex flex-col items-center">
                   <div className={`text-2xl mb-2 ${stat.color}`}>{stat.icon}</div>
@@ -126,8 +175,12 @@ export default function Home() {
       <section className="relative py-24 px-4 sm:px-6 lg:px-8 z-10 bg-white/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">全方位的面试备战方案</h2>
-            <p className="text-lg text-slate-500">无论你是校招萌新还是社招大佬，这里都有适合你的练习模式</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              全方位的面试备战方案
+            </h2>
+            <p className="text-lg text-slate-500">
+              无论你是校招萌新还是社招大佬，这里都有适合你的练习模式
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -150,7 +203,11 @@ export default function Home() {
                   ))}
                 </ul>
                 <Link href="/interview/social">
-                  <Button type="primary" size="large" className="w-full bg-blue-600 hover:bg-blue-700 border-0 shadow-blue-200">
+                  <Button
+                    type="primary"
+                    size="large"
+                    className="w-full bg-blue-600 hover:bg-blue-700 border-0 shadow-blue-200"
+                  >
                     开始综合模拟
                   </Button>
                 </Link>
@@ -165,7 +222,9 @@ export default function Home() {
                   <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white text-2xl">
                     <FileTextOutlined />
                   </div>
-                  <Tag color="gold" className="border-0 px-3 py-1 text-xs font-bold">HOT</Tag>
+                  <Tag color="gold" className="border-0 px-3 py-1 text-xs font-bold">
+                    HOT
+                  </Tag>
                 </div>
                 <h3 className="text-2xl font-bold text-white mb-4">简历押题</h3>
                 <p className="text-slate-300 mb-6 leading-relaxed">
@@ -179,7 +238,10 @@ export default function Home() {
                   ))}
                 </ul>
                 <Link href="/resume">
-                  <Button size="large" className="w-full bg-white text-slate-900 hover:bg-slate-100 border-0 font-bold">
+                  <Button
+                    size="large"
+                    className="w-full bg-white text-slate-900 hover:bg-slate-100 border-0 font-bold"
+                  >
                     上传简历押题
                   </Button>
                 </Link>
@@ -205,7 +267,11 @@ export default function Home() {
                   ))}
                 </ul>
                 <Link href="/interview/special">
-                  <Button type="primary" size="large" className="w-full bg-purple-600 hover:bg-purple-700 border-0 shadow-purple-200">
+                  <Button
+                    type="primary"
+                    size="large"
+                    className="w-full bg-purple-600 hover:bg-purple-700 border-0 shadow-purple-200"
+                  >
                     选择专项训练
                   </Button>
                 </Link>
@@ -219,22 +285,77 @@ export default function Home() {
       <section className="relative py-24 px-4 sm:px-6 lg:px-8 z-10">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">为什么选择面试吧？</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              为什么选择面试吧？
+            </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-             {[
-              { icon: <CompassOutlined />, title: '大厂真题库', desc: '基于一线大厂历年真题训练，拒绝过时八股文', color: 'text-blue-500', bg: 'bg-blue-50' },
-              { icon: <FlagOutlined />, title: '千人千面', desc: '根据你的简历和能力动态调整题目难度', color: 'text-indigo-500', bg: 'bg-indigo-50' },
-              { icon: <EyeOutlined />, title: '深度复盘', desc: '每次面试都有详细的评估报告与改进建议', color: 'text-purple-500', bg: 'bg-purple-50' },
-              { icon: <ThunderboltOutlined />, title: '极速反馈', desc: '无需等待，随时随地开启面试，实时反馈', color: 'text-yellow-500', bg: 'bg-yellow-50' },
-              { icon: <SmileOutlined />, title: '超高性价比', desc: '仅需传统私教 1/10 的价格享受 24h 服务', color: 'text-green-500', bg: 'bg-green-50' },
-              { icon: <SwitcherOutlined />, title: '难度可控', desc: '从入门到专家级，难度随心切换', color: 'text-pink-500', bg: 'bg-pink-50' },
-              { icon: <SendOutlined />, title: '实战演练', desc: '高压环境模拟，克服面试紧张感', color: 'text-cyan-500', bg: 'bg-cyan-50' },
-              { icon: <TeamOutlined />, title: '角色扮演', desc: '模拟不同风格面试官，从容应对各种情况', color: 'text-orange-500', bg: 'bg-orange-50' },
+            {[
+              {
+                icon: <CompassOutlined />,
+                title: '大厂真题库',
+                desc: '基于一线大厂历年真题训练，拒绝过时八股文',
+                color: 'text-blue-500',
+                bg: 'bg-blue-50',
+              },
+              {
+                icon: <FlagOutlined />,
+                title: '千人千面',
+                desc: '根据你的简历和能力动态调整题目难度',
+                color: 'text-indigo-500',
+                bg: 'bg-indigo-50',
+              },
+              {
+                icon: <EyeOutlined />,
+                title: '深度复盘',
+                desc: '每次面试都有详细的评估报告与改进建议',
+                color: 'text-purple-500',
+                bg: 'bg-purple-50',
+              },
+              {
+                icon: <ThunderboltOutlined />,
+                title: '极速反馈',
+                desc: '无需等待，随时随地开启面试，实时反馈',
+                color: 'text-yellow-500',
+                bg: 'bg-yellow-50',
+              },
+              {
+                icon: <SmileOutlined />,
+                title: '超高性价比',
+                desc: '仅需传统私教 1/10 的价格享受 24h 服务',
+                color: 'text-green-500',
+                bg: 'bg-green-50',
+              },
+              {
+                icon: <SwitcherOutlined />,
+                title: '难度可控',
+                desc: '从入门到专家级，难度随心切换',
+                color: 'text-pink-500',
+                bg: 'bg-pink-50',
+              },
+              {
+                icon: <SendOutlined />,
+                title: '实战演练',
+                desc: '高压环境模拟，克服面试紧张感',
+                color: 'text-cyan-500',
+                bg: 'bg-cyan-50',
+              },
+              {
+                icon: <TeamOutlined />,
+                title: '角色扮演',
+                desc: '模拟不同风格面试官，从容应对各种情况',
+                color: 'text-orange-500',
+                bg: 'bg-orange-50',
+              },
             ].map((item, idx) => (
-              <div key={idx} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col items-start">
-                <div className={`w-12 h-12 ${item.bg} rounded-xl flex items-center justify-center text-xl ${item.color} mb-4`}>
+              <div
+                key={idx}
+                className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col items-start"
+              >
+                <div
+                  className={`w-12 h-12 ${item.bg} rounded-xl flex items-center justify-center text-xl ${item.color} mb-4`}
+                >
                   {item.icon}
                 </div>
                 <h4 className="text-lg font-bold text-slate-800 mb-2">{item.title}</h4>
@@ -255,16 +376,23 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {testimonials.map((t, i) => (
-              <div key={i} className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-lg transition-all">
+              <div
+                key={i}
+                className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-lg transition-all"
+              >
                 <div className="flex items-center gap-1 text-yellow-400 mb-6">
-                  {[1,2,3,4,5].map(s => <FireOutlined key={s} />)}
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <FireOutlined key={s} />
+                  ))}
                 </div>
                 <p className="text-slate-600 mb-6 leading-relaxed italic">"{t.text}"</p>
                 <div className="flex items-center gap-4">
                   <Avatar src={t.avatar} size={48} className="border-2 border-white shadow-sm" />
                   <div>
                     <div className="font-bold text-slate-800">{t.user}</div>
-                    <div className="text-xs text-slate-500 font-medium uppercase tracking-wide">{t.title}</div>
+                    <div className="text-xs text-slate-500 font-medium uppercase tracking-wide">
+                      {t.title}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -283,10 +411,42 @@ export default function Home() {
             ghost
             expandIconPosition="end"
             items={[
-              { key: '1', label: '为什么要用面试吧，而不是豆包、ChatGPT这些通用AI？', children: <p className="text-slate-500 pb-4">面试吧针对求职面试场景深度定制，真实面试标准、追问逻辑与评估体系都更贴近用人单位的要求。</p> },
-              { key: '2', label: '面试吧到底解决了什么问题', children: <p className="text-slate-500 pb-4">帮助你在真实面试来临前发现薄弱点并针对性训练，输出结构化评估与改进建议。</p> },
-              { key: '3', label: '面试吧适合什么样的人使用？', children: <p className="text-slate-500 pb-4">从校招到社招，从转岗到晋升，皆可使用；支持多岗位面试模拟。</p> },
-              { key: '4', label: '收费标准是什么，性价比如何？', children: <p className="text-slate-500 pb-4">单次体验低成本，会员价格更划算；与线下私教相比成本约为1/10。</p> },
+              {
+                key: '1',
+                label: '为什么要用面试吧，而不是豆包、ChatGPT这些通用AI？',
+                children: (
+                  <p className="text-slate-500 pb-4">
+                    面试吧针对求职面试场景深度定制，真实面试标准、追问逻辑与评估体系都更贴近用人单位的要求。
+                  </p>
+                ),
+              },
+              {
+                key: '2',
+                label: '面试吧到底解决了什么问题',
+                children: (
+                  <p className="text-slate-500 pb-4">
+                    帮助你在真实面试来临前发现薄弱点并针对性训练，输出结构化评估与改进建议。
+                  </p>
+                ),
+              },
+              {
+                key: '3',
+                label: '面试吧适合什么样的人使用？',
+                children: (
+                  <p className="text-slate-500 pb-4">
+                    从校招到社招，从转岗到晋升，皆可使用；支持多岗位面试模拟。
+                  </p>
+                ),
+              },
+              {
+                key: '4',
+                label: '收费标准是什么，性价比如何？',
+                children: (
+                  <p className="text-slate-500 pb-4">
+                    单次体验低成本，会员价格更划算；与线下私教相比成本约为1/10。
+                  </p>
+                ),
+              },
             ]}
             className="bg-white rounded-2xl shadow-sm border border-slate-200"
           />
@@ -298,10 +458,17 @@ export default function Home() {
         <div className="max-w-5xl mx-auto bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-12 text-center shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
           <div className="relative z-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">准备好开始你的面试之旅了吗？</h2>
-            <p className="text-blue-100 text-lg mb-10 max-w-2xl mx-auto">立即加入数万名求职者的行列，用 AI 武装自己，从容应对每一次挑战。</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+              准备好开始你的面试之旅了吗？
+            </h2>
+            <p className="text-blue-100 text-lg mb-10 max-w-2xl mx-auto">
+              立即加入数万名求职者的行列，用 AI 武装自己，从容应对每一次挑战。
+            </p>
             <Link href="/resume">
-              <Button size="large" className="h-14 px-10 text-lg rounded-full bg-white text-blue-700 hover:bg-blue-50 border-0 font-bold shadow-lg hover:scale-105 transition-all">
+              <Button
+                size="large"
+                className="h-14 px-10 text-lg rounded-full bg-white text-blue-700 hover:bg-blue-50 border-0 font-bold shadow-lg hover:scale-105 transition-all"
+              >
                 免费开始使用
               </Button>
             </Link>

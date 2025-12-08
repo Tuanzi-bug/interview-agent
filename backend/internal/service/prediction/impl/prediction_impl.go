@@ -58,7 +58,11 @@ func (s *PredictionServiceImpl) Predict(ctx context.Context, req *predictionIDL.
 	log.Printf("[Prediction] Calling Agent with prompt length: %d", len(prompt))
 
 	// 3. Call Agent
-	agent := predictionAgent.NewPredictionAgent(userID)
+	agent, err := predictionAgent.NewPredictionAgent(userID)
+	if err != nil {
+		log.Printf("[Prediction] Failed to create prediction agent: %v", err)
+		return nil, err
+	}
 
 	// 使用 Runner 运行 Agent
 	runner := adk.NewRunner(ctx, adk.RunnerConfig{

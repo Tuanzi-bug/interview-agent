@@ -20,9 +20,7 @@ const Banner: FC = () => {
           <Button type="primary" size="large" className="bg-primary hover:bg-primary/90">
             免费试用
           </Button>
-          <Button size="large">
-            了解更多
-          </Button>
+          <Button size="large">了解更多</Button>
         </div>
         <div className="mt-8 text-gray-500 text-sm">
           <span className="mr-4">✓ 11,677+ 注册用户</span>

@@ -3,9 +3,8 @@
 /**
  * 格式化日期时间
  * @param date 日期字符串或时间戳
- * @param format 格式化模板
  */
-export const formatDateTime = (date: string | number | Date, format: string = 'YYYY-MM-DD HH:mm:ss'): string => {
+export const formatDateTime = (date: string | number | Date): string => {
   // 预留实现
   return new Date(date).toLocaleString('zh-CN');
 };
@@ -25,11 +24,11 @@ export const formatNumber = (num: number, decimals: number = 0): string => {
  */
 export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 

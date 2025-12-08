@@ -5,11 +5,12 @@ import (
 	"ai-eino-interview-agent/internal/model"
 	"encoding/json"
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
 	"golang.org/x/net/context"
-	"log"
-	"time"
 )
 
 func GenerateAnswerRecordEvaluation(ctx context.Context, userId uint, reportId uint64) (*model.AnswerReport, error) {
@@ -18,7 +19,11 @@ func GenerateAnswerRecordEvaluation(ctx context.Context, userId uint, reportId u
 	defer cancel()
 
 	// 创建主题评估智能体
-	agent := record_evaluation.NewAnswerRecordAgent(userId)
+	agent, err := record_evaluation.NewAnswerRecordAgent(userId)
+	if err != nil {
+		log.Printf("[GenerateAnswerRecordEvaluation] 创建智能体失败: %v", err)
+		return nil, err
+	}
 
 	// 创建 runner
 	runner := adk.NewRunner(timeoutCtx, adk.RunnerConfig{

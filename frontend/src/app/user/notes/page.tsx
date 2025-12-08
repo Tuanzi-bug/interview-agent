@@ -2,14 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { Typography, Input, Select, Space, Button, Table, Tag, Empty, message, Card } from 'antd';
-import { 
-  BookOutlined, 
-  SearchOutlined, 
-  DeleteOutlined, 
-  CopyOutlined, 
+import {
+  BookOutlined,
+  SearchOutlined,
+  DeleteOutlined,
+  CopyOutlined,
   ReloadOutlined,
   TagsOutlined,
-  FileTextOutlined
+  FileTextOutlined,
 } from '@ant-design/icons';
 
 type Note = {
@@ -22,9 +22,30 @@ type Note = {
 };
 
 const NOTES: Note[] = [
-  { key: 1, type: '押题笔记', title: 'Redis持久化要点', source: '简历押题-Redis', time: '2024-11-02 12:40', tags: ['Redis', 'AOF'] },
-  { key: 2, type: '面试笔记', title: 'Go并发最佳实践', source: '综合面试-社招', time: '2024-11-06 19:20', tags: ['Go', '并发'] },
-  { key: 3, type: '押题笔记', title: 'MySQL索引设计', source: '简历押题-MySQL', time: '2024-11-03 21:05', tags: ['MySQL', '索引'] },
+  {
+    key: 1,
+    type: '押题笔记',
+    title: 'Redis持久化要点',
+    source: '简历押题-Redis',
+    time: '2024-11-02 12:40',
+    tags: ['Redis', 'AOF'],
+  },
+  {
+    key: 2,
+    type: '面试笔记',
+    title: 'Go并发最佳实践',
+    source: '综合面试-社招',
+    time: '2024-11-06 19:20',
+    tags: ['Go', '并发'],
+  },
+  {
+    key: 3,
+    type: '押题笔记',
+    title: 'MySQL索引设计',
+    source: '简历押题-MySQL',
+    time: '2024-11-03 21:05',
+    tags: ['MySQL', '索引'],
+  },
 ];
 
 const ANSWERS: Record<number, string> = {
@@ -41,17 +62,20 @@ export default function NotesPage() {
   const [expandedKeys, setExpandedKeys] = useState<number[]>([]);
 
   const filtered = useMemo(() => {
-    return notes.filter(n => n.type === active)
-      .filter(n => (keyword ? n.title.includes(keyword) || n.source.includes(keyword) : true))
-      .filter(n => (tag ? n.tags.includes(tag) : true));
+    return notes
+      .filter((n) => n.type === active)
+      .filter((n) => (keyword ? n.title.includes(keyword) || n.source.includes(keyword) : true))
+      .filter((n) => (tag ? n.tags.includes(tag) : true));
   }, [active, keyword, tag, notes]);
 
   const toggleExpand = (key: number) => {
-    setExpandedKeys(prev => (prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]));
+    setExpandedKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
   };
 
   const handleDelete = (key: number) => {
-    setNotes(prev => prev.filter(n => n.key !== key));
+    setNotes((prev) => prev.filter((n) => n.key !== key));
     message.success('笔记已删除');
   };
 
@@ -79,7 +103,10 @@ export default function NotesPage() {
           <p className="text-slate-500 mt-2 ml-11">整理你的面试知识库，温故而知新</p>
         </div>
 
-        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+        <div
+          className="bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50 animate-fade-in-up"
+          style={{ animationDelay: '0.1s' }}
+        >
           {/* Tabs & Filters */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div className="bg-slate-100/80 p-1 rounded-xl inline-flex">
@@ -99,33 +126,36 @@ export default function NotesPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <Input 
-                placeholder="搜索关键词..." 
+              <Input
+                placeholder="搜索关键词..."
                 prefix={<SearchOutlined className="text-slate-400" />}
-                value={keyword} 
-                onChange={e => setKeyword(e.target.value)} 
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
                 className="w-full md:w-[220px] h-10 rounded-lg border-slate-200 hover:border-emerald-400 focus:border-emerald-500"
                 variant="filled"
               />
-              <Select 
-                placeholder="选择标签" 
-                allowClear 
-                value={tag} 
-                onChange={setTag} 
+              <Select
+                placeholder="选择标签"
+                allowClear
+                value={tag}
+                onChange={setTag}
                 className="w-full md:w-[160px] h-10"
                 options={[
-                  { value: 'Redis', label: 'Redis' }, 
-                  { value: 'AOF', label: 'AOF' }, 
-                  { value: 'Go', label: 'Go' }, 
-                  { value: '并发', label: '并发' }, 
-                  { value: 'MySQL', label: 'MySQL' }, 
-                  { value: '索引', label: '索引' }
-                ]} 
+                  { value: 'Redis', label: 'Redis' },
+                  { value: 'AOF', label: 'AOF' },
+                  { value: 'Go', label: 'Go' },
+                  { value: '并发', label: '并发' },
+                  { value: 'MySQL', label: 'MySQL' },
+                  { value: '索引', label: '索引' },
+                ]}
                 variant="filled"
               />
-              <Button 
-                icon={<ReloadOutlined />} 
-                onClick={() => { setKeyword(''); setTag(undefined); }}
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => {
+                  setKeyword('');
+                  setTag(undefined);
+                }}
                 className="h-10 px-4 rounded-lg border-slate-200 text-slate-500 hover:text-emerald-600 hover:border-emerald-200"
               >
                 重置
@@ -136,14 +166,14 @@ export default function NotesPage() {
           {/* Content */}
           {filtered.length === 0 ? (
             <div className="py-20 text-center">
-              <Empty 
-                image={Empty.PRESENTED_IMAGE_SIMPLE} 
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
                   <div className="text-slate-400">
                     <p className="mb-2">暂无{active}</p>
                     <p className="text-xs">尝试切换筛选条件或添加新笔记</p>
                   </div>
-                } 
+                }
               />
             </div>
           ) : (
@@ -161,17 +191,25 @@ export default function NotesPage() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-3">
                               <h4 className="font-bold text-slate-800 m-0">参考答案与思路</h4>
-                              <Tag color="success" className="rounded-full px-2 border-0 bg-emerald-50 text-emerald-600">AI 生成</Tag>
+                              <Tag
+                                color="success"
+                                className="rounded-full px-2 border-0 bg-emerald-50 text-emerald-600"
+                              >
+                                AI 生成
+                              </Tag>
                             </div>
                             <div className="text-slate-600 leading-relaxed text-base">
                               {ANSWERS[row.key] || '暂无详细内容'}
                             </div>
                             <div className="mt-4 flex items-center gap-2">
-                              <Button 
-                                size="small" 
-                                type="dashed" 
-                                icon={<CopyOutlined />} 
-                                onClick={(e) => { e.stopPropagation(); handleCopy(row.key); }}
+                              <Button
+                                size="small"
+                                type="dashed"
+                                icon={<CopyOutlined />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopy(row.key);
+                                }}
                                 className="text-slate-500 hover:text-emerald-600 hover:border-emerald-300"
                               >
                                 复制内容
@@ -183,73 +221,83 @@ export default function NotesPage() {
                     </div>
                   ),
                   expandedRowKeys: expandedKeys,
-                  onExpandedRowsChange: keys => setExpandedKeys(keys as number[]),
+                  onExpandedRowsChange: (keys) => setExpandedKeys(keys as number[]),
                   expandIcon: () => null, // Hide default icon, we use row click
                 }}
                 onRow={(row: Note) => ({
                   onClick: () => toggleExpand(row.key),
-                  className: "cursor-pointer hover:bg-slate-50 transition-colors group"
+                  className: 'cursor-pointer hover:bg-slate-50 transition-colors group',
                 })}
-                pagination={{ 
+                pagination={{
                   pageSize: 10,
-                  className: "px-6 py-4",
-                  showTotal: (total) => <span className="text-slate-400">共 {total} 条笔记</span>
+                  className: 'px-6 py-4',
+                  showTotal: (total) => <span className="text-slate-400">共 {total} 条笔记</span>,
                 }}
                 dataSource={filtered}
                 columns={[
-                  { 
-                    title: '标题', 
-                    dataIndex: 'title', 
-                    className: "pl-6",
+                  {
+                    title: '标题',
+                    dataIndex: 'title',
+                    className: 'pl-6',
                     render: (text) => (
                       <span className="font-bold text-slate-700 group-hover:text-emerald-700 transition-colors">
                         {text}
                       </span>
-                    ) 
+                    ),
                   },
-                  { 
-                    title: '来源', 
+                  {
+                    title: '来源',
                     dataIndex: 'source',
-                    render: (text) => <span className="text-slate-500 text-sm bg-slate-100 px-2 py-1 rounded-md">{text}</span>
+                    render: (text) => (
+                      <span className="text-slate-500 text-sm bg-slate-100 px-2 py-1 rounded-md">
+                        {text}
+                      </span>
+                    ),
                   },
-                  { 
-                    title: '标签', 
-                    dataIndex: 'tags', 
+                  {
+                    title: '标签',
+                    dataIndex: 'tags',
                     render: (tags: string[]) => (
                       <div className="flex gap-1">
-                        {tags.map(t => (
-                          <Tag key={t} bordered={false} className="bg-blue-50 text-blue-600 m-0 rounded-full px-2.5">
+                        {tags.map((t) => (
+                          <Tag
+                            key={t}
+                            bordered={false}
+                            className="bg-blue-50 text-blue-600 m-0 rounded-full px-2.5"
+                          >
                             {t}
                           </Tag>
                         ))}
                       </div>
-                    ) 
+                    ),
                   },
-                  { 
-                    title: '创建时间', 
+                  {
+                    title: '创建时间',
                     dataIndex: 'time',
-                    render: (text) => <span className="text-slate-400 text-xs font-mono">{text}</span>
+                    render: (text) => (
+                      <span className="text-slate-400 text-xs font-mono">{text}</span>
+                    ),
                   },
-                  { 
-                    title: '操作', 
+                  {
+                    title: '操作',
                     width: 120,
                     render: (_: any, row: Note) => (
-                      <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                        <Button 
-                          type="text" 
-                          icon={<CopyOutlined />} 
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          type="text"
+                          icon={<CopyOutlined />}
                           onClick={() => handleCopy(row.key)}
-                          className="text-slate-400 hover:text-blue-600 hover:bg-blue-50" 
+                          className="text-slate-400 hover:text-blue-600 hover:bg-blue-50"
                         />
-                        <Button 
-                          type="text" 
+                        <Button
+                          type="text"
                           danger
-                          icon={<DeleteOutlined />} 
+                          icon={<DeleteOutlined />}
                           onClick={() => handleDelete(row.key)}
-                          className="text-slate-400 hover:text-red-600 hover:bg-red-50" 
+                          className="text-slate-400 hover:text-red-600 hover:bg-red-50"
                         />
                       </div>
-                    ) 
+                    ),
                   },
                 ]}
                 className="modern-table"

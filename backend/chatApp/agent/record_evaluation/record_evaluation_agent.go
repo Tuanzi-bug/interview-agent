@@ -4,7 +4,6 @@ import (
 	"ai-eino-interview-agent/chatApp/chat"
 	tool2 "ai-eino-interview-agent/chatApp/tool"
 	"fmt"
-	"log"
 
 	"github.com/cloudwego/eino/adk"
 	componenttool "github.com/cloudwego/eino/components/tool"
@@ -12,11 +11,11 @@ import (
 	"golang.org/x/net/context"
 )
 
-func NewRecordEvaluationAgent(userId uint) adk.Agent {
+func NewRecordEvaluationAgent(userId uint) (adk.Agent, error) {
 	ctx := context.Background()
 	model, err := chat.CreatOpenAiChatModel(ctx, userId)
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to create OpenAI chat model: %w", err))
+		return nil, fmt.Errorf("failed to create OpenAI chat model: %w", err)
 	}
 	baseAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Name:        "RecordEvaluationAgent",
@@ -33,7 +32,7 @@ func NewRecordEvaluationAgent(userId uint) adk.Agent {
 		MaxIterations: 15,
 	})
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to create evaluation agent: %w", err))
+		return nil, fmt.Errorf("failed to create evaluation agent: %w", err)
 	}
-	return baseAgent
+	return baseAgent, nil
 }

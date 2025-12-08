@@ -5,7 +5,6 @@ import (
 	tool2 "ai-eino-interview-agent/chatApp/tool"
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/cloudwego/eino/adk"
 	componenttool "github.com/cloudwego/eino/components/tool"
@@ -14,11 +13,11 @@ import (
 
 // NewResumeParserAgent 创建简历解析智能体
 // 用于解析简历内容，提取关键信息用于面试准备
-func NewResumeParserAgent(userId uint) adk.Agent {
+func NewResumeParserAgent(userId uint) (adk.Agent, error) {
 	ctx := context.Background()
 	model, err := chat.CreatOpenAiChatModel(ctx, userId)
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to create OpenAI chat model: %w", err))
+		return nil, fmt.Errorf("failed to create OpenAI chat model: %w", err)
 	}
 
 	baseAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
@@ -109,7 +108,7 @@ func NewResumeParserAgent(userId uint) adk.Agent {
 		MaxIterations: 20,
 	})
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to create resume parser agent: %w", err))
+		return nil, fmt.Errorf("failed to create resume parser agent: %w", err)
 	}
-	return baseAgent
+	return baseAgent, nil
 }

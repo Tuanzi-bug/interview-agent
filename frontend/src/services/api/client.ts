@@ -13,12 +13,17 @@ const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const url = config.url || '';
-    const isAuthFree = url.includes('/user/register') || url.includes('/user/login') || url.includes('/user/logout');
+    const isAuthFree =
+      url.includes('/user/register') || url.includes('/user/login') || url.includes('/user/logout');
     const token = localStorage.getItem('token');
     if (token && !isAuthFree) {
       config.headers = (config.headers || {}) as any;
       (config.headers as any).Authorization = `Bearer ${token}`;
       (config.headers as any)['X-Auth-Token'] = token;
+    }
+    // 为面试评估和答题记录接口设置 3 分钟超时
+    if (url.includes('/mianshi/evaluation') || url.includes('/mianshi/answer-record')) {
+      config.timeout = 180000; // 3 分钟 = 180 秒
     }
     return config;
   },

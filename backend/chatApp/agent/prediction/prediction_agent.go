@@ -4,7 +4,6 @@ import (
 	"ai-eino-interview-agent/chatApp/chat"
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/cloudwego/eino/adk"
 )
@@ -24,12 +23,12 @@ type PredictionResult struct {
 }
 
 // NewPredictionAgent 创建押题智能体
-func NewPredictionAgent(userId uint) adk.Agent {
+func NewPredictionAgent(userId uint) (adk.Agent, error) {
 	ctx := context.Background()
 
 	model, err := chat.CreatOpenAiChatModel(ctx, userId)
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to create OpenAI chat model: %w", err))
+		return nil, fmt.Errorf("failed to create OpenAI chat model: %w", err)
 	}
 
 	agent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
@@ -60,7 +59,7 @@ func NewPredictionAgent(userId uint) adk.Agent {
 		Model: model,
 	})
 	if err != nil {
-		log.Fatal(fmt.Errorf("failed to create prediction agent: %w", err))
+		return nil, fmt.Errorf("failed to create prediction agent: %w", err)
 	}
-	return agent
+	return agent, nil
 }

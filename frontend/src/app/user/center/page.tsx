@@ -1,11 +1,35 @@
 'use client';
 
-import { Typography, Row, Col, Card as AntCard, Avatar, Tag, Button, Space, Table, Select, Upload, message, Spin, Popconfirm, Alert } from 'antd';
-import { UploadOutlined, FileOutlined, DeleteOutlined, StarOutlined, StarFilled, InboxOutlined } from '@ant-design/icons';
+import {
+  Typography,
+  Row,
+  Col,
+  Card as AntCard,
+  Avatar,
+  Tag,
+  Button,
+  Space,
+  Table,
+  Select,
+  Upload,
+  message,
+  Spin,
+  Popconfirm,
+  Alert,
+} from 'antd';
+import {
+  UploadOutlined,
+  FileOutlined,
+  DeleteOutlined,
+  StarOutlined,
+  StarFilled,
+  InboxOutlined,
+} from '@ant-design/icons';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import type { UploadProps } from 'antd';
 import apiClient from '@/services/api/client';
+import { API_BASE_URL } from '@/config/api';
 
 const { Title, Paragraph, Text } = Typography;
 const { Dragger } = Upload;
@@ -32,12 +56,30 @@ const columns = [
 ];
 
 const data = [
-  { key: 1, project: '专项面试-Redis', coin: '+20', amount: '¥0.00', channel: '免费体验', time: '2024-10-01 20:12', orderId: 'FREE-001' },
-  { key: 2, project: '简历押题', coin: '-10', amount: '¥9.90', channel: '微信支付', time: '2024-11-02 12:45', orderId: 'WX-20241102-123456' },
+  {
+    key: 1,
+    project: '专项面试-Redis',
+    coin: '+20',
+    amount: '¥0.00',
+    channel: '免费体验',
+    time: '2024-10-01 20:12',
+    orderId: 'FREE-001',
+  },
+  {
+    key: 2,
+    project: '简历押题',
+    coin: '-10',
+    amount: '¥9.90',
+    channel: '微信支付',
+    time: '2024-11-02 12:45',
+    orderId: 'WX-20241102-123456',
+  },
 ];
 
 export default function UserCenterPage() {
-  const [profile, setProfile] = useState<{ id?: number; username?: string; email?: string } | null>(null);
+  const [profile, setProfile] = useState<{ id?: number; username?: string; email?: string } | null>(
+    null
+  );
   const [resumes, setResumes] = useState<ResumeInfo[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loadingResumes, setLoadingResumes] = useState(false);
@@ -76,6 +118,7 @@ export default function UserCenterPage() {
     try {
       const res: any = await apiClient.post('/resume/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 180000, // 3 分钟超时
       });
       message.success('简历上传成功');
       fetchResumes();
@@ -137,7 +180,7 @@ export default function UserCenterPage() {
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     setCheckingConfig(true);
-    fetch('http://localhost:8888/api/user/model/check', {
+    fetch(`${API_BASE_URL}/user/model/check`, {
       method: 'GET',
       headers: {
         Authorization: token ? `Bearer ${token}` : '',
@@ -182,14 +225,25 @@ export default function UserCenterPage() {
           <Col xs={24} md={8} className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
             <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-bl-full -mr-8 -mt-8 z-0" />
-              
+
               <div className="relative z-10 flex flex-col items-center text-center">
                 <div className="p-1 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 mb-4">
-                  <Avatar size={80} src="https://api.dicebear.com/7.x/adventurer/svg?seed=LB" className="border-4 border-white shadow-md" />
+                  <Avatar
+                    size={80}
+                    src="https://api.dicebear.com/7.x/adventurer/svg?seed=LB"
+                    className="border-4 border-white shadow-md"
+                  />
                 </div>
-                <h2 className="text-xl font-bold text-slate-800 mb-1">{profile?.username || '未登录'}</h2>
-                <Tag color="blue" className="border-0 bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-medium">面试吧学员</Tag>
-                
+                <h2 className="text-xl font-bold text-slate-800 mb-1">
+                  {profile?.username || '未登录'}
+                </h2>
+                <Tag
+                  color="blue"
+                  className="border-0 bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-medium"
+                >
+                  面试吧学员
+                </Tag>
+
                 <div className="w-full mt-8 space-y-3 text-left bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-slate-500">用户名</span>
@@ -233,7 +287,9 @@ export default function UserCenterPage() {
                                 <FileOutlined className="text-lg" />
                               </div>
                               <div>
-                                <div className="font-medium text-slate-700 group-hover:text-blue-700 transition-colors">{resume.file_name}</div>
+                                <div className="font-medium text-slate-700 group-hover:text-blue-700 transition-colors">
+                                  {resume.file_name}
+                                </div>
                                 <div className="text-xs text-slate-400 flex gap-2 mt-1">
                                   <span>{formatFileSize(resume.file_size)}</span>
                                   <span>•</span>
@@ -269,7 +325,14 @@ export default function UserCenterPage() {
                             message="模型未配置"
                             description={
                               <span>
-                                无法上传简历，请先去 <Link href="/user/models" className="text-blue-600 font-medium underline hover:text-blue-700">用户模型页面</Link> 配置模型
+                                无法上传简历，请先去{' '}
+                                <Link
+                                  href="/user/models"
+                                  className="text-blue-600 font-medium underline hover:text-blue-700"
+                                >
+                                  用户模型页面
+                                </Link>{' '}
+                                配置模型
                               </span>
                             }
                             type="warning"
@@ -277,17 +340,25 @@ export default function UserCenterPage() {
                             className="mb-4 rounded-xl border-orange-100 bg-orange-50"
                           />
                         )}
-                        <Dragger 
-                          {...uploadProps} 
+                        <Dragger
+                          {...uploadProps}
                           disabled={uploading || !modelConfigured || checkingConfig}
                           className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl hover:border-blue-400 transition-colors"
                           style={{ padding: '40px 0', background: 'rgb(248 250 252)' }}
                         >
                           <p className="ant-upload-drag-icon text-blue-500 mb-4">
-                            {uploading ? <Spin /> : <InboxOutlined style={{ fontSize: '48px', color: '#3b82f6' }} />}
+                            {uploading ? (
+                              <Spin />
+                            ) : (
+                              <InboxOutlined style={{ fontSize: '48px', color: '#3b82f6' }} />
+                            )}
                           </p>
                           <p className="text-base font-medium text-slate-700 mb-2">
-                            {uploading ? '上传中...' : (modelConfigured === false ? '请先配置模型' : '点击或拖拽文件到此区域上传')}
+                            {uploading
+                              ? '上传中...'
+                              : modelConfigured === false
+                                ? '请先配置模型'
+                                : '点击或拖拽文件到此区域上传'}
                           </p>
                           <p className="text-sm text-slate-400">
                             仅支持 PDF 格式，文件大小不超过 10MB

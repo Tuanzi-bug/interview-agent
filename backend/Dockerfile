@@ -10,6 +10,10 @@ WORKDIR /app
 # 复制 go.mod 和 go.sum
 COPY go.mod go.sum ./
 
+# 配置 Go 模块代理（使用国内镜像加速）
+ENV GOPROXY=https://goproxy.cn,https://proxy.golang.org,direct
+ENV GOSUMDB=off
+
 # 下载依赖
 RUN go mod download
 

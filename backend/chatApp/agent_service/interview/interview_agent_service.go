@@ -52,21 +52,21 @@ func (s *InterviewAgentService) GetInterviewAgent(agentType InterviewAgentType, 
 	switch agentType {
 	// Comprehensive 综合面试智能体
 	case ComprehensiveSchool:
-		return comprehensive.NewSchoolComprehensiveAgent(s.userId, needResumeTool), nil
+		return comprehensive.NewSchoolComprehensiveAgent(s.userId, needResumeTool)
 	case ComprehensiveSocial:
-		return comprehensive.NewSocialComprehensiveAgent(s.userId, needResumeTool), nil
+		return comprehensive.NewSocialComprehensiveAgent(s.userId, needResumeTool)
 
 	// Specialized 专项面试智能体
 	case SpecializedGo:
-		return specialized.NewGoSpecializedAgent(s.userId, needResumeTool), nil
+		return specialized.NewGoSpecializedAgent(s.userId, needResumeTool)
 	case SpecializedJava:
-		return specialized.NewJavaSpecializedAgent(s.userId, needResumeTool), nil
+		return specialized.NewJavaSpecializedAgent(s.userId, needResumeTool)
 	case SpecializedMQ:
-		return specialized.NewMQSpecializedAgent(s.userId, needResumeTool), nil
+		return specialized.NewMQSpecializedAgent(s.userId, needResumeTool)
 	case SpecializedMySQL:
-		return specialized.NewMySQLSpecializedAgent(s.userId, needResumeTool), nil
+		return specialized.NewMySQLSpecializedAgent(s.userId, needResumeTool)
 	case SpecializedRedis:
-		return specialized.NewRedisSpecializedAgent(s.userId, needResumeTool), nil
+		return specialized.NewRedisSpecializedAgent(s.userId, needResumeTool)
 
 	default:
 		return nil, fmt.Errorf("unknown interview agent type: %s", agentType)

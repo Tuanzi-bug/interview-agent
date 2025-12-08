@@ -1,11 +1,25 @@
 'use client';
 
-import { Typography, Row, Col, Card as AntCard, Form, Select, Input, Button, Tag, message, Modal, Spin, Alert } from 'antd';
+import {
+  Typography,
+  Row,
+  Col,
+  Form,
+  Select,
+  Input,
+  Button,
+  Tag,
+  message,
+  Spin,
+  Alert,
+  Modal,
+} from 'antd';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircleOutlined, FileOutlined } from '@ant-design/icons';
 import apiClient from '@/services/api/client';
+import { API_BASE_URL } from '@/config/api';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -17,12 +31,13 @@ interface ResumeInfo {
 
 export default function CampusInterviewPage() {
   const [form] = Form.useForm();
-  const [selectedResumeId, setSelectedResumeId] = useState<number | null>(null);
+  const [, setSelectedResumeId] = useState<number | null>(null);
   const [resumes, setResumes] = useState<ResumeInfo[]>([]);
   const [loadingResumes, setLoadingResumes] = useState(false);
   const [starting, setStarting] = useState(false);
   const [modelConfigured, setModelConfigured] = useState<boolean | null>(null);
   const [checkingConfig, setCheckingConfig] = useState<boolean>(false);
+  const [showNoResumeModal, setShowNoResumeModal] = useState(false);
   const router = useRouter();
 
   // 获取用户简历列表
@@ -30,7 +45,11 @@ export default function CampusInterviewPage() {
     setLoadingResumes(true);
     try {
       const data: any = await apiClient.get('/resume/list');
-      setResumes(data?.resumes || []);
+      const list = data?.resumes || [];
+      setResumes(list);
+      if (list.length === 0) {
+        setShowNoResumeModal(true);
+      }
     } catch (err) {
       console.error('获取简历列表失败:', err);
     } finally {
@@ -42,7 +61,7 @@ export default function CampusInterviewPage() {
     fetchResumes();
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     setCheckingConfig(true);
-    fetch('http://localhost:8888/api/user/model/check', {
+    fetch(`${API_BASE_URL}/user/model/check`, {
       method: 'GET',
       headers: {
         Authorization: token ? `Bearer ${token}` : '',
@@ -83,13 +102,19 @@ export default function CampusInterviewPage() {
 
           <Row gutter={[48, 32]}>
             {/* Left Side: Info & Features */}
-            <Col xs={24} lg={9} className="relative z-10 border-b lg:border-b-0 lg:border-r border-slate-100 pb-8 lg:pb-0 lg:pr-10">
+            <Col
+              xs={24}
+              lg={9}
+              className="relative z-10 border-b lg:border-b-0 lg:border-r border-slate-100 pb-8 lg:pb-0 lg:pr-10"
+            >
               <div className="h-full flex flex-col">
                 <div className="mb-6">
-                  <Title level={4} className="!mb-2 !font-bold text-slate-800">核心评估维度</Title>
+                  <Title level={4} className="!mb-2 !font-bold text-slate-800">
+                    核心评估维度
+                  </Title>
                   <Text className="text-slate-400 text-sm">系统将重点考察以下能力</Text>
                 </div>
-                
+
                 <div className="space-y-6 flex-1">
                   {[
                     { title: '系统基础能力', desc: '重视基础测评，构建逻辑理解力' },
@@ -102,7 +127,9 @@ export default function CampusInterviewPage() {
                         <CheckCircleOutlined className="text-lg" />
                       </div>
                       <div>
-                        <div className="font-medium text-slate-700 mb-1 group-hover:text-green-600 transition-colors">{t.title}</div>
+                        <div className="font-medium text-slate-700 mb-1 group-hover:text-green-600 transition-colors">
+                          {t.title}
+                        </div>
                         <div className="text-sm text-slate-400 leading-relaxed">{t.desc}</div>
                       </div>
                     </div>
@@ -110,9 +137,9 @@ export default function CampusInterviewPage() {
                 </div>
 
                 <div className="mt-8 pt-8 border-t border-slate-50 hidden lg:block">
-                   <div className="bg-slate-50 rounded-xl p-4 text-xs text-slate-500 leading-relaxed">
-                     💡 提示：上传一份内容完善的简历能帮助 AI 更好地生成针对性题目。
-                   </div>
+                  <div className="bg-slate-50 rounded-xl p-4 text-xs text-slate-500 leading-relaxed">
+                    💡 提示：上传一份内容完善的简历能帮助 AI 更好地生成针对性题目。
+                  </div>
                 </div>
               </div>
             </Col>
@@ -120,11 +147,14 @@ export default function CampusInterviewPage() {
             {/* Right Side: Form */}
             <Col xs={24} lg={15} className="relative z-10">
               <div className="lg:pl-4">
-                <Title level={4} className="!mb-8 !font-bold text-slate-800 flex items-center gap-2">
+                <Title
+                  level={4}
+                  className="!mb-8 !font-bold text-slate-800 flex items-center gap-2"
+                >
                   <span className="w-1.5 h-6 bg-green-500 rounded-full block"></span>
                   面试配置
                 </Title>
-                
+
                 <Form
                   form={form}
                   layout="vertical"
@@ -145,7 +175,9 @@ export default function CampusInterviewPage() {
                       className="!h-12"
                       variant="filled"
                       onChange={(value) => setSelectedResumeId(value)}
-                      notFoundContent={loadingResumes ? <Spin size="small" /> : '暂无简历，请先在个人中心上传'}
+                      notFoundContent={
+                        loadingResumes ? <Spin size="small" /> : '暂无简历，请先在个人中心上传'
+                      }
                       options={resumes.map((r) => ({
                         value: r.id,
                         label: (
@@ -159,21 +191,45 @@ export default function CampusInterviewPage() {
                   </Form.Item>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <Form.Item label={<span className="font-medium text-slate-700">岗位意向</span>} name="job" className="!mb-2">
-                      <Input placeholder="如：Java后端开发" className="!h-12 !bg-slate-50 border-slate-200 hover:bg-white focus:bg-white transition-colors" />
+                    <Form.Item
+                      label={<span className="font-medium text-slate-700">岗位意向</span>}
+                      name="job"
+                      className="!mb-2"
+                    >
+                      <Input
+                        placeholder="如：Java后端开发"
+                        className="!h-12 !bg-slate-50 border-slate-200 hover:bg-white focus:bg-white transition-colors"
+                      />
                     </Form.Item>
-                    
-                    <Form.Item label={<span className="font-medium text-slate-700">难度等级</span>} name="level" rules={[{ required: true, message: '请选择难度等级' }]} className="!mb-2"> 
-                      <Select 
+
+                    <Form.Item
+                      label={<span className="font-medium text-slate-700">难度等级</span>}
+                      name="level"
+                      rules={[{ required: true, message: '请选择难度等级' }]}
+                      className="!mb-2"
+                    >
+                      <Select
                         className="!h-12"
                         variant="filled"
-                        options={[{ value: '简单', label: '简单' }, { value: '中等', label: '中等' }, { value: '复杂', label: '复杂' }]} 
+                        options={[
+                          { value: '简单', label: '简单' },
+                          { value: '中等', label: '中等' },
+                          { value: '复杂', label: '复杂' },
+                        ]}
                       />
                     </Form.Item>
                   </div>
 
-                  <Form.Item label={<span className="font-medium text-slate-700">目标公司（可选）</span>} name="company_name" className="!mb-6">
-                    <Input placeholder="如：字节跳动" maxLength={100} className="!h-12 !bg-slate-50 border-slate-200 hover:bg-white focus:bg-white transition-colors" />
+                  <Form.Item
+                    label={<span className="font-medium text-slate-700">目标公司（可选）</span>}
+                    name="company_name"
+                    className="!mb-6"
+                  >
+                    <Input
+                      placeholder="如：字节跳动"
+                      maxLength={100}
+                      className="!h-12 !bg-slate-50 border-slate-200 hover:bg-white focus:bg-white transition-colors"
+                    />
                   </Form.Item>
 
                   <div className="mt-2">
@@ -181,9 +237,13 @@ export default function CampusInterviewPage() {
                       <Alert
                         message="模型未配置"
                         description={
-                          <span>
-                            请去 <Link href="/user/models" className="text-blue-500 underline">用户模型页面</Link> 配置模型
-                          </span>
+                          <>
+                            请去{' '}
+                            <Link href="/user/models" className="text-blue-500 underline">
+                              用户模型页面
+                            </Link>{' '}
+                            配置模型
+                          </>
                         }
                         type="warning"
                         showIcon
@@ -192,10 +252,12 @@ export default function CampusInterviewPage() {
                     )}
                     {checkingConfig && (
                       <div className="mb-4 flex justify-center">
-                         <Tag color="default" className="px-3 py-1 rounded-full">正在检查模型配置...</Tag>
+                        <Tag color="default" className="px-3 py-1 rounded-full">
+                          正在检查模型配置...
+                        </Tag>
                       </div>
                     )}
-                    
+
                     <Button
                       type="primary"
                       block
@@ -224,7 +286,11 @@ export default function CampusInterviewPage() {
                           resume_id: values.resume_id,
                         };
                         (window as any).__interviewParams = { ...params };
-                        try { sessionStorage.setItem('interviewParams', JSON.stringify(params)); } catch {}
+                        try {
+                          sessionStorage.setItem('interviewParams', JSON.stringify(params));
+                        } catch {
+                          // ignore storage error
+                        }
                         setStarting(true);
                         router.push('/interview/campus/start');
                       }}
@@ -241,6 +307,28 @@ export default function CampusInterviewPage() {
           </Row>
         </div>
       </div>
+      <Modal
+        open={showNoResumeModal}
+        title="温馨提示"
+        footer={null}
+        onCancel={() => setShowNoResumeModal(false)}
+        centered
+      >
+        <div className="text-center py-6">
+          <div className="mb-4 text-slate-600 text-lg">检测到您尚未上传简历，无法进行面试。</div>
+          <div className="mb-8 text-slate-500">
+            请前往个人中心上传您的简历，AI 将根据您的简历内容生成针对性的面试题目。
+          </div>
+          <Button
+            type="primary"
+            size="large"
+            onClick={() => router.push('/user/center')}
+            className="w-full bg-indigo-600 hover:bg-indigo-500"
+          >
+            前往上传简历
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
