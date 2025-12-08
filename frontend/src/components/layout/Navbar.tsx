@@ -191,7 +191,8 @@ const Navbar: FC = () => {
             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full" />
           </Link>
           <Link
-            href="/"
+            href="https://awq7m8b63wy.feishu.cn/wiki/Cl8mwzOayiTtaZknRU2cyoFHndL"
+            target="_blank"
             className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors relative group"
           >
             使用手册

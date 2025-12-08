@@ -319,7 +319,8 @@ export default function UserModelsPage() {
               <div className="text-sm text-blue-700">
                 如果您不知道如何配置或获取免费大模型，请参看顶部导航栏的
                 <a
-                  href="/"
+                  href="https://awq7m8b63wy.feishu.cn/wiki/Cl8mwzOayiTtaZknRU2cyoFHndL"
+                  target="_blank"
                   className="font-bold underline decoration-blue-300 hover:text-blue-800 mx-1"
                 >
                   使用手册
