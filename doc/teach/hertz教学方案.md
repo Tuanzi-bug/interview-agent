@@ -165,3 +165,94 @@ Todos updated: 1 items
 - 服务启动与 CORS：`backend/main.go:101-129`
 
 如果你希望，我可以把这份“新项目从0到全功能复刻”的教学方案按章节格式化为一个文档文本，包含每阶段的课堂讲解要点与实操清单，并附上所有 `hz` 命令与 `curl` 验证示例。告诉我目标文件名与存放路径，我会直接写入并保持与上述方案完全一致的结构。
+
+# 上传简历端到端教学方案
+
+## 课程目标
+- 完成“上传简历 → 解析简历 → 入库 → 查询”的端到端闭环
+- 覆盖 Hertz 接口设计、IDL 驱动路由、文件上传与校验、持久化层、Eino Agent 编排、大模型对接
+- 通过模块化实战，让学员能独立实现与扩展上传简历能力
+
+## 架构总览
+- 路由与接口
+  - IDL 定义驱动生成路由：`backend/idl/interviews/interviews.thrift:204-216`
+  - 路由注册：`backend/api/router/interview/api.go:55-63`
+- Handler 层
+  - 上传入口：`backend/api/handler/interview/interviews_service.go:56`
+  - 文件校验与保存：同文件内 `handleResumeUpload(...)`
+  - 解析服务调用：`service.ParseResumeAndSave(...)`，位置 `backend/chatApp/agent/service/resume_service.go:55`
+- Agent 与模型
+  - Agent 构建：`backend/chatApp/agent/resume/resume.go:16`
+  - 模型创建：`chat.CreatOpenAiChatModel(ctx, userId)`（项目内封装，密钥走环境）
+  - 工具注入：`tool2.CreatePDFToTextTool()`，先工具解析再总结
+- 持久化层
+  - 模型与 DAO：`backend/internal/model/resume.go`
+  - 创建记录：`backend/internal/model/resume.go:33`
+  - 业务服务：`backend/internal/service/interviews/impl/resume_manager_impl.go`
+
+## 开发顺序（课堂路线）
+- 第 1 步：IDL → 路由 → Handler 生成与关系
+  - 上传接口定义：`backend/idl/interviews/interviews.thrift:204-216`
+  - 路由注册对照：`backend/api/router/interview/api.go:55-63`
+- 第 2 步：上传 Handler 最小正确性
+  - 入口：`backend/api/handler/interview/interviews_service.go:56`
+  - 只允许 PDF、10MB 限制，保存到 `uploads/resumes`（使用 `PWD`）
+  - 用 Postman/curl 验证接收与落盘
+- 第 3 步：持久化层与数据模型
+  - 字段解释：`backend/internal/model/resume.go:14-23`
+  - `getDB` 初始化与常见坑
+  - 先用占位内容写入，跑通 DB 流程
+- 第 4 步：引入 Eino Agent 编排（先讲流程）
+  - Agent 构造：`backend/chatApp/agent/resume/resume.go:16`
+  - 必须先调用 `pdf_to_text` 工具
+  - Runner 与超时：`backend/chatApp/agent/service/resume_service.go:55` 顶层 `context.WithTimeout(..., 120*time.Second)`
+  - Query 的结构化提示与 JSON 输出约束
+- 第 5 步：对接大模型并联通 Agent
+  - 模型创建：`chat.CreatOpenAiChatModel(ctx, userId)`，密钥环境管理
+  - 跑通“pdf_to_text → LLM 总结 → JSON → 入库”：`backend/chatApp/agent/service/resume_service.go:243`
+  - 将解析 JSON 存入 `Resume.Content`，文件名保留原 PDF 名、`FileType="pdf"`
+- 第 6 步：查询与默认简历
+  - 查询接口：`GetResume` 入口在 `backend/api/handler/interview/interviews_service.go`（函数名定位）
+  - 默认简历设置与读取：`backend/internal/model/resume.go:112-129`、`impl.ResumeServer.GetDefaultResumeInfo(...)`
+- 第 7 步：质量与扩展
+  - 错误处理与用户态提示（401、文件无效、模型失败）
+  - 性能与健壮性：超时、文件清理、并发上传、异步解析（讲思路）
+  - 安全：不记录密钥、不暴露路径、控制上传大小与类型
+
+## 课程分段（2.5–3 小时）
+- 模块 1（20 分钟）：架构与 IDL 驱动
+- 模块 2（40 分钟）：文件上传与校验
+- 模块 3（30 分钟）：数据模型与入库
+- 模块 4（45–60 分钟）：Eino Agent 与模型对接
+- 模块 5（20–30 分钟）：查询、默认简历与收尾
+
+## 演示与练习
+- 演示命令
+  - 上传：`curl -X POST -H "Authorization: Bearer <token>" -F "resume=@/path/resume.pdf" http://localhost:<port>/api/resume/upload`
+  - 查询：`GET /api/resume/<resume_id>`、`GET /api/resume/default`、`GET /api/resume/list`
+- 练习题
+  - 将 10MB 限制改为 5MB 并返回友好错误
+  - 增加 `.docx` 支持（扩展工具链与类型校验）
+  - 为 `ParseResumeAndSave` 增加失败重试一次
+
+## 关键讲解点与易错项
+- IDL 变更后需更新生成代码，否则路由与 Handler 不匹配
+- `getDB` 未初始化会 panic，开课前检查数据库初始化
+- 文件保存路径依赖 `PWD`，需确认环境
+- Agent 工具必须先调用，避免 LLM 凭空总结
+- 超时控制与错误上报清晰，避免课堂卡住
+- 不把密钥写入代码或日志
+
+## 代码定位参考
+- 路由注册：`backend/api/router/interview/api.go:55-63`
+- 上传入口：`backend/api/handler/interview/interviews_service.go:56`
+- 解析服务：`backend/chatApp/agent/service/resume_service.go:55`
+- Agent 构建：`backend/chatApp/agent/resume/resume.go:16`
+- 创建简历记录：`backend/internal/model/resume.go:33`
+- 服务层上传：`backend/internal/service/interviews/impl/resume_manager_impl.go:81`
+- 默认简历设置：`backend/internal/model/resume.go:112-129`
+
+## 作业与扩展
+- 支持异步解析并在前端展示解析状态
+- 增加“简历内容预览”接口，返回核心字段摘要
+- 设置默认时取消其他默认（业务事件化）
