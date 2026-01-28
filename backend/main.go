@@ -76,14 +76,14 @@ func main() {
 	//}
 	//log.Println("Milvus Manager initialized successfully")
 
-	// 8. 初始化消息队列（使用 Redis）
+	// 8. 初始化消息队列（使用 Redis）// 可以说明使用kafka实现消息队列
 	log.Println("Initializing Redis message queue...")
 	redisClient := repository.GetRedis()
 	if redisClient == nil {
 		log.Fatalf("Redis client not initialized")
 	}
 	messageQueue := mq.NewRedisQueue(redisClient)
-	mq.InitMessageQueue(messageQueue)
+	mq.InitMessageQueue(messageQueue) // 开启全局消息队列
 	log.Println("Redis message queue initialized successfully")
 
 	// 9. 启动消费者
@@ -123,7 +123,7 @@ func main() {
 
 		c.Next(ctx)
 	})
-
+	// 注册 jwt中间件并配置一些白名单
 	s.Use(appMiddleware.JWTMiddlewareWithSkipper(interviewRouter.AuthSkipper()))
 	router.GeneratedRegister(s)
 

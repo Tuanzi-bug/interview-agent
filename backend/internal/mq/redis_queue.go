@@ -79,13 +79,13 @@ func (q *RedisQueue) Subscribe(ctx context.Context, handler MessageHandler) erro
 	messageCount := 0
 	for {
 		select {
-		case <-ctx.Done():
+		case <-ctx.Done(): // 上下文取消时退出
 			log.Printf("[RedisQueue] Context cancelled, stopping subscription (received %d messages)", messageCount)
 			return ctx.Err()
-		case <-q.done:
+		case <-q.done: // 队列关闭退出
 			log.Printf("[RedisQueue] Queue closed, stopping subscription (received %d messages)", messageCount)
 			return nil
-		case msg := <-ch:
+		case msg := <-ch: // 有消息到达
 			if msg == nil {
 				log.Printf("[RedisQueue] Received nil message")
 				continue
