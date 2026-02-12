@@ -5,6 +5,7 @@ import (
 	"ai-eino-interview-agent/internal/config"
 	"ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/model"
+	"ai-eino-interview-agent/internal/utils"
 	"context"
 	"encoding/json"
 	"errors"
@@ -39,10 +40,15 @@ func (s *UserServer) Register(_ context.Context, req userapi.RegisterRequest) (*
 		return nil, err
 	}
 
+	hashedPassword, err := utils.HashPassword(req.GetPassword())
+	if err != nil {
+		return nil, fmt.Errorf("密码加密失败: %v", err)
+	}
+
 	userRecord := &model.User{
 		Username:     req.GetUsername(),
 		Email:        req.GetEmail(),
-		PasswordHash: req.GetPassword(),
+		PasswordHash: hashedPassword,
 		Role:         "user",
 	}
 
@@ -67,7 +73,7 @@ func (s *UserServer) Login(_ context.Context, req userapi.LoginRequest) (*userap
 		return nil, err
 	}
 
-	if userRecord.PasswordHash != req.GetPassword() {
+	if !utils.CheckPasswordHash(req.GetPassword(), userRecord.PasswordHash) {
 		return nil, errors.New("密码错误")
 	}
 
