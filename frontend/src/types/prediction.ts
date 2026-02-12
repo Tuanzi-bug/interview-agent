@@ -6,6 +6,8 @@ export interface PredictionRecordItem {
   company: string;
   prediction_type: string;
   language: string;
+  resume_name: string;
+  status: string;
 }
 
 export interface ListPredictionResponse {

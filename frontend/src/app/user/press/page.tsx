@@ -36,18 +36,16 @@ export default function PressRecordsPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
 
-  const fetchData = async (page: number, size: number) => {
+  const fetchData = async (page: number, size: number, filterStatus?: string, filterCompany?: string) => {
     setLoading(true);
     try {
-      const res = await predictionService.getPredictionList(page, size);
+      const res = await predictionService.getPredictionList(page, size, filterStatus, filterCompany);
       if (res && res.list) {
         const mappedData = res.list.map((item) => ({
           ...item,
           key: item.id,
-          // Backend doesn't return resume name yet
-          resume: '默认简历', 
-          // Backend doesn't return status yet, default to '已出题'
-          status: '已出题' as const, 
+          resume: item.resume_name,
+          status: item.status as '已出题' | '进行中' | '失败',
         }));
         setData(mappedData);
         setTotal(res.total);
@@ -61,15 +59,8 @@ export default function PressRecordsPage() {
   };
 
   useEffect(() => {
-    fetchData(currentPage, pageSize);
+    fetchData(currentPage, pageSize, status, company);
   }, [currentPage, pageSize]);
-
-  // Client-side filtering for now (Backend API doesn't support filters yet)
-  const filtered = data.filter(
-    (r) =>
-      (status === '全部状态' || r.status === status) &&
-      (company === '' || r.company.includes(company))
-  );
 
   return (
     <div className="min-h-screen relative font-sans">
@@ -116,7 +107,10 @@ export default function PressRecordsPage() {
             <Button
               type="primary"
               className="bg-blue-600 hover:bg-blue-500 h-10 px-6 rounded-lg shadow-blue-200"
-              onClick={() => fetchData(1, pageSize)}
+              onClick={() => {
+                setCurrentPage(1);
+                fetchData(1, pageSize, status, company);
+              }}
             >
               查询
             </Button>
@@ -223,7 +217,7 @@ export default function PressRecordsPage() {
                 ),
               },
             ]}
-            dataSource={filtered}
+            dataSource={data}
             pagination={{
               current: currentPage,
               pageSize: pageSize,
