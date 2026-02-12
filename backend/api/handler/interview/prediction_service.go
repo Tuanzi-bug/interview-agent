@@ -8,6 +8,7 @@ import (
 	"ai-eino-interview-agent/internal/service/prediction/impl"
 	"context"
 	"log"
+	"strconv"
 
 	prediction "ai-eino-interview-agent/api/model/prediction"
 	"github.com/cloudwego/hertz/pkg/app"
@@ -72,11 +73,20 @@ func ListPredictions(ctx context.Context, c *app.RequestContext) {
 func GetPredictionDetail(ctx context.Context, c *app.RequestContext) {
 	var err error
 	var req prediction.GetPredictionDetailRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+
+	idStr := c.Param("id")
+	if idStr == "" {
+		response.BadRequest(ctx, c, "ID parameter is required")
 		return
 	}
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		response.BadRequest(ctx, c, "Invalid ID parameter")
+		return
+	}
+
+	req.ID = id
 
 	userID := middleware.GetUserID(c)
 	if userID == 0 {

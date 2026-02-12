@@ -293,6 +293,7 @@ func (s *PredictionServiceImpl) GetPredictionDetail(ctx context.Context, req *pr
 		questions = append(questions, &predictionIDL.PredictionQuestion{
 			ID:              int64(q.ID),
 			Question:        q.Question,
+			Content:         q.Content,
 			Focus:           q.Focus,
 			ThinkingPath:    q.ThinkingPath,
 			ReferenceAnswer: q.ReferenceAnswer,
