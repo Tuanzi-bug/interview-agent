@@ -32,6 +32,8 @@ struct PredictResponse {
 struct ListPredictionRequest {
     1: optional i32 page (api.query="page", default="1")
     2: optional i32 size (api.query="size", default="10")
+    3: optional string status (api.query="status")
+    4: optional string company_name (api.query="company_name")
 }
 
 // 押题记录摘要
@@ -43,6 +45,8 @@ struct PredictionRecordItem {
     5: required string company
     6: required string prediction_type
     7: required string language
+    8: required string resume_name
+    9: required string status
 }
 
 // 列表响应

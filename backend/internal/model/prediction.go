@@ -13,11 +13,13 @@ type PredictionRecord struct {
 	ID         uint64               `json:"id" gorm:"primaryKey;autoIncrement;comment:押题记录ID"`
 	UserID     uint                 `json:"user_id" gorm:"index;not null;comment:用户ID"`
 	ResumeID   uint64               `json:"resume_id" gorm:"index;not null;comment:简历ID"`
+	Resume     *Resume              `json:"resume" gorm:"foreignKey:ResumeID"`
 	Type       string               `json:"type" gorm:"size:20;comment:押题类型(校招/社招)"`
 	Language   string               `json:"language" gorm:"size:20;comment:语言类型(java/go)"`
 	JobTitle   string               `json:"job_title" gorm:"size:50;comment:岗位名称(前端/后端)"`
 	Difficulty string               `json:"difficulty" gorm:"size:20;comment:难度等级(入门/进阶)"`
 	Company    string               `json:"company" gorm:"size:100;comment:公司名称(字节/阿里等)"`
+	Status     string               `json:"status" gorm:"size:20;default:'已出题';comment:状态(已出题/进行中/失败)"`
 	Questions  []PredictionQuestion `json:"questions" gorm:"foreignKey:RecordID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	CreatedAt  time.Time            `json:"created_at" gorm:"autoCreateTime;comment:创建时间"`
 }
@@ -84,7 +86,7 @@ func (d *_Prediction) GetPredictionRecordByID(id uint64) (*PredictionRecord, err
 }
 
 // GetPredictionRecordsByUserID 查询用户的押题记录
-func (d *_Prediction) GetPredictionRecordsByUserID(userID uint, page, pageSize int) ([]*PredictionRecord, int64, error) {
+func (d *_Prediction) GetPredictionRecordsByUserID(userID uint, page, pageSize int, status string, companyName string) ([]*PredictionRecord, int64, error) {
 	if getDB == nil {
 		panic("getDB function not initialized")
 	}
@@ -92,11 +94,20 @@ func (d *_Prediction) GetPredictionRecordsByUserID(userID uint, page, pageSize i
 	var total int64
 
 	db := getDB().Model(&PredictionRecord{}).Where("user_id = ?", userID)
+
+	if status != "" && status != "全部状态" {
+		db = db.Where("status = ?", status)
+	}
+	if companyName != "" {
+		db = db.Where("company LIKE ?", "%"+companyName+"%")
+	}
+
 	db.Count(&total)
 
-	err := db.Order("created_at asc").
+	err := db.Order("created_at desc").
 		Offset((page-1)*pageSize).
 		Limit(pageSize).
+		Preload("Resume").
 		Preload("Questions", func(db *gorm.DB) *gorm.DB {
 			return db.Order("sort ASC")
 		}).

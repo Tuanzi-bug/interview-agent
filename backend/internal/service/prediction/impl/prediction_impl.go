@@ -130,6 +130,7 @@ func (s *PredictionServiceImpl) Predict(ctx context.Context, req *predictionIDL.
 		Language:   req.Language,
 		JobTitle:   req.JobTitle,
 		Difficulty: req.Difficulty,
+		Status:     "已出题",
 	}
 	if req.CompanyName != nil {
 		record.Company = *req.CompanyName
@@ -236,13 +237,26 @@ func (s *PredictionServiceImpl) ListPredictions(ctx context.Context, req *predic
 		size = int(*req.Size)
 	}
 
-	records, total, err := model.PredictionDao.GetPredictionRecordsByUserID(userID, page, size)
+	var status string
+	if req.Status != nil {
+		status = *req.Status
+	}
+	var companyName string
+	if req.CompanyName != nil {
+		companyName = *req.CompanyName
+	}
+
+	records, total, err := model.PredictionDao.GetPredictionRecordsByUserID(userID, page, size, status, companyName)
 	if err != nil {
 		return nil, err
 	}
 
 	var list []*predictionIDL.PredictionRecordItem
 	for _, r := range records {
+		resumeName := "未知简历"
+		if r.Resume != nil {
+			resumeName = r.Resume.FileName
+		}
 		list = append(list, &predictionIDL.PredictionRecordItem{
 			ID:             int64(r.ID),
 			CreatedAt:      r.CreatedAt.Format(time.DateTime),
@@ -251,6 +265,8 @@ func (s *PredictionServiceImpl) ListPredictions(ctx context.Context, req *predic
 			Company:        r.Company,
 			PredictionType: r.Type,
 			Language:       r.Language,
+			ResumeName:     resumeName,
+			Status:         r.Status,
 		})
 	}
 

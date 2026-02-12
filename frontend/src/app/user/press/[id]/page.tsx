@@ -1,68 +1,98 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Typography, Row, Col, Card as AntCard, List, Tag, Space, Divider } from 'antd';
+import { useMemo, useState, useEffect } from 'react';
+import { Typography, Row, Col, Card as AntCard, List, Tag, Space, Divider, Skeleton, message } from 'antd';
 import { BookOutlined, BulbOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { useParams } from 'next/navigation';
+import { predictionService } from '@/services/api/prediction';
+import type { PredictionQuestion } from '@/types/prediction';
 
 const { Title, Paragraph, Text } = Typography;
 
-const staticData = {
-  questions: [
-    {
-      title: '我看你简历上提到了RAG驱动AI旅行助手项目，你主要负责的部分吗？',
-      question:
-        '我看你简历上提到了RAG驱动AI旅行助手项目，能先跟我简单介绍一下这个项目的背景和你主要负责的部分吗？',
-      idea: [
-        {
-          label: '背景',
-          value: '项目背景兼顾的真实性、个人职责的清晰度、技术方案的合理性、项目成果的可信度',
-        },
-        { label: '职责', value: '负责AI助手的研发落地，提升客户体验与员工效率' },
-        { label: '挑战', value: '解决检索准确性与响应稳定性问题，构建可解释的AI响应' },
-        { label: '成果', value: '整体满意度提升，业务指标优化，成功率提升' },
-      ],
-      reference:
-        '该项目为RAG驱动的旅行助手，整合检索与生成，在稳定性与响应速度上做了优化，通过流式SSE提升交互体验，核心链路可用性达到99%以上。',
-      followups: [
-        '这个AI助手为何选择RAG而不是纯生成式？',
-        '你在项目中的技术决策有哪些？如何权衡准确性与性能？',
-        '项目上线后，用户反馈和指标变化如何？下一步优化方向？',
-      ],
-    },
-    {
-      title: '在这个AI旅行助手中如何做多源数据检索与融合？',
-      question: '在这个AI旅行助手中，如何实现多源数据检索与融合以保证答复的可靠性？',
-      idea: [
-        { label: '背景', value: '多源数据，包括百科、攻略库、商家信息与用户生成内容' },
-        { label: '职责', value: '负责检索管道设计与结果融合策略落地' },
-        { label: '挑战', value: '异构数据的质量与时效性问题' },
-        { label: '成果', value: '答复准确率与一致性提升' },
-      ],
-      reference:
-        '采用分层检索与重排策略，BM25+向量检索结合，针对问句类别使用不同的融合权重与投票机制。',
-      followups: ['你如何评估融合策略的效果？', '数据时效性问题如何处理？'],
-    },
-    {
-      title: '在RAG系统中如何处理并发与延迟问题？',
-      question: '在RAG系统中如何处理并发与延迟问题，确保用户体验？',
-      idea: [
-        { label: '背景', value: '高并发场景下检索与生成的协同' },
-        { label: '职责', value: '优化请求调度与缓存策略' },
-        { label: '挑战', value: '检索延迟与生成阻塞' },
-        { label: '成果', value: '端到端延迟稳定在 100-200ms 量级（流式首包更快）' },
-      ],
-      reference: '采用异步管道与消息队列、向量缓存与热点文档预取，首包用SSE推送提升感知速度。',
-      followups: ['为什么选择SSE而非WebSocket？', '缓存失效策略如何设计？'],
-    },
-  ],
-};
+// UI View Model
+interface QuestionViewModel {
+  title: string;
+  question: string;
+  idea: { label: string; value: string }[];
+  reference: string;
+  followups: string[];
+}
 
 export default function PressDetailPage() {
+  const params = useParams();
+  const id = Number(params.id);
+  
   const [selected, setSelected] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [questions, setQuestions] = useState<QuestionViewModel[]>([]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchDetail = async () => {
+      setLoading(true);
+      try {
+        const res = await predictionService.getPredictionDetail(id);
+        if (res && res.questions) {
+          const viewModels: QuestionViewModel[] = res.questions.map((q: PredictionQuestion) => {
+            let followups: string[] = [];
+            try {
+              // Try parsing if it looks like a JSON array, otherwise treat as single string or empty
+              if (q.follow_up && (q.follow_up.startsWith('[') || q.follow_up.startsWith('{'))) {
+                 followups = JSON.parse(q.follow_up);
+              } else if (q.follow_up) {
+                 followups = [q.follow_up];
+              }
+            } catch (e) {
+              console.warn('Failed to parse follow_up:', q.follow_up);
+              followups = q.follow_up ? [q.follow_up] : [];
+            }
+
+            return {
+              title: q.question, // Use question as title
+              question: q.question,
+              idea: [
+                { label: '考察重点', value: q.focus },
+                { label: '思考路径', value: q.thinking_path },
+                { label: '问题详解', value: q.content },
+              ].filter(item => item.value), // Filter out empty values
+              reference: q.reference_answer,
+              followups: Array.isArray(followups) ? followups : [],
+            };
+          });
+          setQuestions(viewModels);
+        }
+      } catch (error) {
+        console.error('Failed to fetch prediction detail:', error);
+        message.error('获取详情失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDetail();
+  }, [id]);
+
   const current = useMemo(
-    () => staticData.questions[selected] || staticData.questions[0],
-    [selected]
+    () => questions[selected] || questions[0],
+    [selected, questions]
   );
+
+  if (loading) {
+     return (
+        <div className="min-h-screen container mx-auto px-4 py-12">
+            <Skeleton active paragraph={{ rows: 4 }} />
+        </div>
+     )
+  }
+
+  if (!current) {
+      return (
+        <div className="min-h-screen container mx-auto px-4 py-12 text-center text-slate-500">
+            暂无数据
+        </div>
+      )
+  }
 
   return (
     <div className="min-h-screen relative font-sans">
@@ -98,7 +128,7 @@ export default function PressDetailPage() {
               <div className="max-h-[calc(100vh-300px)] overflow-y-auto custom-scrollbar">
                 <List
                   itemLayout="horizontal"
-                  dataSource={staticData.questions}
+                  dataSource={questions}
                   split={false}
                   renderItem={(item, index) => (
                     <List.Item
@@ -183,7 +213,7 @@ export default function PressDetailPage() {
                       </div>
                       参考答案
                     </div>
-                    <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 border border-slate-100 text-slate-700 leading-loose">
+                    <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl p-6 border border-slate-100 text-slate-700 leading-loose whitespace-pre-wrap">
                       {current.reference}
                     </div>
                   </section>

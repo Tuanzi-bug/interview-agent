@@ -3,7 +3,7 @@ module.exports = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:8888/api/:path*',
+        destination: `${process.env.INTERNAL_API_URL || 'http://localhost:8888'}/api/:path*`,
       },
     ];
   },

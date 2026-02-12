@@ -8,19 +8,13 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
-// 押题请求
 type PredictRequest struct {
-	ResumeID int64 `thrift:"resume_id,1,required" form:"resume_id,required" json:"resume_id,required"`
-	// 校招/社招
-	PredictionType string `thrift:"prediction_type,2,required" form:"prediction_type,required" json:"prediction_type,required"`
-	// java/go
-	Language string `thrift:"language,3,required" form:"language,required" json:"language,required"`
-	// 前端/后端
-	JobTitle string `thrift:"job_title,4,required" form:"job_title,required" json:"job_title,required"`
-	// 入门/进阶
-	Difficulty string `thrift:"difficulty,5,required" form:"difficulty,required" json:"difficulty,required"`
-	// 公司名称
-	CompanyName *string `thrift:"company_name,6,optional" form:"company_name" json:"company_name,omitempty"`
+	ResumeID       int64   `thrift:"resume_id,1,required" json:"resume_id"`
+	PredictionType string  `thrift:"prediction_type,2,required" json:"prediction_type"`
+	Language       string  `thrift:"language,3,required" json:"language"`
+	JobTitle       string  `thrift:"job_title,4,required" json:"job_title"`
+	Difficulty     string  `thrift:"difficulty,5,required" json:"difficulty"`
+	CompanyName    *string `thrift:"company_name,6,optional" json:"company_name,omitempty"`
 }
 
 func NewPredictRequest() *PredictRequest {
@@ -431,16 +425,15 @@ func (p *PredictRequest) String() string {
 
 }
 
-// 押题问题详情
 type PredictionQuestion struct {
-	ID              int64  `thrift:"id,1,required" form:"id,required" json:"id,required" query:"id,required"`
-	Question        string `thrift:"question,2,required" form:"question,required" json:"question,required" query:"question,required"`
-	Content         string `thrift:"content,3,required" form:"content,required" json:"content,required" query:"content,required"`
-	Focus           string `thrift:"focus,4,required" form:"focus,required" json:"focus,required" query:"focus,required"`
-	ThinkingPath    string `thrift:"thinking_path,5,required" form:"thinking_path,required" json:"thinking_path,required" query:"thinking_path,required"`
-	ReferenceAnswer string `thrift:"reference_answer,6,required" form:"reference_answer,required" json:"reference_answer,required" query:"reference_answer,required"`
-	FollowUp        string `thrift:"follow_up,7,required" form:"follow_up,required" json:"follow_up,required" query:"follow_up,required"`
-	Sort            int32  `thrift:"sort,8,required" form:"sort,required" json:"sort,required" query:"sort,required"`
+	ID              int64  `thrift:"id,1,required" json:"id"`
+	Question        string `thrift:"question,2,required" json:"question"`
+	Content         string `thrift:"content,3,required" json:"content"`
+	Focus           string `thrift:"focus,4,required" json:"focus"`
+	ThinkingPath    string `thrift:"thinking_path,5,required" json:"thinking_path"`
+	ReferenceAnswer string `thrift:"reference_answer,6,required" json:"reference_answer"`
+	FollowUp        string `thrift:"follow_up,7,required" json:"follow_up"`
+	Sort            int32  `thrift:"sort,8,required" json:"sort"`
 }
 
 func NewPredictionQuestion() *PredictionQuestion {
@@ -951,10 +944,9 @@ func (p *PredictionQuestion) String() string {
 
 }
 
-// 押题响应
 type PredictResponse struct {
-	RecordID  int64                 `thrift:"record_id,1,required" form:"record_id,required" json:"record_id,required" query:"record_id,required"`
-	Questions []*PredictionQuestion `thrift:"questions,2,required,list<PredictionQuestion>" form:"questions,required" json:"questions,required" query:"questions,required"`
+	RecordID  int64                 `thrift:"record_id,1,required" json:"record_id"`
+	Questions []*PredictionQuestion `thrift:"questions,2,required,list<PredictionQuestion>" json:"questions"`
 }
 
 func NewPredictResponse() *PredictResponse {
@@ -1173,10 +1165,11 @@ func (p *PredictResponse) String() string {
 
 }
 
-// 获取押题记录列表请求
 type ListPredictionRequest struct {
-	Page *int32 `thrift:"page,1,optional" json:"page,omitempty" query:"page"`
-	Size *int32 `thrift:"size,2,optional" json:"size,omitempty" query:"size"`
+	Page        *int32  `thrift:"page,1,optional" json:"page,omitempty"`
+	Size        *int32  `thrift:"size,2,optional" json:"size,omitempty"`
+	Status      *string `thrift:"status,3,optional" json:"status,omitempty"`
+	CompanyName *string `thrift:"company_name,4,optional" json:"company_name,omitempty"`
 }
 
 func NewListPredictionRequest() *ListPredictionRequest {
@@ -1204,9 +1197,29 @@ func (p *ListPredictionRequest) GetSize() (v int32) {
 	return *p.Size
 }
 
+var ListPredictionRequest_Status_DEFAULT string
+
+func (p *ListPredictionRequest) GetStatus() (v string) {
+	if !p.IsSetStatus() {
+		return ListPredictionRequest_Status_DEFAULT
+	}
+	return *p.Status
+}
+
+var ListPredictionRequest_CompanyName_DEFAULT string
+
+func (p *ListPredictionRequest) GetCompanyName() (v string) {
+	if !p.IsSetCompanyName() {
+		return ListPredictionRequest_CompanyName_DEFAULT
+	}
+	return *p.CompanyName
+}
+
 var fieldIDToName_ListPredictionRequest = map[int16]string{
 	1: "page",
 	2: "size",
+	3: "status",
+	4: "company_name",
 }
 
 func (p *ListPredictionRequest) IsSetPage() bool {
@@ -1215,6 +1228,14 @@ func (p *ListPredictionRequest) IsSetPage() bool {
 
 func (p *ListPredictionRequest) IsSetSize() bool {
 	return p.Size != nil
+}
+
+func (p *ListPredictionRequest) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *ListPredictionRequest) IsSetCompanyName() bool {
+	return p.CompanyName != nil
 }
 
 func (p *ListPredictionRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -1247,6 +1268,22 @@ func (p *ListPredictionRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1303,6 +1340,28 @@ func (p *ListPredictionRequest) ReadField2(iprot thrift.TProtocol) error {
 	p.Size = _field
 	return nil
 }
+func (p *ListPredictionRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Status = _field
+	return nil
+}
+func (p *ListPredictionRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CompanyName = _field
+	return nil
+}
 
 func (p *ListPredictionRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1316,6 +1375,14 @@ func (p *ListPredictionRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -1374,6 +1441,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
+func (p *ListPredictionRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Status); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *ListPredictionRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCompanyName() {
+		if err = oprot.WriteFieldBegin("company_name", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.CompanyName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
 func (p *ListPredictionRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1382,15 +1487,16 @@ func (p *ListPredictionRequest) String() string {
 
 }
 
-// 押题记录摘要
 type PredictionRecordItem struct {
-	ID             int64  `thrift:"id,1,required" form:"id,required" json:"id,required" query:"id,required"`
-	CreatedAt      string `thrift:"created_at,2,required" form:"created_at,required" json:"created_at,required" query:"created_at,required"`
-	JobTitle       string `thrift:"job_title,3,required" form:"job_title,required" json:"job_title,required" query:"job_title,required"`
-	Difficulty     string `thrift:"difficulty,4,required" form:"difficulty,required" json:"difficulty,required" query:"difficulty,required"`
-	Company        string `thrift:"company,5,required" form:"company,required" json:"company,required" query:"company,required"`
-	PredictionType string `thrift:"prediction_type,6,required" form:"prediction_type,required" json:"prediction_type,required" query:"prediction_type,required"`
-	Language       string `thrift:"language,7,required" form:"language,required" json:"language,required" query:"language,required"`
+	ID             int64  `thrift:"id,1,required" json:"id"`
+	CreatedAt      string `thrift:"created_at,2,required" json:"created_at"`
+	JobTitle       string `thrift:"job_title,3,required" json:"job_title"`
+	Difficulty     string `thrift:"difficulty,4,required" json:"difficulty"`
+	Company        string `thrift:"company,5,required" json:"company"`
+	PredictionType string `thrift:"prediction_type,6,required" json:"prediction_type"`
+	Language       string `thrift:"language,7,required" json:"language"`
+	ResumeName     string `thrift:"resume_name,8,required" json:"resume_name"`
+	Status         string `thrift:"status,9,required" json:"status"`
 }
 
 func NewPredictionRecordItem() *PredictionRecordItem {
@@ -1428,6 +1534,14 @@ func (p *PredictionRecordItem) GetLanguage() (v string) {
 	return p.Language
 }
 
+func (p *PredictionRecordItem) GetResumeName() (v string) {
+	return p.ResumeName
+}
+
+func (p *PredictionRecordItem) GetStatus() (v string) {
+	return p.Status
+}
+
 var fieldIDToName_PredictionRecordItem = map[int16]string{
 	1: "id",
 	2: "created_at",
@@ -1436,6 +1550,8 @@ var fieldIDToName_PredictionRecordItem = map[int16]string{
 	5: "company",
 	6: "prediction_type",
 	7: "language",
+	8: "resume_name",
+	9: "status",
 }
 
 func (p *PredictionRecordItem) Read(iprot thrift.TProtocol) (err error) {
@@ -1449,6 +1565,8 @@ func (p *PredictionRecordItem) Read(iprot thrift.TProtocol) (err error) {
 	var issetCompany bool = false
 	var issetPredictionType bool = false
 	var issetLanguage bool = false
+	var issetResumeName bool = false
+	var issetStatus bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -1527,6 +1645,24 @@ func (p *PredictionRecordItem) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetResumeName = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetStatus = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		default:
 			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
@@ -1572,6 +1708,16 @@ func (p *PredictionRecordItem) Read(iprot thrift.TProtocol) (err error) {
 
 	if !issetLanguage {
 		fieldId = 7
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetResumeName {
+		fieldId = 8
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetStatus {
+		fieldId = 9
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -1669,6 +1815,28 @@ func (p *PredictionRecordItem) ReadField7(iprot thrift.TProtocol) error {
 	p.Language = _field
 	return nil
 }
+func (p *PredictionRecordItem) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ResumeName = _field
+	return nil
+}
+func (p *PredictionRecordItem) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Status = _field
+	return nil
+}
 
 func (p *PredictionRecordItem) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1702,6 +1870,14 @@ func (p *PredictionRecordItem) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 	}
@@ -1841,6 +2017,40 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
 
+func (p *PredictionRecordItem) writeField8(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("resume_name", thrift.STRING, 8); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.ResumeName); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *PredictionRecordItem) writeField9(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("status", thrift.STRING, 9); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Status); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
 func (p *PredictionRecordItem) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1849,12 +2059,11 @@ func (p *PredictionRecordItem) String() string {
 
 }
 
-// 列表响应
 type ListPredictionResponse struct {
-	List  []*PredictionRecordItem `thrift:"list,1,required,list<PredictionRecordItem>" form:"list,required" json:"list,required" query:"list,required"`
-	Total int64                   `thrift:"total,2,required" form:"total,required" json:"total,required" query:"total,required"`
-	Page  int32                   `thrift:"page,3,required" form:"page,required" json:"page,required" query:"page,required"`
-	Size  int32                   `thrift:"size,4,required" form:"size,required" json:"size,required" query:"size,required"`
+	List  []*PredictionRecordItem `thrift:"list,1,required,list<PredictionRecordItem>" json:"list"`
+	Total int64                   `thrift:"total,2,required" json:"total"`
+	Page  int32                   `thrift:"page,3,required" json:"page"`
+	Size  int32                   `thrift:"size,4,required" json:"size"`
 }
 
 func NewListPredictionResponse() *ListPredictionResponse {
@@ -2177,9 +2386,8 @@ func (p *ListPredictionResponse) String() string {
 
 }
 
-// 获取详情请求
 type GetPredictionDetailRequest struct {
-	ID int64 `thrift:"id,1,required" json:"id,required" path:"id,required"`
+	ID int64 `thrift:"id,1,required" json:"id"`
 }
 
 func NewGetPredictionDetailRequest() *GetPredictionDetailRequest {
@@ -2326,10 +2534,9 @@ func (p *GetPredictionDetailRequest) String() string {
 
 }
 
-// 详情响应
 type GetPredictionDetailResponse struct {
-	ID        int64                 `thrift:"id,1,required" form:"id,required" json:"id,required" query:"id,required"`
-	Questions []*PredictionQuestion `thrift:"questions,2,required,list<PredictionQuestion>" form:"questions,required" json:"questions,required" query:"questions,required"`
+	ID        int64                 `thrift:"id,1,required" json:"id"`
+	Questions []*PredictionQuestion `thrift:"questions,2,required,list<PredictionQuestion>" json:"questions"`
 }
 
 func NewGetPredictionDetailResponse() *GetPredictionDetailResponse {
@@ -2549,11 +2756,10 @@ func (p *GetPredictionDetailResponse) String() string {
 }
 
 type PredictionService interface {
-	// 开始押题
 	Predict(ctx context.Context, request *PredictRequest) (r *PredictResponse, err error)
-	// 获取列表
+
 	ListPredictions(ctx context.Context, request *ListPredictionRequest) (r *ListPredictionResponse, err error)
-	// 获取详情
+
 	GetPredictionDetail(ctx context.Context, request *GetPredictionDetailRequest) (r *GetPredictionDetailResponse, err error)
 }
 
@@ -2799,7 +3005,7 @@ func (p *predictionServiceProcessorGetPredictionDetail) Process(ctx context.Cont
 }
 
 type PredictionServicePredictArgs struct {
-	Request *PredictRequest `thrift:"request,1"`
+	Request *PredictRequest `thrift:"request,1" json:"request"`
 }
 
 func NewPredictionServicePredictArgs() *PredictionServicePredictArgs {
@@ -2945,7 +3151,7 @@ func (p *PredictionServicePredictArgs) String() string {
 }
 
 type PredictionServicePredictResult struct {
-	Success *PredictResponse `thrift:"success,0,optional"`
+	Success *PredictResponse `thrift:"success,0,optional" json:"success,omitempty"`
 }
 
 func NewPredictionServicePredictResult() *PredictionServicePredictResult {
@@ -3093,7 +3299,7 @@ func (p *PredictionServicePredictResult) String() string {
 }
 
 type PredictionServiceListPredictionsArgs struct {
-	Request *ListPredictionRequest `thrift:"request,1"`
+	Request *ListPredictionRequest `thrift:"request,1" json:"request"`
 }
 
 func NewPredictionServiceListPredictionsArgs() *PredictionServiceListPredictionsArgs {
@@ -3239,7 +3445,7 @@ func (p *PredictionServiceListPredictionsArgs) String() string {
 }
 
 type PredictionServiceListPredictionsResult struct {
-	Success *ListPredictionResponse `thrift:"success,0,optional"`
+	Success *ListPredictionResponse `thrift:"success,0,optional" json:"success,omitempty"`
 }
 
 func NewPredictionServiceListPredictionsResult() *PredictionServiceListPredictionsResult {
@@ -3387,7 +3593,7 @@ func (p *PredictionServiceListPredictionsResult) String() string {
 }
 
 type PredictionServiceGetPredictionDetailArgs struct {
-	Request *GetPredictionDetailRequest `thrift:"request,1"`
+	Request *GetPredictionDetailRequest `thrift:"request,1" json:"request"`
 }
 
 func NewPredictionServiceGetPredictionDetailArgs() *PredictionServiceGetPredictionDetailArgs {
@@ -3533,7 +3739,7 @@ func (p *PredictionServiceGetPredictionDetailArgs) String() string {
 }
 
 type PredictionServiceGetPredictionDetailResult struct {
-	Success *GetPredictionDetailResponse `thrift:"success,0,optional"`
+	Success *GetPredictionDetailResponse `thrift:"success,0,optional" json:"success,omitempty"`
 }
 
 func NewPredictionServiceGetPredictionDetailResult() *PredictionServiceGetPredictionDetailResult {

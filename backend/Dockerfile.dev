@@ -1,0 +1,20 @@
+FROM golang:1.24-alpine
+
+# Install necessary tools
+RUN apk add --no-cache git ca-certificates tzdata
+
+# Set working directory
+WORKDIR /app
+
+# Configure Go proxy
+ENV GOPROXY=https://goproxy.cn,https://proxy.golang.org,direct
+ENV GOSUMDB=off
+
+# Install Air for hot reload (pin version to compatible with Go 1.24)
+RUN go install github.com/air-verse/air@v1.61.1
+
+# Expose port
+EXPOSE 8888
+
+# Start Air
+CMD ["air", "-c", ".air.toml"]

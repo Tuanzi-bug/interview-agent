@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Typography,
   Table,
@@ -10,62 +10,62 @@ import {
   Space,
   Tag,
   Button,
+  message,
   Card as AntCard,
 } from 'antd';
+import { predictionService } from '@/services/api/prediction';
+import type { PredictionRecordItem } from '@/types/prediction';
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
 
-type RecordItem = {
+interface DisplayRecordItem extends PredictionRecordItem {
   key: number;
   resume: string;
   status: '已出题' | '进行中' | '失败';
-  type: '精准岗位押题' | '让机器面试题';
-  level: '入门' | '中级' | '进阶';
-  company: string;
-  job: string;
-  time: string;
-};
-
-const DATA: RecordItem[] = [
-  {
-    key: 1,
-    resume: '我的简历_v1.pdf',
-    status: '已出题',
-    type: '精准岗位押题',
-    level: '入门',
-    company: '字节跳动',
-    job: 'Java后端开发',
-    time: '2024-11-01 19:30',
-  },
-  {
-    key: 2,
-    resume: '校招版.pdf',
-    status: '进行中',
-    type: '让机器面试题',
-    level: '中级',
-    company: '美团',
-    job: 'Golang开发',
-    time: '2024-11-05 09:10',
-  },
-  {
-    key: 3,
-    resume: '我的简历_v1.pdf',
-    status: '已出题',
-    type: '精准岗位押题',
-    level: '进阶',
-    company: '阿里巴巴',
-    job: '后端架构',
-    time: '2024-11-07 14:22',
-  },
-];
+}
 
 export default function PressRecordsPage() {
   const [selectedKeys, setSelectedKeys] = useState<number[]>([]);
   const [status, setStatus] = useState<string>('全部状态');
   const [company, setCompany] = useState<string>('');
+  
+  const [loading, setLoading] = useState<boolean>(false);
+  const [data, setData] = useState<DisplayRecordItem[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
-  const filtered = DATA.filter(
+  const fetchData = async (page: number, size: number) => {
+    setLoading(true);
+    try {
+      const res = await predictionService.getPredictionList(page, size);
+      if (res && res.list) {
+        const mappedData = res.list.map((item) => ({
+          ...item,
+          key: item.id,
+          // Backend doesn't return resume name yet
+          resume: '默认简历', 
+          // Backend doesn't return status yet, default to '已出题'
+          status: '已出题' as const, 
+        }));
+        setData(mappedData);
+        setTotal(res.total);
+      }
+    } catch (error) {
+      console.error('Failed to fetch prediction records:', error);
+      message.error('获取押题记录失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData(currentPage, pageSize);
+  }, [currentPage, pageSize]);
+
+  // Client-side filtering for now (Backend API doesn't support filters yet)
+  const filtered = data.filter(
     (r) =>
       (status === '全部状态' || r.status === status) &&
       (company === '' || r.company.includes(company))
@@ -116,12 +116,14 @@ export default function PressRecordsPage() {
             <Button
               type="primary"
               className="bg-blue-600 hover:bg-blue-500 h-10 px-6 rounded-lg shadow-blue-200"
+              onClick={() => fetchData(1, pageSize)}
             >
               查询
             </Button>
           </div>
 
           <Table
+            loading={loading}
             rowSelection={{
               selectedRowKeys: selectedKeys,
               onChange: (keys) => setSelectedKeys(keys as number[]),
@@ -135,7 +137,7 @@ export default function PressRecordsPage() {
               {
                 title: '状态',
                 dataIndex: 'status',
-                render: (v: RecordItem['status']) => {
+                render: (v: DisplayRecordItem['status']) => {
                   const colorMap = {
                     已出题: {
                       color: 'success',
@@ -171,12 +173,12 @@ export default function PressRecordsPage() {
               },
               {
                 title: '押题类型',
-                dataIndex: 'type',
+                dataIndex: 'prediction_type',
                 render: (text) => <span className="text-slate-600">{text}</span>,
               },
               {
                 title: '难度等级',
-                dataIndex: 'level',
+                dataIndex: 'difficulty',
                 render: (text) => (
                   <span
                     className={`font-medium ${text === '进阶' ? 'text-purple-600' : text === '中级' ? 'text-blue-600' : 'text-slate-600'}`}
@@ -192,12 +194,12 @@ export default function PressRecordsPage() {
               },
               {
                 title: '岗位名称',
-                dataIndex: 'job',
+                dataIndex: 'job_title',
                 render: (text) => <span className="text-slate-600">{text}</span>,
               },
               {
                 title: '押题时间',
-                dataIndex: 'time',
+                dataIndex: 'created_at',
                 render: (text) => <span className="text-slate-500 text-sm font-mono">{text}</span>,
               },
               {
@@ -223,7 +225,13 @@ export default function PressRecordsPage() {
             ]}
             dataSource={filtered}
             pagination={{
-              pageSize: 20,
+              current: currentPage,
+              pageSize: pageSize,
+              total: total,
+              onChange: (page, size) => {
+                setCurrentPage(page);
+                setPageSize(size);
+              },
               className: 'mt-6',
               showTotal: (total) => <span className="text-slate-500">共 {total} 条记录</span>,
             }}
