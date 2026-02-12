@@ -12,6 +12,7 @@ import {
   Button,
   message,
   Card as AntCard,
+  Tooltip,
 } from 'antd';
 import { predictionService } from '@/services/api/prediction';
 import type { PredictionRecordItem } from '@/types/prediction';
@@ -126,11 +127,20 @@ export default function PressRecordsPage() {
               {
                 title: '使用的简历',
                 dataIndex: 'resume',
-                render: (text) => <span className="font-medium text-slate-700">{text}</span>,
+                ellipsis: {
+                  showTitle: false,
+                },
+                width: 200,
+                render: (text) => (
+                  <Tooltip placement="topLeft" title={text}>
+                    <span className="font-medium text-slate-700">{text}</span>
+                  </Tooltip>
+                ),
               },
               {
                 title: '状态',
                 dataIndex: 'status',
+                width: 100,
                 render: (v: DisplayRecordItem['status']) => {
                   const colorMap = {
                     已出题: {
@@ -168,11 +178,20 @@ export default function PressRecordsPage() {
               {
                 title: '押题类型',
                 dataIndex: 'prediction_type',
-                render: (text) => <span className="text-slate-600">{text}</span>,
+                width: 130,
+                ellipsis: {
+                  showTitle: false,
+                },
+                render: (text) => (
+                  <Tooltip placement="topLeft" title={text}>
+                    <span className="text-slate-600">{text}</span>
+                  </Tooltip>
+                ),
               },
               {
                 title: '难度等级',
                 dataIndex: 'difficulty',
+                width: 100,
                 render: (text) => (
                   <span
                     className={`font-medium ${text === '进阶' ? 'text-purple-600' : text === '中级' ? 'text-blue-600' : 'text-slate-600'}`}
@@ -184,32 +203,51 @@ export default function PressRecordsPage() {
               {
                 title: '公司名称',
                 dataIndex: 'company',
-                render: (text) => <span className="font-bold text-slate-800">{text}</span>,
+                ellipsis: {
+                  showTitle: false,
+                },
+                width: 120,
+                render: (text) => (
+                  <Tooltip placement="topLeft" title={text}>
+                    <span className="font-bold text-slate-800">{text}</span>
+                  </Tooltip>
+                ),
               },
               {
                 title: '岗位名称',
                 dataIndex: 'job_title',
-                render: (text) => <span className="text-slate-600">{text}</span>,
+                ellipsis: {
+                  showTitle: false,
+                },
+                width: 120,
+                render: (text) => (
+                  <Tooltip placement="topLeft" title={text}>
+                    <span className="text-slate-600">{text}</span>
+                  </Tooltip>
+                ),
               },
               {
                 title: '押题时间',
                 dataIndex: 'created_at',
+                width: 160,
                 render: (text) => <span className="text-slate-500 text-sm font-mono">{text}</span>,
               },
               {
                 title: '操作',
+                width: 180,
+                fixed: 'right',
                 render: (_: any, row: any) => (
-                  <Space size="small">
+                  <Space size="small" wrap={false}>
                     <a
                       href={`/user/press/${row.key}`}
-                      className="text-blue-600 hover:text-blue-500 font-medium"
+                      className="text-blue-600 hover:text-blue-500 font-medium whitespace-nowrap"
                     >
                       查看详情
                     </a>
                     <span className="text-slate-300">|</span>
                     <Button
                       type="link"
-                      className="text-slate-500 hover:text-blue-600 p-0 h-auto font-normal"
+                      className="text-slate-500 hover:text-blue-600 p-0 h-auto font-normal whitespace-nowrap"
                     >
                       继续押题
                     </Button>
@@ -218,6 +256,7 @@ export default function PressRecordsPage() {
               },
             ]}
             dataSource={data}
+            scroll={{ x: 1200 }}
             pagination={{
               current: currentPage,
               pageSize: pageSize,

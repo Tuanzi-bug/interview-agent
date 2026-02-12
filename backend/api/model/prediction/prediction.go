@@ -2535,8 +2535,12 @@ func (p *GetPredictionDetailRequest) String() string {
 }
 
 type GetPredictionDetailResponse struct {
-	ID        int64                 `thrift:"id,1,required" json:"id"`
-	Questions []*PredictionQuestion `thrift:"questions,2,required,list<PredictionQuestion>" json:"questions"`
+	ID             int64                 `thrift:"id,1,required" json:"id"`
+	Questions      []*PredictionQuestion `thrift:"questions,2,required,list<PredictionQuestion>" json:"questions"`
+	Difficulty     string                `thrift:"difficulty,3,required" json:"difficulty"`
+	PredictionType string                `thrift:"prediction_type,4,required" json:"prediction_type"`
+	JobTitle       string                `thrift:"job_title,5,required" json:"job_title"`
+	Company        string                `thrift:"company,6,required" json:"company"`
 }
 
 func NewGetPredictionDetailResponse() *GetPredictionDetailResponse {
@@ -2554,9 +2558,29 @@ func (p *GetPredictionDetailResponse) GetQuestions() (v []*PredictionQuestion) {
 	return p.Questions
 }
 
+func (p *GetPredictionDetailResponse) GetDifficulty() (v string) {
+	return p.Difficulty
+}
+
+func (p *GetPredictionDetailResponse) GetPredictionType() (v string) {
+	return p.PredictionType
+}
+
+func (p *GetPredictionDetailResponse) GetJobTitle() (v string) {
+	return p.JobTitle
+}
+
+func (p *GetPredictionDetailResponse) GetCompany() (v string) {
+	return p.Company
+}
+
 var fieldIDToName_GetPredictionDetailResponse = map[int16]string{
 	1: "id",
 	2: "questions",
+	3: "difficulty",
+	4: "prediction_type",
+	5: "job_title",
+	6: "company",
 }
 
 func (p *GetPredictionDetailResponse) Read(iprot thrift.TProtocol) (err error) {

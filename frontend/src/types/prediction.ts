@@ -31,4 +31,8 @@ export interface PredictionQuestion {
 export interface GetPredictionDetailResponse {
   id: number;
   questions: PredictionQuestion[];
+  difficulty: string;
+  prediction_type: string;
+  job_title: string;
+  company: string;
 }

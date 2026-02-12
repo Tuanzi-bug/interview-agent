@@ -303,7 +303,11 @@ func (s *PredictionServiceImpl) GetPredictionDetail(ctx context.Context, req *pr
 	}
 
 	return &predictionIDL.GetPredictionDetailResponse{
-		ID:        int64(record.ID),
-		Questions: questions,
+		ID:             int64(record.ID),
+		Questions:      questions,
+		Difficulty:     record.Difficulty,
+		PredictionType: record.Type,
+		JobTitle:       record.JobTitle,
+		Company:        record.Company,
 	}, nil
 }

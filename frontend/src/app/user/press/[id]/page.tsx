@@ -25,6 +25,12 @@ export default function PressDetailPage() {
   const [selected, setSelected] = useState(0);
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<QuestionViewModel[]>([]);
+  const [recordMetadata, setRecordMetadata] = useState<{
+    difficulty: string;
+    prediction_type: string;
+    job_title: string;
+    company: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -34,6 +40,14 @@ export default function PressDetailPage() {
       try {
         const res = await predictionService.getPredictionDetail(id);
         if (res && res.questions) {
+          // Store record-level metadata
+          setRecordMetadata({
+            difficulty: res.difficulty || '中等',
+            prediction_type: res.prediction_type || '校招',
+            job_title: res.job_title || '后端开发',
+            company: res.company || '',
+          });
+
           const viewModels: QuestionViewModel[] = res.questions.map((q: PredictionQuestion) => {
             let followups: string[] = [];
             try {
@@ -125,28 +139,82 @@ export default function PressDetailPage() {
                   <span>题目目录</span>
                 </Space>
               </div>
-              <div className="max-h-[calc(100vh-300px)] overflow-y-auto custom-scrollbar">
+              <div className="max-h-[calc(100vh-300px)] overflow-y-auto custom-scrollbar p-2">
                 <List
                   itemLayout="horizontal"
                   dataSource={questions}
                   split={false}
-                  renderItem={(item, index) => (
-                    <List.Item
-                      onClick={() => setSelected(index)}
-                      className={`transition-colors duration-200 cursor-pointer border-l-4 px-4 py-3 hover:bg-blue-50/50 ${
-                        index === selected ? 'bg-blue-50 border-blue-500' : 'border-transparent'
-                      }`}
-                    >
-                      <div className="w-full">
-                        <div
-                          className={`font-medium mb-1 line-clamp-2 ${index === selected ? 'text-blue-700' : 'text-slate-700'}`}
-                        >
-                          <span className="mr-2 text-slate-400">0{index + 1}.</span>
-                          {item.title}
+                  renderItem={(item, index) => {
+                    const isSelected = index === selected;
+                    return (
+                      <div
+                        onClick={() => setSelected(index)}
+                        className={`
+                          group relative cursor-pointer transition-all duration-200 ease-out mb-2 rounded-lg
+                          ${isSelected 
+                            ? 'bg-blue-50/80 shadow-sm ring-1 ring-blue-100' 
+                            : 'hover:bg-slate-50 hover:shadow-sm hover:ring-1 hover:ring-slate-100'}
+                        `}
+                      >
+                        <div className={`
+                          absolute left-0 top-2 bottom-2 w-1 rounded-r-full transition-colors duration-200
+                          ${isSelected ? 'bg-blue-500' : 'bg-transparent group-hover:bg-slate-200'}
+                        `} />
+
+                        <div className="flex gap-3 py-3 pr-3 pl-4">
+                          <div className={`
+                            flex-shrink-0 font-mono text-sm pt-[2px] w-6 text-right transition-colors
+                            ${isSelected ? 'text-blue-600 font-bold' : 'text-slate-400 font-medium group-hover:text-slate-500'}
+                          `}>
+                            {(index + 1).toString().padStart(2, '0')}
+                          </div>
+
+                          <div className="flex-1 min-w-0 space-y-1.5">
+                            {/* Question Text */}
+                            <div 
+                              className={`
+                                text-sm leading-relaxed transition-colors
+                                ${isSelected ? 'text-slate-800 font-medium' : 'text-slate-600 group-hover:text-slate-900'}
+                              `}
+                              title={item.question}
+                            >
+                              <div className={`
+                                line-clamp-2
+                                ${!isSelected && '[mask-image:linear-gradient(180deg,black_70%,transparent)]'}
+                              `}>
+                                {item.title}
+                              </div>
+                            </div>
+
+                            {/* Metadata Tags */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`
+                                inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium
+                                transition-all duration-200
+                                ${isSelected
+                                  ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-200'
+                                  : 'bg-slate-100 text-slate-600'
+                                }
+                              `}>
+                                {recordMetadata?.prediction_type || '技术问题'}
+                              </span>
+                              <span className={`
+                                inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium
+                                transition-all duration-200
+                                ${recordMetadata?.difficulty === '简单' && 'bg-green-100 text-green-700'}
+                                ${recordMetadata?.difficulty === '中等' && 'bg-yellow-100 text-yellow-700'}
+                                ${recordMetadata?.difficulty === '困难' && 'bg-red-100 text-red-700'}
+                                ${!recordMetadata?.difficulty && 'bg-slate-100 text-slate-600'}
+                                ${isSelected && 'ring-1 ring-current/20'}
+                              `}>
+                                {recordMetadata?.difficulty || '中等'}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </List.Item>
-                  )}
+                    );
+                  }}
                 />
               </div>
             </AntCard>

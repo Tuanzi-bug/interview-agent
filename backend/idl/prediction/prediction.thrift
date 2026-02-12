@@ -66,6 +66,10 @@ struct GetPredictionDetailRequest {
 struct GetPredictionDetailResponse {
     1: required i64 id
     2: required list<PredictionQuestion> questions
+    3: required string difficulty
+    4: required string prediction_type
+    5: required string job_title
+    6: required string company
 }
 
 service PredictionService {
