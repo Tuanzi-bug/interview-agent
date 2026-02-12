@@ -8,6 +8,7 @@ import (
 
 	"ai-eino-interview-agent/api/response"
 	"ai-eino-interview-agent/internal/config"
+	"ai-eino-interview-agent/internal/utils"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/golang-jwt/jwt/v5"
@@ -81,13 +82,8 @@ func JWTMiddlewareWithSkipper(skipper JWTSkipper) app.HandlerFunc {
 func GenerateToken(userID uint, username, role string) (string, error) {
 	cfg := config.Global.Security
 
-	// 解析过期时间
-	expiration, err := time.ParseDuration(cfg.JWTExpiration)
-	if err != nil {
-		expiration = 24 * time.Hour // 默认24小时
-	}
+	expiration := utils.ParseDurationWithDefault(cfg.JWTExpiration, 24*time.Hour, "jwt_expiration")
 
-	// 创建声明
 	claims := JWTClaims{
 		UserID:   userID,
 		Username: username,

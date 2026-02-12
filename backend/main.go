@@ -8,6 +8,7 @@ import (
 	appMiddleware "ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/mq"
 	"ai-eino-interview-agent/internal/repository"
+	"ai-eino-interview-agent/internal/utils"
 	"context"
 	"errors"
 	"fmt"
@@ -98,8 +99,19 @@ func main() {
 	time.Sleep(500 * time.Millisecond)
 	defer cancelConsumer()
 
+	// 解析 Hertz 配置
+	readTimeout := utils.ParseDurationWithDefault(cfg.Hertz.ReadTimeout, 3*time.Minute, "read_timeout")
+	writeTimeout := utils.ParseDurationWithDefault(cfg.Hertz.WriteTimeout, 3*time.Minute, "write_timeout")
+	idleTimeout := utils.ParseDurationWithDefault(cfg.Hertz.IdleTimeout, 3*time.Minute, "idle_timeout")
+
 	// 初始化Hertz服务器
-	s := server.Default(server.WithHostPorts(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)))
+	s := server.Default(
+		server.WithHostPorts(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)),
+		server.WithReadTimeout(readTimeout),
+		server.WithWriteTimeout(writeTimeout),
+		server.WithIdleTimeout(idleTimeout),
+		server.WithMaxRequestBodySize(20*1024*1024), // 20MB limit to support large PDF uploads
+	)
 
 	// 添加错误处理中间件（必须在最前面）
 	// Recovery: 捕获请求处理中的 panic，防止服务崩溃

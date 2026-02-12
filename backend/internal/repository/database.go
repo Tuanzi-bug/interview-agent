@@ -2,10 +2,10 @@ package repository
 
 import (
 	"log"
-	"time"
 
 	"ai-eino-interview-agent/internal/config"
 	"ai-eino-interview-agent/internal/model"
+	"ai-eino-interview-agent/internal/utils"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -37,8 +37,8 @@ func InitDatabase(dbConfig config.DatabaseConfig) error {
 	sqlDB.SetMaxIdleConns(dbConfig.MaxIdleConns)
 	sqlDB.SetMaxOpenConns(dbConfig.MaxOpenConns)
 	if dbConfig.ConnMaxLifetime != "" {
-		connMaxLifetime, err := time.ParseDuration(dbConfig.ConnMaxLifetime)
-		if err == nil {
+		connMaxLifetime := utils.ParseDurationWithDefault(dbConfig.ConnMaxLifetime, 0, "conn_max_lifetime")
+		if connMaxLifetime > 0 {
 			sqlDB.SetConnMaxLifetime(connMaxLifetime)
 		}
 	}
