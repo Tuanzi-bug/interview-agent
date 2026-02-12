@@ -144,38 +144,6 @@
 
 ---
 
-## 第四阶段：实战准备 (预计2-3天)
-
-### Day 12: 完整流程追踪
-- [ ] 追踪一个完整的用户请求流程
-  - [ ] 用户登录流程
-  - [ ] 创建面试流程
-  - [ ] 面试对话流程
-  - [ ] 获取评估报告流程
-- [ ] 画出完整的数据流图
-- [ ] 完成 Wiki: [diagrams/data-flow.md](diagrams/data-flow.md)
-
-### Day 13: 运行与调试
-- [ ] 配置开发环境
-- [ ] 运行系统
-- [ ] 使用Postman测试API
-- [ ] 打断点调试代码
-- [ ] 记录遇到的问题和解决方案
-
-### Day 14: 开发指南编写
-- [ ] 完成 Wiki: [06-development-guide/add-new-feature.md](06-development-guide/add-new-feature.md)
-  - [ ] 记录新功能开发流程
-  - [ ] 提供代码模板
-- [ ] 完成 Wiki: [06-development-guide/coding-standards.md](06-development-guide/coding-standards.md)
-  - [ ] 总结代码规范
-  - [ ] 记录最佳实践
-
-**阶段总结**: 
-- 完成日期: _____
-- 学习心得: _____
-
----
-
 ## 🎯 学习成果验收
 
 完成以上所有学习后，你应该能够：
