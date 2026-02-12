@@ -25,9 +25,9 @@ redis:
 hertz:
   log_level: "info"
   log_path: "./logs"
-  read_timeout: "10s"
-  write_timeout: "10s"
-  idle_timeout: "60s"
+  read_timeout: "300s"   # 增加到5分钟，支持大文件上传
+  write_timeout: "300s"  # 增加到5分钟，支持长耗时的AI解析
+  idle_timeout: "300s"
 
 # 面试系统配置
 interview:
