@@ -9,7 +9,8 @@
 3. [面试智能体详解](interview-agent.md)
 4. [简历分析智能体](resume-agent.md)
 5. [评估智能体](evaluation-agent.md)
-6. [向量数据库](vector-database.md)
+6. [预测智能体](prediction-agent.md)
+7. [向量数据库](vector-database.md)
 
 ---
 
