@@ -283,3 +283,185 @@ ProgressUpdate struct {
 - Worker pool size: 3 workers (next phase)
 - Redis pub/sub for progress: Stateless, transient updates (no persistence needed)
 
+
+## Phase 3.2: Worker Pool Implementation (2026-02-15)
+
+### Architecture Decision: Package Location Change
+
+**Original Requirement**: Create worker pool in `backend/internal/service/resume_worker_pool.go`
+
+**Actual Implementation**: Created in `backend/internal/worker/resume_worker_pool.go`
+
+**Reason for Change**: Import cycle prevented placement in `internal/service`
+
+Import cycle chain:
+1. `internal/service` → `internal/mq` (new dependency from worker pool)
+2. `internal/mq/consumer.go` → `chatApp/agent_service/evaluation`
+3. `chatApp/agent/resume` → `chatApp/tool`
+4. `chatApp/tool/pdfParserTool.go` → `internal/service` (for ResumeTextCache)
+
+**Resolution**: Created new package `internal/worker` to isolate worker pool from existing service dependencies.
+
+### Worker Pool Patterns Discovered
+
+**Dependency Injection for Parse Function:**
+- Worker pool accepts `ParseResumeFunc` as constructor parameter
+- Type: `func(ctx context.Context, userID uint, filePath string, fileSize int64) (uint64, interface{}, error)`
+- Allows testing with mock implementations without importing `chatApp` packages
+- Breaks import cycle by inverting dependency direction
+
+**Goroutine Lifecycle Management:**
+```go
+type WorkerPool struct {
+    ctx      context.Context
+    cancel   context.CancelFunc
+    wg       sync.WaitGroup
+    stopOnce sync.Once  // Prevents double-stop panics
+}
+```
+
+**Worker Loop Pattern:**
+- Use `select` with `ctx.Done()` for graceful shutdown
+- Blocking dequeue with 5-second timeout
+- `nil` job return (timeout) is NOT an error - continue loop
+- Errors logged but worker continues (resilience)
+
+**Progress Publishing Stages:**
+0. **Pending (0%)**: "Job received, waiting to process"
+1. **Extracting (25%)**: "Extracting text from PDF"
+2. **Extracted (50%)**: "Text extraction complete, starting AI analysis"
+3. **Analyzing (75%)**: "Analyzing resume with AI"
+4. **Completed (100%)**: "Resume analysis complete"
+5. **Failed (any%)**: "Error: {detailed message}"
+
+**Database Update Pattern:**
+- Update status at EVERY stage (not just start/end)
+- Include duration metrics: `extract_duration`, `analyze_duration`
+- Use `map[string]interface{}` for flexible updates
+- Separate helper method `updateDatabase()` for error isolation
+
+**Error Handling Strategy:**
+- File validation BEFORE processing (os.Stat for size)
+- Progress updates on EVERY error with detailed ErrorMsg
+- Database updated with error status before returning
+- Worker continues after job failure (doesn't crash)
+
+### Testing Strategies for Concurrent Code
+
+**Mock Functions:**
+```go
+func mockParseResumeFunc(ctx, userID, filePath, fileSize) (uint64, interface{}, error) {
+    return 12345, nil, nil  // Instant success for timing tests
+}
+```
+
+**Test Isolation:**
+- Each test creates fresh WorkerPool instance
+- Use separate context per test
+- Redis DB 1 for tests (isolated from production DB 0)
+- `FlushDB` before each test
+
+**Timing Considerations:**
+- Redis pub/sub needs ~50ms to establish subscription
+- Worker startup needs ~100ms before accepting jobs
+- Job processing tests use 2-3 second delays
+- Graceful shutdown verified with 5-second timeout
+
+**Graceful Skip Pattern:**
+```go
+client := getTestRedisClient(t)
+if client == nil {
+    return  // t.Skip already called in helper
+}
+defer client.Close()
+```
+
+### Integration Points
+
+**With Existing Services:**
+- Calls `service.ParseResumeAndSave()` from `chatApp/agent/service`
+- Uses `model.ResumeUploadStatusDao.UpdateStatus()` for database
+- Uses `mq.ResumeUploadQueue` for job dequeue and progress publish
+- File size obtained via `os.Stat()` (job doesn't include size)
+
+**With Future Phases:**
+- Phase 4 (Upload Handler): Will instantiate WorkerPool on server startup
+- Phase 5 (SSE Endpoint): Will subscribe to progress channels published by workers
+
+### Performance Considerations
+
+**Worker Count:**
+- Default: 3 workers (configurable via constructor)
+- Blocking dequeue (BRP OP) sleeps in Redis (no CPU polling)
+- Workers wake instantly when job available (Redis efficiency)
+
+**Timeout Values:**
+- Dequeue timeout: 5 seconds (balance responsiveness vs Redis load)
+- Shutdown timeout: 30 seconds maximum wait
+- Parse timeout: 120 seconds (inherited from ParseResumeAndSave)
+
+**Memory Management:**
+- Context cancellation releases goroutines
+- WaitGroup ensures cleanup before Stop() returns
+- No global state (all in struct fields)
+
+### Gotchas Encountered
+
+1. **Import Cycle**: Cannot place worker pool in `internal/service` due to existing architecture
+2. **Unused Pool Variable**: Test that only uses queue.PublishProgress() doesn't need pool instance
+3. **File Size Missing**: ResumeUploadJob doesn't include fileSize - must stat file
+4. **Double Stop Safety**: Use sync.Once to prevent panic on multiple Stop() calls
+5. **Test Package Naming**: Must use correct package name (`worker` not `service`)
+
+### Code Quality Verification
+
+✅ Zero compilation errors  
+✅ Tests pass with `-race` flag  
+✅ LSP diagnostics clean (only workspace warnings)  
+✅ Proper error wrapping with context  
+✅ Idiomatic Go patterns (context, defer, error handling)  
+✅ Logging follows existing format: `[WorkerPool] <message>`
+
+### Files Created
+
+- `backend/internal/worker/resume_worker_pool.go` (234 lines)
+- `backend/internal/worker/resume_worker_pool_test.go` (445 lines, 8 test cases)
+
+### Success Criteria Met
+
+✅ Worker pool starts N goroutines on Start()  
+✅ Each worker loops: DequeueJob → ProcessJob → PublishProgress  
+✅ Progress published at all 5 stages (0%, 25%, 50%, 75%, 100%)  
+✅ Graceful shutdown via Stop() with context cancellation  
+✅ Database updated at each processing stage  
+✅ Integration with existing services (queue, database, AI agent)  
+✅ Comprehensive tests with proper mocking  
+✅ Tests pass with race detection  
+✅ Clean compilation and diagnostics  
+
+### Next Steps
+
+**Phase 4 (Upload Handler Modification):**
+- Instantiate WorkerPool in main.go on server startup
+- Modify upload handler to enqueue job with 15s sync timeout
+- Return uploadID immediately if async (don't block frontend)
+
+**Phase 5 (SSE Progress Endpoint):**
+- Create endpoint that subscribes to `resume:progress:{uploadID}`
+- Stream progress updates to frontend via Server-Sent Events
+- Worker pool's PublishProgress() feeds this endpoint
+
+### Architectural Notes
+
+**Why `internal/worker` Package:**
+- Isolates worker logic from `internal/service` circular dependencies
+- Can import from both `internal/mq` and `chatApp` without cycles
+- Parallel to `internal/service` (both under `internal/`)
+- Follows Go package organization: group by responsibility
+
+**Dependency Injection Benefits:**
+- Breaks import cycle (worker doesn't import chatApp directly)
+- Enables testing with mock parse functions
+- Allows future flexibility (different parse implementations)
+- Follows SOLID principles (Dependency Inversion)
+
