@@ -7,12 +7,17 @@ import (
 	"ai-eino-interview-agent/api/response"
 	"ai-eino-interview-agent/chatApp/agent/service"
 	"ai-eino-interview-agent/internal/middleware"
+	"ai-eino-interview-agent/internal/model"
+	"ai-eino-interview-agent/internal/mq"
+	"ai-eino-interview-agent/internal/repository"
 	interviewservice "ai-eino-interview-agent/internal/service/interviews"
+	"ai-eino-interview-agent/internal/worker"
 	"context"
 	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
+	"sync"
 
 	"os"
 	"path/filepath"
@@ -21,7 +26,25 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/google/uuid"
 )
+
+var (
+	globalWorkerPool *worker.WorkerPool
+	workerPoolMutex  sync.RWMutex
+)
+
+func SetWorkerPool(pool *worker.WorkerPool) {
+	workerPoolMutex.Lock()
+	defer workerPoolMutex.Unlock()
+	globalWorkerPool = pool
+}
+
+func GetWorkerPool() *worker.WorkerPool {
+	workerPoolMutex.RLock()
+	defer workerPoolMutex.RUnlock()
+	return globalWorkerPool
+}
 
 // GetInterviewRecords .
 // @router /api/interview/records [GET]
@@ -51,7 +74,7 @@ func GetInterviewRecords(ctx context.Context, c *app.RequestContext) {
 	response.Success(ctx, c, resp)
 }
 
-// UploadResume 上传简历
+// UploadResume 上传简历（混合同步/异步模式）
 // @router /api/resume/upload [POST]
 func UploadResume(ctx context.Context, c *app.RequestContext) {
 	userID := middleware.GetUserID(c)
@@ -59,7 +82,7 @@ func UploadResume(ctx context.Context, c *app.RequestContext) {
 		response.Unauthorized(ctx, c, "Authorization token is required")
 		return
 	}
-	// 处理文件上传
+
 	resumeFilePath, err := handleResumeUpload(c)
 	if err != nil {
 		response.BadRequest(ctx, c, err.Error())
@@ -69,25 +92,120 @@ func UploadResume(ctx context.Context, c *app.RequestContext) {
 		response.BadRequest(ctx, c, "No resume file uploaded")
 		return
 	}
-	// 获取文件信息
+
 	fileHeader, err := c.FormFile("resume")
 	if err != nil {
 		response.BadRequest(ctx, c, "Failed to get file info: "+err.Error())
 		return
 	}
-	// 调用简历解析服务（从 session 中获取参数）
-	dbResumeID, _, err := service.ParseResumeAndSave(ctx, userID, resumeFilePath, fileHeader.Size)
-	if err != nil {
-		log.Printf("[UploadResume] 简历解析失败: %v", err)
-		response.InternalServerError(ctx, c, "Failed to parse resume: "+err.Error())
+
+	uploadID := uuid.New().String()
+
+	uploadStatus := &model.ResumeUploadStatus{
+		UploadID: uploadID,
+		UserID:   userID,
+		FilePath: resumeFilePath,
+		Status:   "pending",
+		Progress: 0,
+		Stage:    "Upload received, starting processing",
+	}
+	if err := model.ResumeUploadStatusDao.CreateUploadStatus(uploadStatus); err != nil {
+		log.Printf("[UploadResume] Failed to create upload status: %v", err)
+		response.InternalServerError(ctx, c, "Failed to create upload record")
 		return
 	}
-	resp := &interviewsapi.UploadResumeResponse{
-		ResumeID: int64(dbResumeID),
-		Message:  "Resume uploaded and parsed successfully",
+
+	syncCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	syncDone := make(chan struct{})
+	var dbResumeID uint64
+	var syncErr error
+
+	go func() {
+		dbResumeID, _, syncErr = service.ParseResumeAndSave(syncCtx, userID, resumeFilePath, fileHeader.Size)
+		close(syncDone)
+	}()
+
+	select {
+	case <-syncDone:
+		if syncErr != nil {
+			log.Printf("[UploadResume] Sync parse failed: %v", syncErr)
+			if err := enqueueAsyncJob(uploadID, userID, resumeFilePath); err != nil {
+				response.InternalServerError(ctx, c, "Failed to process resume")
+				return
+			}
+			resumeIDPtr := (*int64)(nil)
+			resp := &interviewsapi.UploadResumeResponse{
+				ResumeID: resumeIDPtr,
+				UploadID: uploadID,
+				IsAsync:  true,
+				Message:  "Resume uploaded, processing asynchronously. Use upload_id to track progress.",
+			}
+			response.Success(ctx, c, resp)
+			return
+		}
+
+		model.ResumeUploadStatusDao.UpdateStatus(uploadID, map[string]interface{}{
+			"status":    "completed",
+			"progress":  100,
+			"stage":     "Resume processed successfully (sync mode)",
+			"resume_id": dbResumeID,
+		})
+
+		resumeID := int64(dbResumeID)
+		resp := &interviewsapi.UploadResumeResponse{
+			ResumeID: &resumeID,
+			UploadID: uploadID,
+			IsAsync:  false,
+			Message:  "Resume uploaded and parsed successfully",
+		}
+		response.Success(ctx, c, resp)
+
+	case <-syncCtx.Done():
+		log.Printf("[UploadResume] Sync timeout, switching to async mode for uploadID=%s", uploadID)
+
+		if err := enqueueAsyncJob(uploadID, userID, resumeFilePath); err != nil {
+			response.InternalServerError(ctx, c, "Failed to enqueue async job")
+			return
+		}
+
+		resumeIDPtr := (*int64)(nil)
+		resp := &interviewsapi.UploadResumeResponse{
+			ResumeID: resumeIDPtr,
+			UploadID: uploadID,
+			IsAsync:  true,
+			Message:  "Resume uploaded, processing asynchronously. Use upload_id to track progress.",
+		}
+		response.Success(ctx, c, resp)
+	}
+}
+
+func enqueueAsyncJob(uploadID string, userID uint, filePath string) error {
+	pool := GetWorkerPool()
+	if pool == nil {
+		return fmt.Errorf("worker pool not initialized")
 	}
 
-	response.Success(ctx, c, resp)
+	queue := mq.NewResumeUploadQueue(repository.GetRedis())
+	job := &mq.ResumeUploadJob{
+		UploadID: uploadID,
+		UserID:   userID,
+		FilePath: filePath,
+	}
+
+	if err := queue.EnqueueJob(context.Background(), job); err != nil {
+		return fmt.Errorf("failed to enqueue job: %w", err)
+	}
+
+	model.ResumeUploadStatusDao.UpdateStatus(uploadID, map[string]interface{}{
+		"status":   "queued",
+		"progress": 0,
+		"stage":    "Job queued for async processing",
+	})
+
+	log.Printf("[UploadResume] Job enqueued for async processing: uploadID=%s", uploadID)
+	return nil
 }
 
 // handleResumeUpload 处理简历文件上传

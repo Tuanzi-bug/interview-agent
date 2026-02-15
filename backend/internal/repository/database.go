@@ -1,7 +1,9 @@
 package repository
 
 import (
+	"fmt"
 	"log"
+	"time"
 
 	"ai-eino-interview-agent/internal/config"
 	"ai-eino-interview-agent/internal/model"
@@ -20,12 +22,31 @@ func InitDatabase(dbConfig config.DatabaseConfig) error {
 	// 配置GORM日志
 	logLevel := logger.Info
 
-	// 连接数据库
-	db, err := gorm.Open(mysql.Open(dbConfig.DSN), &gorm.Config{
-		Logger: logger.Default.LogMode(logLevel),
-	})
-	if err != nil {
-		return err
+	// 连接数据库，带重试机制
+	var db *gorm.DB
+	var err error
+	maxRetries := 10
+	retryDelay := 1 * time.Second
+
+	for i := 0; i < maxRetries; i++ {
+		db, err = gorm.Open(mysql.Open(dbConfig.DSN), &gorm.Config{
+			Logger: logger.Default.LogMode(logLevel),
+		})
+		if err == nil {
+			break
+		}
+
+		if i < maxRetries-1 {
+			log.Printf("数据库连接尝试 %d/%d 失败: %v. 将在 %v 后重试...",
+				i+1, maxRetries, err, retryDelay)
+			time.Sleep(retryDelay)
+			retryDelay *= 2
+			if retryDelay > 30*time.Second {
+				retryDelay = 30 * time.Second
+			}
+		} else {
+			return fmt.Errorf("连接数据库失败，已尝试 %d 次: %w", maxRetries, err)
+		}
 	}
 
 	// 配置连接池

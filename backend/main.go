@@ -1,14 +1,17 @@
 package main
 
 import (
+	"ai-eino-interview-agent/api/handler/interview"
 	"ai-eino-interview-agent/api/router"
 	interviewRouter "ai-eino-interview-agent/api/router/interview"
 	routerMiddleware "ai-eino-interview-agent/api/router/middleware"
+	"ai-eino-interview-agent/chatApp/agent/service"
 	"ai-eino-interview-agent/internal/config"
 	appMiddleware "ai-eino-interview-agent/internal/middleware"
 	"ai-eino-interview-agent/internal/mq"
 	"ai-eino-interview-agent/internal/repository"
 	"ai-eino-interview-agent/internal/utils"
+	"ai-eino-interview-agent/internal/worker"
 	"context"
 	"errors"
 	"fmt"
@@ -87,6 +90,28 @@ func main() {
 	mq.InitMessageQueue(messageQueue) // 开启全局消息队列
 	log.Println("Redis message queue initialized successfully")
 
+	// 10. 初始化简历上传工作池
+	log.Println("Initializing resume upload worker pool...")
+	resumeQueue := mq.NewResumeUploadQueue(redisClient)
+
+	// Wrap ParseResumeAndSave to match ParseResumeFunc signature
+	parseFunc := func(ctx context.Context, userID uint, filePath string, fileSize int64) (uint64, interface{}, error) {
+		resumeID, result, err := service.ParseResumeAndSave(ctx, userID, filePath, fileSize)
+		return resumeID, result, err
+	}
+
+	workerPool, err := worker.NewWorkerPool(resumeQueue, 3, parseFunc)
+	if err != nil {
+		log.Fatalf("Failed to create worker pool: %v", err)
+	}
+	if err := workerPool.Start(); err != nil {
+		log.Fatalf("Failed to start worker pool: %v", err)
+	}
+	log.Println("Resume upload worker pool initialized with 3 workers")
+
+	// Make worker pool accessible to handlers
+	interview.SetWorkerPool(workerPool)
+
 	// 9. 启动消费者
 	log.Println("Starting message consumer...")
 	consumerCtx, cancelConsumer := context.WithCancel(context.Background())
@@ -154,6 +179,13 @@ func main() {
 	// 等待中断信号
 	<-quit
 	log.Println("Shutting down server...")
+
+	// 关闭工作池
+	log.Println("Shutting down worker pool...")
+	if err := workerPool.Stop(); err != nil {
+		log.Printf("Error stopping worker pool: %v", err)
+	}
+	log.Println("Worker pool stopped")
 
 	// 关闭消费者
 	cancelConsumer()

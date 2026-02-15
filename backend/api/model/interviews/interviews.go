@@ -6976,10 +6976,14 @@ func (p *UploadResumeRequest) String() string {
 
 // 上传简历响应
 type UploadResumeResponse struct {
-	// 简历ID
-	ResumeID int64 `thrift:"resume_id,1,required" form:"resume_id,required" json:"resume_id,required" query:"resume_id,required"`
+	// 简历ID（同步模式返回）
+	ResumeID *int64 `thrift:"resume_id,1,optional" form:"resume_id" json:"resume_id,omitempty" query:"resume_id"`
+	// 上传任务ID（异步模式追踪进度）
+	UploadID string `thrift:"upload_id,2,required" form:"upload_id,required" json:"upload_id,required" query:"upload_id,required"`
+	// true=异步处理中, false=同步已完成
+	IsAsync bool `thrift:"is_async,3,required" form:"is_async,required" json:"is_async,required" query:"is_async,required"`
 	// 消息说明
-	Message string `thrift:"message,2,required" form:"message,required" json:"message,required" query:"message,required"`
+	Message string `thrift:"message,4,required" form:"message,required" json:"message,required" query:"message,required"`
 }
 
 func NewUploadResumeResponse() *UploadResumeResponse {
@@ -6989,8 +6993,21 @@ func NewUploadResumeResponse() *UploadResumeResponse {
 func (p *UploadResumeResponse) InitDefault() {
 }
 
+var UploadResumeResponse_ResumeID_DEFAULT int64
+
 func (p *UploadResumeResponse) GetResumeID() (v int64) {
-	return p.ResumeID
+	if !p.IsSetResumeID() {
+		return UploadResumeResponse_ResumeID_DEFAULT
+	}
+	return *p.ResumeID
+}
+
+func (p *UploadResumeResponse) GetUploadID() (v string) {
+	return p.UploadID
+}
+
+func (p *UploadResumeResponse) GetIsAsync() (v bool) {
+	return p.IsAsync
 }
 
 func (p *UploadResumeResponse) GetMessage() (v string) {
@@ -6999,14 +7016,21 @@ func (p *UploadResumeResponse) GetMessage() (v string) {
 
 var fieldIDToName_UploadResumeResponse = map[int16]string{
 	1: "resume_id",
-	2: "message",
+	2: "upload_id",
+	3: "is_async",
+	4: "message",
+}
+
+func (p *UploadResumeResponse) IsSetResumeID() bool {
+	return p.ResumeID != nil
 }
 
 func (p *UploadResumeResponse) Read(iprot thrift.TProtocol) (err error) {
 
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetResumeID bool = false
+	var issetUploadID bool = false
+	var issetIsAsync bool = false
 	var issetMessage bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
@@ -7028,13 +7052,30 @@ func (p *UploadResumeResponse) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetResumeID = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetUploadID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetIsAsync = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 				issetMessage = true
@@ -7054,13 +7095,18 @@ func (p *UploadResumeResponse) Read(iprot thrift.TProtocol) (err error) {
 		goto ReadStructEndError
 	}
 
-	if !issetResumeID {
-		fieldId = 1
+	if !issetUploadID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetIsAsync {
+		fieldId = 3
 		goto RequiredFieldNotSetError
 	}
 
 	if !issetMessage {
-		fieldId = 2
+		fieldId = 4
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -7083,16 +7129,38 @@ RequiredFieldNotSetError:
 
 func (p *UploadResumeResponse) ReadField1(iprot thrift.TProtocol) error {
 
-	var _field int64
+	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.ResumeID = _field
 	return nil
 }
 func (p *UploadResumeResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.UploadID = _field
+	return nil
+}
+func (p *UploadResumeResponse) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.IsAsync = _field
+	return nil
+}
+func (p *UploadResumeResponse) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -7118,6 +7186,14 @@ func (p *UploadResumeResponse) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 2
 			goto WriteFieldError
 		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
 	}
 	if err = oprot.WriteFieldStop(); err != nil {
 		goto WriteFieldStopError
@@ -7137,14 +7213,16 @@ WriteStructEndError:
 }
 
 func (p *UploadResumeResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("resume_id", thrift.I64, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.ResumeID); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetResumeID() {
+		if err = oprot.WriteFieldBegin("resume_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ResumeID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -7154,10 +7232,10 @@ WriteFieldEndError:
 }
 
 func (p *UploadResumeResponse) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("message", thrift.STRING, 2); err != nil {
+	if err = oprot.WriteFieldBegin("upload_id", thrift.STRING, 2); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteString(p.Message); err != nil {
+	if err := oprot.WriteString(p.UploadID); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -7168,6 +7246,40 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *UploadResumeResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("is_async", thrift.BOOL, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteBool(p.IsAsync); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *UploadResumeResponse) writeField4(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("message", thrift.STRING, 4); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Message); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
 func (p *UploadResumeResponse) String() string {

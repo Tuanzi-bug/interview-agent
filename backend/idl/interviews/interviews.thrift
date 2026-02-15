@@ -184,8 +184,10 @@ struct UploadResumeRequest {
 
 // 上传简历响应
 struct UploadResumeResponse {
-    1: required i64    resume_id  // 简历ID
-    2: required string message    // 消息说明
+    1: optional i64    resume_id  // 简历ID（同步模式返回）
+    2: required string upload_id  // 上传任务ID（异步模式追踪进度）
+    3: required bool   is_async   // true=异步处理中, false=同步已完成
+    4: required string message    // 消息说明
 }
 
 // 获取简历详情请求
