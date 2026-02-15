@@ -11,7 +11,8 @@
     "skills/coding-standards/SKILL.md"
   ],
   "plugin": [
-    "./.opencode/plugins"
+    "./.opencode/plugins",
+    "oh-my-opencode"
   ],
   "agent": {
     "build": {
