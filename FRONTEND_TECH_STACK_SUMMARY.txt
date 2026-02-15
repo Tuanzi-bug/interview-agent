@@ -1,0 +1,389 @@
+═══════════════════════════════════════════════════════════════════════════════
+  FRONTEND TECHNOLOGY STACK ANALYSIS
+  Go Eino Interview Agent - 面试吧AI面试平台
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. UI FRAMEWORK                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│ ► Ant Design v5.12.8 (PRIMARY)                                              │
+│   ├─ Enterprise-grade component library (50+ components)                    │
+│   ├─ Full Chinese localization (zh_CN)                                     │
+│   ├─ Alibaba ecosystem alignment (ByteDance adoption)                       │
+│   ├─ Icon library: @ant-design/icons@5.3.0                                │
+│   └─ Components: Button, Card, Modal, Form, Table, Drawer, Descriptions   │
+│                                                                               │
+│ Why NOT Material-UI? → Ant Design has better CJK support & enterprise UX   │
+│ Why NOT Chakra?       → Zustand + Ant Design covers state + UI perfectly   │
+│ Why NOT Mantine?      → Ant Design colors already match brand colors       │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2. STATE MANAGEMENT                                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│ ► Zustand v4.4.7 (PRIMARY)                                                  │
+│   ├─ Minimal boilerplate (no reducers, dispatchers)                         │
+│   ├─ ~2KB bundle size (vs Redux ~50KB)                                      │
+│   ├─ Direct hook access: useAuthStore()                                     │
+│   ├─ Persistence middleware: localStorage auto-sync                         │
+│   └─ TypeScript-first design                                                │
+│                                                                               │
+│ Store Example:                                                               │
+│   • authStore.ts - Authentication state (user, isAuthenticated)            │
+│   • Stores state in localStorage as 'auth-storage'                          │
+│                                                                               │
+│ Why NOT Redux?      → Too verbose for small/medium apps                    │
+│ Why NOT MobX?       → Zustand's immutability is clearer                    │
+│ Why NOT Context?    → Zustand has built-in persistence + devtools          │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 3. HTTP CLIENT & API                                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│ ► Axios v1.6.5 (PRIMARY)                                                    │
+│   ├─ Request interceptors: Auto-inject Bearer token                         │
+│   ├─ Response interceptors: Global error handling (401 cleanup)             │
+│   ├─ Per-request timeout: 3min for evaluation endpoints                     │
+│   ├─ Automatic token injection from localStorage                            │
+│   └─ Double-header strategy: Authorization + X-Auth-Token                  │
+│                                                                               │
+│ ► Service Layer (encapsulation)                                             │
+│   ├─ predictionService - Prediction API (getPredictionList, etc.)          │
+│   └─ Future services: resumeService, interviewService                       │
+│                                                                               │
+│ ► React Query v5.17.19 (INSTALLED, NOT YET USED)                           │
+│   └─ Future migration path for caching + server state                      │
+│                                                                               │
+│ Request Flow:                                                                │
+│   Component → Hook (useAuth) → Service → Axios Client → API                │
+│                                            ↓                                  │
+│                                     Interceptors:                            │
+│                                     • Add token                              │
+│                                     • Set timeout                            │
+│                                     • Handle 401                             │
+│                                                                               │
+│ Why NOT Fetch API?  → No interceptor pattern, more verbose                 │
+│ Why NOT SWR?        → Zustand + Axios is simpler for this scale            │
+│ Why NOT tRPC?       → Backend uses REST, not RPC                           │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 4. FRAMEWORK & RUNTIME                                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│ ► Next.js v14.0.4 (PRIMARY FRAMEWORK)                                       │
+│   ├─ React 18.2.0 + ReactDOM 18.2.0                                        │
+│   ├─ App Router (file-based routing)                                        │
+│   ├─ Server Components by default (less JS sent to client)                  │
+│   ├─ Built-in API rewriting: /api/:path → backend                          │
+│   ├─ Image optimization + Font loading                                      │
+│   ├─ TypeScript zero-config                                                 │
+│   └─ Production builds optimized for speed                                  │
+│                                                                               │
+│ Key Files:                                                                   │
+│   • src/app/layout.tsx - Root layout with metadata                          │
+│   • src/app/page.tsx - Home page                                            │
+│   • next.config.js - API rewriting configuration                            │
+│                                                                               │
+│ Routes Generated:                                                            │
+│   /interview/campus             → campus interview flow                      │
+│   /interview/social             → social interview flow                      │
+│   /interview/special            → specialized interview flow                 │
+│   /user/center                  → user profile                               │
+│   /user/interviews              → interview history                          │
+│   /resume                       → resume management                          │
+│   /questions                    → question bank                              │
+│                                                                               │
+│ Why Next.js 14? → Server components + SSR ideal for dashboards              │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 5. STYLING & CSS                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│ ► Tailwind CSS v3.4.1 (UTILITY-FIRST)                                       │
+│   ├─ PostCSS v8.4.33 for CSS processing                                     │
+│   ├─ Autoprefixer v10.4.17 for vendor prefixes                             │
+│   ├─ Custom color theme aligned with Ant Design:                            │
+│   │   primary: #52c41a (Ant Green)                                          │
+│   │   secondary: #722ed1 (Ant Purple)                                       │
+│   │   error: #f5222d, warning: #faad14, info: #1890ff                      │
+│   └─ Unused CSS purged at build time                                        │
+│                                                                               │
+│ ► Global CSS (globals.css)                                                  │
+│   └─ Base styles, Ant Design customizations, overrides                     │
+│                                                                               │
+│ Styling Strategy (Hybrid):                                                  │
+│   • Ant Design components: Structure & semantics                            │
+│   • Tailwind utilities: Layout, spacing, responsive                         │
+│   • Global CSS: Base styles & brand customization                           │
+│                                                                               │
+│ Example Usage:                                                               │
+│   <main className="min-h-screen py-8">{children}</main>                    │
+│                                                                               │
+│ Why Tailwind?  → Works perfectly with component-driven design              │
+│ Bundle Impact → 0KB at runtime (CSS purged)                                │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 6. DEVELOPER TOOLS & CODE QUALITY                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│ ► TypeScript v5.3.3 (STRICT MODE)                                           │
+│   ├─ Full type safety across all code                                       │
+│   ├─ Target: ES5 (backward compatibility)                                   │
+│   ├─ Path alias: @ → src/                                                   │
+│   └─ incremental: true (faster rebuilds)                                    │
+│                                                                               │
+│ ► ESLint v8.56.0                                                             │
+│   ├─ Extends: next/core-web-vitals + @typescript-eslint                    │
+│   ├─ Prettier integration: eslint-plugin-prettier                           │
+│   └─ Relaxed rules: no-explicit-any off, no-unused-vars off               │
+│                                                                               │
+│ ► Prettier v3.2.4                                                            │
+│   ├─ printWidth: 100 chars                                                  │
+│   ├─ singleQuote: true                                                      │
+│   ├─ tabWidth: 2 spaces                                                     │
+│   └─ trailingComma: es5                                                     │
+│                                                                               │
+│ Commands:                                                                    │
+│   npm run dev       → Start dev server on port 3000                         │
+│   npm run build     → Production build to .next/                            │
+│   npm run start     → Run production build                                   │
+│   npm run lint      → Run ESLint checks                                      │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 7. PROJECT STRUCTURE & ARCHITECTURE                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│ frontend/src/                                                                │
+│ ├── app/                        Next.js pages (file-based routes)           │
+│ │   ├── interview/              Interview flows (campus, social, special)   │
+│ │   ├── user/                   User management (profile, interviews)       │
+│ │   ├── resume/                 Resume management                           │
+│ │   ├── questions/              Question bank                               │
+│ │   ├── layout.tsx              Root layout + metadata                      │
+│ │   └── page.tsx                Home page                                    │
+│ │                                                                             │
+│ ├── components/                 Reusable React components                   │
+│ │   ├── common/                 Generic (Button, Card)                      │
+│ │   ├── home/                   Home-specific components                    │
+│ │   ├── layout/                 Navbar, Footer                              │
+│ │   └── BackendHealthCheck.tsx  Diagnostic component                       │
+│ │                                                                             │
+│ ├── config/                     Application configuration                   │
+│ │   └── api.ts                  API endpoints & constants                   │
+│ │                                                                             │
+│ ├── services/                   Business logic & API calls                  │
+│ │   └── api/                                                                 │
+│ │       ├── client.ts           Axios instance + interceptors               │
+│ │       └── prediction.ts       Prediction API service                      │
+│ │                                                                             │
+│ ├── store/                      Zustand state management                    │
+│ │   └── authStore.ts            Authentication state (user, token)          │
+│ │                                                                             │
+│ ├── hooks/                      Custom React hooks                          │
+│ │   └── useAuth.ts              Auth state hook (wrapper)                   │
+│ │                                                                             │
+│ ├── types/                      TypeScript type definitions                 │
+│ │   ├── global.ts               Global types (User, Interview, Resume)      │
+│ │   └── prediction.ts           Prediction-specific types                   │
+│ │                                                                             │
+│ └── utils/                      Utility functions                           │
+│     └── format.ts               Formatting helpers                          │
+│                                                                               │
+│ Architectural Patterns:                                                      │
+│                                                                               │
+│   Separation of Concerns:                                                    │
+│   • Presentation (components/) - React UI only                              │
+│   • Business Logic (services/) - API calls, transformations                 │
+│   • State (store/) - Global state management                                │
+│   • Config (config/) - Constants, environment config                        │
+│                                                                               │
+│   Data Flow:                                                                 │
+│   Component → Hook → Service → Axios → Backend API                          │
+│       ↓                                      ↓                                │
+│   Zustand Store ←──────────── Interceptors ←──┘                             │
+│       ↓                                                                       │
+│   localStorage (persistence)                                                 │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 8. DEPENDENCY SUMMARY                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│ Core Dependencies (7):                                                       │
+│ ├─ next@14.0.4                          React meta-framework                │
+│ ├─ react@18.2.0 + react-dom@18.2.0     UI library                           │
+│ ├─ antd@5.12.8                          UI component library                │
+│ ├─ @ant-design/icons@5.3.0              Icon library                        │
+│ ├─ zustand@4.4.7                        State management                    │
+│ ├─ axios@1.6.5                          HTTP client                         │
+│ └─ @tanstack/react-query@5.17.19        [Installed, not yet used]           │
+│                                                                               │
+│ Dev Dependencies (40+):                                                      │
+│ ├─ @types/node@20.11.5                  Node.js type definitions            │
+│ ├─ @types/react@18.2.48                 React type definitions              │
+│ ├─ typescript@5.3.3                     Type checking                       │
+│ ├─ tailwindcss@3.4.1                    CSS framework                       │
+│ ├─ postcss@8.4.33                       CSS processing                      │
+│ ├─ autoprefixer@10.4.17                 Vendor prefixes                     │
+│ ├─ eslint@8.56.0                        Code linting                        │
+│ ├─ prettier@3.2.4                       Code formatting                     │
+│ └─ @typescript-eslint/*                 TS linting                          │
+│                                                                               │
+│ Bundle Size Estimates:                                                       │
+│ ├─ antd: ~800KB (minified)                                                  │
+│ ├─ axios: ~12KB                                                             │
+│ ├─ zustand: ~2KB                                                            │
+│ ├─ react: ~40KB                                                             │
+│ └─ tailwindcss: ~0KB (purged at build)                                      │
+│                                                                               │
+│ TOTAL CORE: ~850KB (before gzip)                                            │
+│ AFTER GZIP: ~250KB (typical modern browser compression)                     │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 9. ENVIRONMENT & CONFIGURATION                                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│ Environment Variables:                                                       │
+│                                                                               │
+│ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api                          │
+│   ├─ Sent to browser (client-side accessible)                               │
+│   ├─ Used in: config/api.ts, services/api/client.ts                        │
+│   └─ Fallback: /api (relative path)                                         │
+│                                                                               │
+│ INTERNAL_API_URL=http://localhost:8888                                      │
+│   ├─ Server-side only (not sent to browser)                                │
+│   ├─ Used in: next.config.js for API rewriting                             │
+│   └─ Avoids CORS issues via transparent proxy                               │
+│                                                                               │
+│ API Rewriting (next.config.js):                                             │
+│ /api/:path* → INTERNAL_API_URL/api/:path*                                   │
+│                                                                               │
+│ This allows:                                                                 │
+│ • Frontend localhost:3000 → next.js rewrites to backend:8888               │
+│ • Zero CORS configuration needed                                            │
+│ • Token automatically added by axios interceptor                            │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 10. SECURITY FEATURES IMPLEMENTED                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│ ✓ JWT Token Management                                                       │
+│   ├─ Stored in localStorage                                                 │
+│   └─ Retrieved on each request                                              │
+│                                                                               │
+│ ✓ Bearer Token Injection                                                     │
+│   └─ Automatically added to all protected endpoints                         │
+│                                                                               │
+│ ✓ Double Header Strategy                                                     │
+│   ├─ Authorization: Bearer {token}                                          │
+│   └─ X-Auth-Token: {token}  (fallback)                                      │
+│                                                                               │
+│ ✓ Auth-Free Route Detection                                                  │
+│   ├─ /user/register - no token needed                                       │
+│   ├─ /user/login - no token needed                                          │
+│   └─ /user/logout - no token needed                                         │
+│                                                                               │
+│ ✓ 401 Response Handling                                                      │
+│   └─ Automatic token cleanup on auth failure                                │
+│                                                                               │
+│ ✗ NOT Implemented (recommendations):                                         │
+│   ├─ CSRF token handling                                                    │
+│   ├─ HTTPOnly cookie storage (over localStorage)                            │
+│   ├─ Content Security Policy headers                                        │
+│   ├─ Request signature verification                                         │
+│   └─ Rate limiting (client-side)                                            │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 11. PERFORMANCE OPTIMIZATIONS                                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│ Next.js Built-in:                                                            │
+│ ├─ Code splitting per route                                                 │
+│ ├─ Server components (reduce client JS)                                      │
+│ ├─ Image optimization (lazy load, WebP)                                     │
+│ ├─ Font optimization (Google Fonts)                                         │
+│ └─ CSS purging (Tailwind unused removal)                                    │
+│                                                                               │
+│ Application-level:                                                           │
+│ ├─ Token caching (localStorage)                                             │
+│ ├─ State persistence (Zustand + middleware)                                 │
+│ ├─ Adaptive timeouts (3min for evaluation endpoints)                        │
+│ ├─ Conditional query params (only send if provided)                         │
+│ └─ Service layer abstraction (future caching layer)                         │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 12. GAPS & FUTURE IMPROVEMENTS                                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│ Testing:                                                                     │
+│ ├─ NO unit tests configured (Jest + React Testing Library recommended)      │
+│ └─ NO E2E tests configured (Cypress or Playwright recommended)              │
+│                                                                               │
+│ React Query:                                                                 │
+│ ├─ Installed but not used                                                   │
+│ └─ Could migrate for: automatic caching, stale-while-revalidate, etc.      │
+│                                                                               │
+│ Security:                                                                    │
+│ ├─ Token stored in localStorage (vulnerable to XSS)                         │
+│ └─ Recommend: HTTPOnly cookies + CSRF protection                            │
+│                                                                               │
+│ Error Handling:                                                              │
+│ ├─ No Error Boundaries configured                                           │
+│ └─ No retry logic for failed requests                                       │
+│                                                                               │
+│ Monitoring:                                                                  │
+│ ├─ No analytics integration                                                 │
+│ ├─ No error tracking (e.g., Sentry)                                         │
+│ └─ No performance monitoring (e.g., New Relic)                              │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+                              QUICK REFERENCE
+═══════════════════════════════════════════════════════════════════════════════
+
+FRAMEWORK STACK:
+  Next.js 14 → React 18 → TypeScript → Tailwind + Ant Design
+
+STATE MANAGEMENT:
+  Zustand (4.4.7) with persist middleware → localStorage
+
+API COMMUNICATION:
+  Axios (1.6.5) with interceptors → Auto JWT injection
+
+STYLING:
+  Ant Design (5.12.8) + Tailwind CSS (3.4.1) hybrid approach
+
+DEVELOPER EXPERIENCE:
+  TypeScript strict mode + ESLint + Prettier + Hot reload
+
+MATURITY LEVEL:
+  ✓ Production-ready
+  ✓ Type-safe
+  ✓ Well-structured
+  ⚠ Missing testing infrastructure
+  ⚠ Security could be enhanced (HTTPOnly cookies)
+
+═══════════════════════════════════════════════════════════════════════════════
