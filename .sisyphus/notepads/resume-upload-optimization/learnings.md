@@ -161,3 +161,125 @@
 - Add cache hit rate monitoring
 - Consider cache warming for frequently accessed resumes
 - Add cache invalidation on resume updates
+
+## Phase 3.1: Resume Upload Job Queue
+
+### Implementation Approach (TDD)
+- **RED Phase**: Wrote comprehensive test suite FIRST with 8 test cases covering all queue operations
+- **GREEN Phase**: Implemented minimal queue functionality to pass all tests
+- **REFACTOR Phase**: Clean code with proper error handling and logging
+
+### Queue Architecture
+- **Job Distribution**: Redis LIST (LPUSH/BRPOP) for reliable one-to-one consumption
+- **Progress Updates**: Redis Pub/Sub (PUBLISH/SUBSCRIBE) for one-to-many broadcasting
+- **Queue Key**: `resume:upload:queue` (single queue for all workers)
+- **Progress Channel**: `resume:progress:{uploadID}` (per-upload channels for SSE streaming)
+
+### Core Data Structures
+```go
+ResumeUploadJob struct {
+    UploadID string
+    UserID   uint
+    FilePath string
+    ResumeID uint64 (optional)
+}
+
+ProgressUpdate struct {
+    Status   string  // "pending", "extracting", "analyzing", "completed", "failed"
+    Progress int     // 0-100
+    Stage    string  // Human-readable description
+    ErrorMsg string  // Optional error message
+}
+```
+
+### Redis Operations Pattern
+- **Enqueue**: `LPUSH resume:upload:queue <json>` (non-blocking, instant return)
+- **Dequeue**: `BRPOP resume:upload:queue <timeout>` (blocking pop with timeout)
+- **Progress**: `PUBLISH resume:progress:{uploadID} <json>` (pub/sub to per-upload channel)
+
+### Blocking Dequeue Behavior
+- Uses `BRPOP` with configurable timeout (recommended 5 seconds for worker loop)
+- Returns `(nil, nil)` on timeout (NOT an error - normal empty queue condition)
+- Returns `(*ResumeUploadJob, nil)` when job available
+- Returns `(nil, error)` only on actual Redis errors
+
+### Error Handling Strategy
+- Nil client check: Return explicit error "redis client not initialized"
+- Redis nil (empty queue): Return `(nil, nil)` NOT an error (worker continues loop)
+- Redis errors: Wrap with context using `fmt.Errorf("...: %w", err)`
+- JSON errors: Wrap with context for debugging
+
+### Testing Strategy
+- **Test Database**: Redis DB 1 (isolated from production DB 0)
+- **Test Isolation**: `FlushDB` before each test to ensure clean state
+- **Graceful Skipping**: Tests skip if Redis unavailable (not fail)
+- **Coverage**: 8 test cases covering initialization, FIFO, timeout, pub/sub, nil client
+- **Timing Tests**: Verify blocking behavior with ~1s tolerance
+
+### Test Coverage
+✅ Queue initialization and structure
+✅ Job enqueue/dequeue operations
+✅ JSON serialization round-trip
+✅ FIFO ordering (multiple jobs)
+✅ Blocking dequeue with timeout
+✅ Progress publishing to correct channels
+✅ Nil client error handling
+✅ Integration with repository.GetRedis()
+
+### Logging Format
+- Follows existing `redis_queue.go` pattern: `[ResumeUploadQueue] <message>`
+- Logs enqueue/dequeue operations with job details
+- Logs progress publishing with channel name and subscriber count
+- Provides visibility for debugging and monitoring
+
+### Performance Considerations
+- **Non-blocking Enqueue**: Instant return after LPUSH (no waiting)
+- **Blocking Dequeue**: Workers sleep efficiently in Redis (no CPU polling)
+- **Pub/Sub Efficiency**: Zero-copy message broadcasting to multiple subscribers
+- **JSON Overhead**: Minimal (job structure is simple, ~100-200 bytes per job)
+
+### Integration Points (Next Phase)
+- Worker pool will call `NewResumeUploadQueue(repository.GetRedis())`
+- Workers loop: `DequeueJob(ctx, 5*time.Second)` until context cancelled
+- Workers call `PublishProgress()` at key processing stages
+- SSE endpoint subscribes to `resume:progress:{uploadID}` for real-time updates
+
+### Gotchas Encountered
+1. **BRPOP Return Format**: Returns `[queueKey, value]` array (need index 1 for data)
+2. **Timeout vs Error**: `redis.Nil` error is NOT a failure (normal empty queue)
+3. **Test Redis Availability**: Tests must skip gracefully if Redis not running
+4. **Pub/Sub Timing**: Need short delay before publishing in tests (subscription setup)
+
+### Code Quality
+✅ No LSP errors in implementation files
+✅ Clean compilation (`go build ./internal/mq/`)
+✅ Go vet passes with no warnings
+✅ Follows existing queue patterns (`redis_queue.go`)
+✅ Proper error wrapping with context
+✅ Idiomatic Go (context, defer, error handling)
+
+### Success Criteria Met
+✅ File created: `backend/internal/mq/resume_upload_queue.go`
+✅ File created: `backend/internal/mq/resume_upload_queue_test.go`
+✅ All queue operations implemented (Enqueue, Dequeue, PublishProgress)
+✅ Blocking dequeue with timeout support
+✅ Progress publishing to per-upload channels
+✅ Comprehensive test coverage (8 test cases)
+✅ Clean compilation and diagnostics
+✅ Error handling and logging complete
+
+### Next Steps (Phase 3.2)
+- Create worker pool manager in `backend/internal/service/`
+- Spawn 3 worker goroutines on system startup
+- Each worker loops: DequeueJob → ProcessResume → PublishProgress
+- Integrate with existing resume parsing logic
+- Add graceful shutdown (context cancellation)
+- Wire up to resume upload API endpoint
+
+### Configuration Values (Documented)
+- Queue key constant: `ResumeUploadQueueKey = "resume:upload:queue"`
+- Recommended dequeue timeout: 5 seconds (worker loop frequency)
+- Progress channel format: `resume:progress:{uploadID}`
+- Worker pool size: 3 workers (next phase)
+- Redis pub/sub for progress: Stateless, transient updates (no persistence needed)
+
