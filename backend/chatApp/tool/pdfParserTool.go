@@ -6,12 +6,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
+
+	"ai-eino-interview-agent/internal/service"
 
 	pdfParser "github.com/cloudwego/eino-ext/components/document/parser/pdf"
 	"github.com/cloudwego/eino/components/document/parser"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
+	"github.com/cloudwego/eino/schema"
 )
 
 // PDFToTextRequest 大模型调用工具的入参结构体（明确参数要求）
@@ -43,16 +47,30 @@ func ConvertPDFToText(ctx context.Context, req *PDFToTextRequest) (*PDFToTextRes
 			"file_path":  req.FilePath,
 			"to_pages":   req.ToPages,
 			"parse_time": time.Now().Format("2006-01-02 15:04:05"),
+			"cache_hit":  false,
 		},
 	}
-	// 1. 参数校验（必填参数检查）
+
 	if req.FilePath == "" {
 		result.Success = false
 		result.ErrorMsg = "参数错误：必须传入 file_path（本地PDF文件的绝对路径）"
 		return &result, errors.New(result.ErrorMsg)
 	}
 
-	// 2. 打开本地PDF文件
+	cache := service.NewResumeTextCache()
+	cachedText, hit, err := cache.Get(ctx, req.FilePath)
+	if hit && err == nil {
+		log.Printf("[PDFParser] Cache HIT for %s", req.FilePath)
+		result.Meta["cache_hit"] = true
+		return reconstructResultFromCache(cachedText, req.ToPages, &result), nil
+	}
+
+	if err != nil {
+		log.Printf("[PDFParser] Cache error: %v", err)
+	} else {
+		log.Printf("[PDFParser] Cache MISS for %s", req.FilePath)
+	}
+
 	file, err := os.Open(req.FilePath)
 	if err != nil {
 		result.Success = false
@@ -66,9 +84,8 @@ func ConvertPDFToText(ctx context.Context, req *PDFToTextRequest) (*PDFToTextRes
 		}
 	}(file)
 
-	// 3. 初始化Eino PDF解析器（无超时配置，极简核心）
 	pdfIns, err := pdfParser.NewPDFParser(ctx, &pdfParser.Config{
-		ToPages: req.ToPages, // 按大模型传入的参数决定是否分页
+		ToPages: req.ToPages,
 	})
 	if err != nil {
 		result.Success = false
@@ -76,7 +93,6 @@ func ConvertPDFToText(ctx context.Context, req *PDFToTextRequest) (*PDFToTextRes
 		return &result, errors.New(result.ErrorMsg)
 	}
 
-	// 4. 核心：解析PDF为纯文本
 	docs, err := pdfIns.Parse(ctx, file,
 		parser.WithURI(req.FilePath),
 		parser.WithExtraMeta(result.Meta),
@@ -87,12 +103,11 @@ func ConvertPDFToText(ctx context.Context, req *PDFToTextRequest) (*PDFToTextRes
 		return &result, errors.New(result.ErrorMsg)
 	}
 
-	// 5. 构造成功结果
 	result.Success = true
 	result.TotalPages = len(docs)
 
+	var textToCache string
 	if req.ToPages {
-		// 分页模式：按页码整理文本（用索引+1作为页码，可靠无依赖）
 		pages := make([]PDFPageText, 0, len(docs))
 		for idx, doc := range docs {
 			pages = append(pages, PDFPageText{
@@ -101,17 +116,58 @@ func ConvertPDFToText(ctx context.Context, req *PDFToTextRequest) (*PDFToTextRes
 			})
 		}
 		result.Pages = pages
+		textToCache = extractTextForCaching(docs)
 	} else {
-		// 合并模式：拼接所有页文本
 		var contentBuilder string
 		for _, doc := range docs {
 			contentBuilder += doc.Content + "\n"
 		}
 		result.Content = contentBuilder
+		textToCache = contentBuilder
 	}
 
-	// 6. 结果序列化为JSON（大模型可直接解析）
+	if result.Success && textToCache != "" {
+		if err := cache.Set(ctx, req.FilePath, textToCache); err != nil {
+			log.Printf("[PDFParser] Failed to cache text: %v", err)
+		}
+	}
+
 	return &result, nil
+}
+
+func reconstructResultFromCache(cachedText string, toPages bool, result *PDFToTextResult) *PDFToTextResult {
+	result.Success = true
+
+	if toPages {
+		lines := strings.Split(strings.TrimSpace(cachedText), "\n")
+		pages := make([]PDFPageText, 0, len(lines))
+		for idx, line := range lines {
+			if line != "" {
+				pages = append(pages, PDFPageText{
+					PageNum: idx + 1,
+					Content: line,
+				})
+			}
+		}
+		result.Pages = pages
+		result.TotalPages = len(pages)
+	} else {
+		result.Content = cachedText
+		result.TotalPages = strings.Count(cachedText, "\n") + 1
+	}
+
+	return result
+}
+
+func extractTextForCaching(docs []*schema.Document) string {
+	var textBuilder strings.Builder
+	for idx, doc := range docs {
+		textBuilder.WriteString(doc.Content)
+		if idx < len(docs)-1 {
+			textBuilder.WriteString("\n")
+		}
+	}
+	return textBuilder.String()
 }
 
 // CreatePDFToTextTool 创建工具实例（供Eino框架注册，大模型识别）
