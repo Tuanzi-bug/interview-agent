@@ -345,3 +345,13 @@ func _predictMw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _uploadMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getuploadprogressMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}

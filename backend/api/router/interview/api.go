@@ -60,6 +60,10 @@ func Register(r *server.Hertz) {
 			_resume.PUT("/:resume_id", append(_updateresumeMw(), interview.UpdateResume)...)
 			_resume.POST("/set-default", append(_setdefaultresumeMw(), interview.SetDefaultResume)...)
 			_resume.POST("/upload", append(_uploadresumeMw(), interview.UploadResume)...)
+			{
+				_upload := _resume.Group("/upload", _uploadMw()...)
+				_upload.GET("/progress/:uploadID", append(_getuploadprogressMw(), interview.GetUploadProgress)...)
+			}
 		}
 		{
 			_user := _api.Group("/user", _userMw()...)
