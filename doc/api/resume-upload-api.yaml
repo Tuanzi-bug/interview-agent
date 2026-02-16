@@ -1,0 +1,781 @@
+openapi: 3.0.3
+info:
+  title: Resume Upload API
+  description: |
+    Resume upload system with hybrid sync/async processing and real-time progress tracking via Server-Sent Events (SSE).
+    
+    ## Features
+    - **Quick Sync Mode**: Fast uploads (< 15s) complete synchronously
+    - **Async Mode**: Large/complex uploads process asynchronously with worker pool
+    - **Real-time Progress**: SSE streaming provides progress updates (0% → 25% → 50% → 75% → 100%)
+    - **PDF Caching**: 30-day cache reduces processing time for duplicate uploads
+    - **Status Tracking**: Complete lifecycle tracking in database
+    
+    ## Workflow
+    1. Client uploads PDF via POST `/api/resume/upload`
+    2. Server attempts quick sync processing (15s timeout)
+    3. If sync succeeds: Returns `resume_id` immediately
+    4. If sync fails/timeouts: Returns `upload_id` for async tracking
+    5. Client connects to SSE endpoint `/api/resume/upload/progress/:uploadID`
+    6. Server streams progress events in real-time
+    7. Processing completes: Client receives `resume_id` in final event
+    
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8888
+    description: Local development server
+  - url: https://api.example.com
+    description: Production server
+
+tags:
+  - name: Resume Upload
+    description: Resume file upload and processing
+  - name: Progress Tracking
+    description: Real-time progress tracking via SSE
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/resume/upload:
+    post:
+      tags:
+        - Resume Upload
+      summary: Upload resume file
+      description: |
+        Upload a PDF resume for processing. The system will attempt quick synchronous processing (< 15s). 
+        If processing takes longer, it falls back to asynchronous mode.
+        
+        ## Processing Modes
+        - **Sync Mode**: Upload completes within 15 seconds, returns `resume_id` immediately
+        - **Async Mode**: Upload enqueued for worker pool, returns `upload_id` for progress tracking
+        
+        ## Cache Behavior
+        Identical files (same SHA256 hash) use cached text extraction, significantly reducing processing time.
+        
+      operationId: uploadResume
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF file to upload (max 10MB)
+            encoding:
+              file:
+                contentType: application/pdf
+      responses:
+        '200':
+          description: Upload successful (sync or async)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/UploadResponseSync'
+                  - $ref: '#/components/schemas/UploadResponseAsync'
+              examples:
+                syncSuccess:
+                  summary: Quick sync upload completed
+                  value:
+                    resume_id: 12345
+                    upload_id: "550e8400-e29b-41d4-a716-446655440000"
+                    is_async: false
+                    message: "Resume uploaded and parsed successfully"
+                asyncQueued:
+                  summary: Async upload enqueued
+                  value:
+                    upload_id: "550e8400-e29b-41d4-a716-446655440001"
+                    is_async: true
+                    message: "Resume uploaded, processing asynchronously. Use upload_id to track progress."
+        '400':
+          description: Bad request (invalid file type, size limit exceeded)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidFileType:
+                  summary: Invalid file type
+                  value:
+                    error: "Only PDF files are allowed"
+                    code: "INVALID_FILE_TYPE"
+                fileTooLarge:
+                  summary: File size exceeds limit
+                  value:
+                    error: "File size exceeds 10MB limit"
+                    code: "FILE_TOO_LARGE"
+        '401':
+          description: Unauthorized (missing or invalid JWT token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                code: "UNAUTHORIZED"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
+                code: "INTERNAL_ERROR"
+
+  /api/resume/upload/progress/{uploadID}:
+    get:
+      tags:
+        - Progress Tracking
+      summary: Stream upload progress via SSE
+      description: |
+        Establishes a Server-Sent Events (SSE) connection to stream real-time progress updates for an async upload.
+        
+        ## Connection Lifecycle
+        1. Client connects → Server sends "connected" event immediately
+        2. Worker processes job → Server streams "progress" events (0%, 25%, 50%, 75%, 100%)
+        3. Processing completes → Server sends final "progress" event with `resume_id`
+        4. Connection closes automatically after completion or 5-minute timeout
+        
+        ## Event Types
+        - `connected`: Initial connection confirmation
+        - `progress`: Progress update (status, percentage, stage, error_msg, resume_id)
+        
+        ## Progress Stages
+        - **pending (0%)**: Job received, waiting to process
+        - **extracting (25%)**: Extracting text from PDF
+        - **extracted (50%)**: Text extraction complete, starting AI analysis
+        - **analyzing (75%)**: Analyzing resume with AI
+        - **completed (100%)**: Resume analysis complete (includes resume_id)
+        - **failed**: Processing failed (includes error_msg)
+        
+        ## Authentication
+        Since EventSource API doesn't support custom headers, JWT token must be provided as query parameter.
+        
+      operationId: getUploadProgress
+      security:
+        - QueryAuth: []
+      parameters:
+        - name: uploadID
+          in: path
+          required: true
+          description: Upload task UUID obtained from upload response
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: token
+          in: query
+          required: true
+          description: JWT authentication token
+          schema:
+            type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: SSE connection established
+          headers:
+            Content-Type:
+              description: Server-Sent Events MIME type
+              schema:
+                type: string
+                example: "text/event-stream; charset=utf-8"
+            Cache-Control:
+              description: Disable caching for streaming
+              schema:
+                type: string
+                example: "no-cache"
+            Connection:
+              description: Keep connection alive
+              schema:
+                type: string
+                example: "keep-alive"
+            X-Accel-Buffering:
+              description: Disable proxy buffering
+              schema:
+                type: string
+                example: "no"
+            X-Content-Type-Options:
+              description: Prevent MIME sniffing
+              schema:
+                type: string
+                example: "nosniff"
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-Sent Events stream. Each event follows SSE format:
+                  ```
+                  event: <event-type>
+                  data: <json-payload>
+                  
+                  ```
+              examples:
+                connectedEvent:
+                  summary: Initial connection event
+                  value: |
+                    event: connected
+                    data: {"message":"Progress stream connected","type":"connected","upload_id":"550e8400-e29b-41d4-a716-446655440000"}
+                    
+                progressEvent:
+                  summary: Progress update event
+                  value: |
+                    event: progress
+                    data: {"upload_id":"550e8400-e29b-41d4-a716-446655440000","status":"extracting","progress":25,"stage":"Extracting text from PDF"}
+                    
+                completedEvent:
+                  summary: Completion event
+                  value: |
+                    event: progress
+                    data: {"upload_id":"550e8400-e29b-41d4-a716-446655440000","status":"completed","progress":100,"stage":"Resume analysis complete","resume_id":12345}
+                    
+                failedEvent:
+                  summary: Failure event
+                  value: |
+                    event: progress
+                    data: {"upload_id":"550e8400-e29b-41d4-a716-446655440000","status":"failed","progress":50,"stage":"Processing failed","error_msg":"Failed to parse PDF: corrupted file"}
+                    
+        '400':
+          description: Bad request (invalid UUID format)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid upload ID format. Expected UUID format."
+                code: "INVALID_UUID"
+        '401':
+          description: Unauthorized (missing or invalid JWT token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                code: "UNAUTHORIZED"
+        '500':
+          description: Internal server error (Redis unavailable)
+          content:
+            text/event-stream:
+              example: |
+                event: error
+                data: {"type":"error","message":"Progress tracking unavailable"}
+                
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT authentication token obtained from login endpoint.
+        Include in Authorization header: `Authorization: Bearer <token>`
+    QueryAuth:
+      type: apiKey
+      in: query
+      name: token
+      description: |
+        JWT authentication token passed as query parameter.
+        Used for SSE endpoint because EventSource API doesn't support custom headers.
+
+  schemas:
+    UploadResponseSync:
+      type: object
+      description: Response for successful synchronous upload (< 15s processing)
+      required:
+        - resume_id
+        - upload_id
+        - is_async
+        - message
+      properties:
+        resume_id:
+          type: integer
+          format: int64
+          description: Resume ID (only present in sync mode)
+          example: 12345
+        upload_id:
+          type: string
+          format: uuid
+          description: Upload task UUID (for tracking)
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        is_async:
+          type: boolean
+          description: false for sync mode
+          example: false
+        message:
+          type: string
+          description: Status message
+          example: "Resume uploaded and parsed successfully"
+
+    UploadResponseAsync:
+      type: object
+      description: Response for asynchronous upload (>= 15s processing or timeout)
+      required:
+        - upload_id
+        - is_async
+        - message
+      properties:
+        upload_id:
+          type: string
+          format: uuid
+          description: Upload task UUID for progress tracking
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        is_async:
+          type: boolean
+          description: true for async mode
+          example: true
+        message:
+          type: string
+          description: Status message
+          example: "Resume uploaded, processing asynchronously. Use upload_id to track progress."
+
+    ProgressEvent:
+      type: object
+      description: Progress update event payload (sent via SSE)
+      required:
+        - upload_id
+        - status
+        - progress
+        - stage
+      properties:
+        upload_id:
+          type: string
+          format: uuid
+          description: Upload task UUID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        status:
+          type: string
+          enum:
+            - pending
+            - extracting
+            - extracted
+            - analyzing
+            - completed
+            - failed
+          description: Current processing status
+          example: "extracting"
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Progress percentage (0-100)
+          example: 25
+        stage:
+          type: string
+          description: Human-readable stage description
+          example: "Extracting text from PDF"
+        error_msg:
+          type: string
+          nullable: true
+          description: Error message (only present when status is "failed")
+          example: "Failed to parse PDF: corrupted file"
+        resume_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: Resume ID (only present when status is "completed")
+          example: 12345
+
+    ConnectedEvent:
+      type: object
+      description: Initial connection confirmation event
+      required:
+        - type
+        - message
+        - upload_id
+      properties:
+        type:
+          type: string
+          enum:
+            - connected
+          description: Event type
+          example: "connected"
+        message:
+          type: string
+          description: Connection confirmation message
+          example: "Progress stream connected"
+        upload_id:
+          type: string
+          format: uuid
+          description: Upload task UUID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+
+    Error:
+      type: object
+      description: Error response
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Invalid file type"
+        code:
+          type: string
+          description: Error code
+          example: "INVALID_FILE_TYPE"
+        details:
+          type: string
+          nullable: true
+          description: Additional error details
+          example: "Only PDF files are supported. Received: application/msword"
+
+  examples:
+    SyncUploadSuccess:
+      summary: Successful synchronous upload
+      description: Small PDF processed in < 15 seconds, returns resume_id immediately
+      value:
+        resume_id: 12345
+        upload_id: "550e8400-e29b-41d4-a716-446655440000"
+        is_async: false
+        message: "Resume uploaded and parsed successfully"
+
+    AsyncUploadQueued:
+      summary: Asynchronous upload enqueued
+      description: Large PDF or timeout, enqueued for worker pool processing
+      value:
+        upload_id: "550e8400-e29b-41d4-a716-446655440001"
+        is_async: true
+        message: "Resume uploaded, processing asynchronously. Use upload_id to track progress."
+
+    ProgressConnected:
+      summary: SSE connection established
+      description: Initial event sent immediately after connection
+      value:
+        type: "connected"
+        message: "Progress stream connected"
+        upload_id: "550e8400-e29b-41d4-a716-446655440000"
+
+    ProgressExtracting:
+      summary: Text extraction in progress
+      description: Worker started extracting text from PDF
+      value:
+        upload_id: "550e8400-e29b-41d4-a716-446655440000"
+        status: "extracting"
+        progress: 25
+        stage: "Extracting text from PDF"
+
+    ProgressAnalyzing:
+      summary: AI analysis in progress
+      description: Worker analyzing resume with AI
+      value:
+        upload_id: "550e8400-e29b-41d4-a716-446655440000"
+        status: "analyzing"
+        progress: 75
+        stage: "Analyzing resume with AI"
+
+    ProgressCompleted:
+      summary: Processing completed successfully
+      description: Final event with resume_id
+      value:
+        upload_id: "550e8400-e29b-41d4-a716-446655440000"
+        status: "completed"
+        progress: 100
+        stage: "Resume analysis complete"
+        resume_id: 12345
+
+    ProgressFailed:
+      summary: Processing failed
+      description: Error occurred during processing
+      value:
+        upload_id: "550e8400-e29b-41d4-a716-446655440000"
+        status: "failed"
+        progress: 50
+        stage: "Processing failed"
+        error_msg: "Failed to parse PDF: corrupted file"
+
+# ==================== Usage Examples ====================
+x-code-samples:
+  - lang: curl
+    label: Upload Resume (Sync)
+    source: |
+      # Upload small PDF (likely completes in sync mode)
+      curl -X POST http://localhost:8888/api/resume/upload \
+        -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+        -F "file=@resume.pdf"
+      
+      # Response:
+      # {
+      #   "resume_id": 12345,
+      #   "upload_id": "550e8400-e29b-41d4-a716-446655440000",
+      #   "is_async": false,
+      #   "message": "Resume uploaded and parsed successfully"
+      # }
+
+  - lang: curl
+    label: Upload Resume (Async) + Track Progress
+    source: |
+      # Upload large PDF (likely triggers async mode)
+      RESPONSE=$(curl -s -X POST http://localhost:8888/api/resume/upload \
+        -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+        -F "file=@large-resume.pdf")
+      
+      # Extract upload_id from response
+      UPLOAD_ID=$(echo $RESPONSE | jq -r '.upload_id')
+      
+      # Connect to SSE endpoint to track progress
+      curl -N "http://localhost:8888/api/resume/upload/progress/$UPLOAD_ID?token=YOUR_JWT_TOKEN"
+      
+      # SSE stream output:
+      # event: connected
+      # data: {"message":"Progress stream connected","type":"connected","upload_id":"..."}
+      #
+      # event: progress
+      # data: {"upload_id":"...","status":"extracting","progress":25,"stage":"Extracting text from PDF"}
+      #
+      # event: progress
+      # data: {"upload_id":"...","status":"analyzing","progress":75,"stage":"Analyzing resume with AI"}
+      #
+      # event: progress
+      # data: {"upload_id":"...","status":"completed","progress":100,"stage":"Resume analysis complete","resume_id":12345}
+
+  - lang: javascript
+    label: Frontend Integration with EventSource
+    source: |
+      // Upload resume
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      
+      const uploadResponse = await fetch('/api/resume/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`
+        },
+        body: formData
+      });
+      
+      const uploadData = await uploadResponse.json();
+      
+      if (uploadData.is_async) {
+        // Connect to SSE for progress tracking
+        const eventSource = new EventSource(
+          `/api/resume/upload/progress/${uploadData.upload_id}?token=${jwtToken}`
+        );
+        
+        eventSource.addEventListener('connected', (e) => {
+          const data = JSON.parse(e.data);
+          console.log('Connected:', data.message);
+        });
+        
+        eventSource.addEventListener('progress', (e) => {
+          const data = JSON.parse(e.data);
+          console.log(`Progress: ${data.progress}% - ${data.stage}`);
+          
+          // Update UI
+          progressBar.style.width = `${data.progress}%`;
+          stageText.textContent = data.stage;
+          
+          if (data.status === 'completed') {
+            console.log('Resume ID:', data.resume_id);
+            eventSource.close();
+            // Refresh resume list or navigate to resume detail
+          } else if (data.status === 'failed') {
+            console.error('Error:', data.error_msg);
+            eventSource.close();
+            // Show error message to user
+          }
+        });
+        
+        eventSource.onerror = (err) => {
+          console.error('SSE error:', err);
+          eventSource.close();
+        };
+      } else {
+        // Sync mode completed immediately
+        console.log('Resume ID:', uploadData.resume_id);
+        // Refresh resume list or navigate to resume detail
+      }
+
+  - lang: python
+    label: Python Client with SSE
+    source: |
+      import requests
+      import json
+      from sseclient import SSEClient  # pip install sseclient-py
+      
+      # Upload resume
+      jwt_token = "YOUR_JWT_TOKEN"
+      headers = {"Authorization": f"Bearer {jwt_token}"}
+      
+      with open('resume.pdf', 'rb') as f:
+        files = {'file': f}
+        response = requests.post(
+          'http://localhost:8888/api/resume/upload',
+          headers=headers,
+          files=files
+        )
+      
+      upload_data = response.json()
+      
+      if upload_data['is_async']:
+        # Track progress via SSE
+        upload_id = upload_data['upload_id']
+        sse_url = f"http://localhost:8888/api/resume/upload/progress/{upload_id}?token={jwt_token}"
+        
+        messages = SSEClient(sse_url)
+        for msg in messages:
+          if msg.event == 'connected':
+            data = json.loads(msg.data)
+            print(f"Connected: {data['message']}")
+          elif msg.event == 'progress':
+            data = json.loads(msg.data)
+            print(f"Progress: {data['progress']}% - {data['stage']}")
+            
+            if data['status'] == 'completed':
+              print(f"Resume ID: {data['resume_id']}")
+              break
+            elif data['status'] == 'failed':
+              print(f"Error: {data['error_msg']}")
+              break
+      else:
+        # Sync mode completed
+        print(f"Resume ID: {upload_data['resume_id']}")
+
+  - lang: go
+    label: Go Client with SSE
+    source: |
+      package main
+      
+      import (
+        "bytes"
+        "encoding/json"
+        "fmt"
+        "io"
+        "mime/multipart"
+        "net/http"
+        "os"
+      )
+      
+      func main() {
+        jwtToken := "YOUR_JWT_TOKEN"
+        
+        // Upload resume
+        file, _ := os.Open("resume.pdf")
+        defer file.Close()
+        
+        body := &bytes.Buffer{}
+        writer := multipart.NewWriter(body)
+        part, _ := writer.CreateFormFile("file", "resume.pdf")
+        io.Copy(part, file)
+        writer.Close()
+        
+        req, _ := http.NewRequest("POST", "http://localhost:8888/api/resume/upload", body)
+        req.Header.Set("Authorization", "Bearer "+jwtToken)
+        req.Header.Set("Content-Type", writer.FormDataContentType())
+        
+        client := &http.Client{}
+        resp, _ := client.Do(req)
+        defer resp.Body.Close()
+        
+        var uploadResp map[string]interface{}
+        json.NewDecoder(resp.Body).Decode(&uploadResp)
+        
+        if uploadResp["is_async"].(bool) {
+          // Track progress via SSE
+          uploadID := uploadResp["upload_id"].(string)
+          sseURL := fmt.Sprintf("http://localhost:8888/api/resume/upload/progress/%s?token=%s", uploadID, jwtToken)
+          
+          req, _ := http.NewRequest("GET", sseURL, nil)
+          resp, _ := client.Do(req)
+          defer resp.Body.Close()
+          
+          decoder := json.NewDecoder(resp.Body)
+          for {
+            var event map[string]interface{}
+            if err := decoder.Decode(&event); err != nil {
+              break
+            }
+            
+            if event["status"] == "completed" {
+              fmt.Printf("Resume ID: %v\n", event["resume_id"])
+              break
+            } else if event["status"] == "failed" {
+              fmt.Printf("Error: %v\n", event["error_msg"])
+              break
+            } else {
+              fmt.Printf("Progress: %v%% - %v\n", event["progress"], event["stage"])
+            }
+          }
+        } else {
+          fmt.Printf("Resume ID: %v\n", uploadResp["resume_id"])
+        }
+      }
+
+# ==================== Additional Documentation ====================
+x-implementation-notes:
+  architecture:
+    - Hertz web framework for HTTP handling
+    - Redis LIST for job queue (LPUSH/BRPOP)
+    - Redis Pub/Sub for progress broadcasting
+    - Worker pool with 3 goroutines
+    - SQLite (tests) / MySQL (production) for status tracking
+    - SHA256-based PDF text caching (30-day TTL)
+  
+  performance:
+    - Quick sync timeout: 15 seconds
+    - Worker job timeout: 120 seconds per job
+    - SSE connection timeout: 5 minutes
+    - Worker shutdown grace period: 180 seconds
+    - Cache hit retrieval: < 1 second
+    - Sync mode processing: < 5 seconds (small PDFs)
+  
+  limitations:
+    - File format: PDF only
+    - Max file size: 10MB
+    - Worker pool: Fixed size (3 workers)
+    - Cache TTL: 30 days (not configurable)
+    - No automatic retry on failure
+    - EventSource doesn't support custom headers (JWT via query param)
+  
+  security:
+    - JWT authentication required for all endpoints
+    - Input validation (file type, size, UUID format)
+    - No sensitive data in logs or error messages
+    - CORS configured in backend
+  
+  monitoring:
+    - Backend logs: Worker pool, queue, cache operations
+    - Redis monitoring: Queue length, cache keys, pub/sub channels
+    - Database queries: Upload status, performance metrics
+    - Docker stats: Container resource usage
+
+x-related-endpoints:
+  - path: /api/resume/list
+    description: Get user's resume list
+    method: GET
+  - path: /api/resume/:resume_id
+    description: Get resume details
+    method: GET
+  - path: /api/resume/:resume_id
+    description: Update resume metadata
+    method: PUT
+  - path: /api/resume/:resume_id
+    description: Delete resume
+    method: DELETE
+
+x-changelog:
+  - version: 1.0.0
+    date: 2026-02-16
+    changes:
+      - Initial API documentation
+      - Hybrid sync/async upload system
+      - SSE-based progress tracking
+      - PDF text caching (30-day TTL)
