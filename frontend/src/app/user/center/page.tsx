@@ -16,6 +16,8 @@ import {
   Spin,
   Popconfirm,
   Alert,
+  Modal,
+  Progress,
 } from 'antd';
 import {
   UploadOutlined,
@@ -24,12 +26,15 @@ import {
   StarOutlined,
   StarFilled,
   InboxOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
 } from '@ant-design/icons';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import type { UploadProps } from 'antd';
 import apiClient from '@/services/api/client';
 import { API_BASE_URL } from '@/config/api';
+import useResumeUploadProgress from '@/hooks/useResumeUploadProgress';
 
 const { Title, Paragraph, Text } = Typography;
 const { Dragger } = Upload;
@@ -85,6 +90,18 @@ export default function UserCenterPage() {
   const [loadingResumes, setLoadingResumes] = useState(false);
   const [modelConfigured, setModelConfigured] = useState<boolean | null>(null);
   const [checkingConfig, setCheckingConfig] = useState<boolean>(false);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+
+  const {
+    progress,
+    status,
+    stage,
+    error: progressError,
+    resumeId: uploadedResumeId,
+    connect: connectProgress,
+    disconnect: disconnectProgress,
+    reset: resetProgress,
+  } = useResumeUploadProgress();
 
   // 获取简历列表
   const fetchResumes = useCallback(async () => {
@@ -98,6 +115,29 @@ export default function UserCenterPage() {
       setLoadingResumes(false);
     }
   }, []);
+
+  // 监听上传状态
+  useEffect(() => {
+    if (status === 'completed') {
+      message.success('简历上传成功');
+      // 延迟关闭，让用户看到100%
+      setTimeout(() => {
+        setShowProgressModal(false);
+        fetchResumes();
+        resetProgress();
+      }, 1000);
+    }
+  }, [status, fetchResumes, resetProgress]);
+
+  // 关闭进度弹窗
+  const handleCloseProgress = () => {
+    if (status === 'pending' || status === 'extracting' || status === 'analyzing') {
+      return; // 进行中不可关闭
+    }
+    setShowProgressModal(false);
+    disconnectProgress();
+    resetProgress();
+  };
 
   // 上传简历
   const handleUpload = async (file: File) => {
@@ -120,8 +160,14 @@ export default function UserCenterPage() {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 180000, // 3 分钟超时
       });
-      message.success('简历上传成功');
-      fetchResumes();
+
+      if (res.is_async) {
+        setShowProgressModal(true);
+        connectProgress(res.upload_id);
+      } else {
+        message.success('简历上传成功');
+        fetchResumes();
+      }
     } catch (err: any) {
       message.error(err?.message || '简历上传失败');
     } finally {
@@ -378,6 +424,57 @@ export default function UserCenterPage() {
             </Row>
           </Col>
         </Row>
+
+        {/* Upload Progress Modal */}
+        <Modal
+          open={showProgressModal}
+          title="简历上传进度"
+          footer={null}
+          closable={status !== 'pending' && status !== 'extracting' && status !== 'analyzing'}
+          onCancel={handleCloseProgress}
+          centered
+          maskClosable={false}
+        >
+          <div className="py-6 text-center">
+            {status === 'failed' ? (
+              <div className="mb-4">
+                <CloseCircleOutlined className="text-red-500 text-5xl mb-4" />
+                <h3 className="text-lg font-medium text-slate-800 mb-2">上传失败</h3>
+                <p className="text-slate-500 mb-6">{progressError || '未知错误'}</p>
+                <Button type="primary" danger onClick={handleCloseProgress}>
+                  关闭
+                </Button>
+              </div>
+            ) : status === 'completed' ? (
+              <div className="mb-4">
+                <CheckCircleOutlined className="text-green-500 text-5xl mb-4" />
+                <h3 className="text-lg font-medium text-slate-800 mb-2">上传完成</h3>
+                <p className="text-slate-500">简历已成功解析并入库</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="relative">
+                  <Progress
+                    type="circle"
+                    percent={progress}
+                    strokeColor={{
+                      '0%': '#3b82f6',
+                      '100%': '#8b5cf6',
+                    }}
+                  />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-slate-800 mb-1">{stage}</h3>
+                  <p className="text-slate-500 text-sm">
+                    {status === 'pending' && '正在排队处理...'}
+                    {status === 'extracting' && '正在提取简历文本...'}
+                    {status === 'analyzing' && 'AI正在深度分析内容...'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </Modal>
       </div>
     </div>
   );
