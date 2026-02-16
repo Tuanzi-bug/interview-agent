@@ -11,6 +11,20 @@ import (
 	"time"
 )
 
+const (
+	// WorkerShutdownTimeout is the maximum time to wait for workers to finish in-flight jobs during shutdown
+	WorkerShutdownTimeout = 180 * time.Second // 3 minutes to allow long-running jobs to complete
+
+	// DequeueTimeout is the maximum time to wait for a job from the queue
+	DequeueTimeout = 5 * time.Second
+
+	// DBUpdateMaxRetries is the maximum number of retry attempts for database updates
+	DBUpdateMaxRetries = 3
+
+	// DBUpdateRetryDelay is the base delay between database update retries
+	DBUpdateRetryDelay = 100 * time.Millisecond
+)
+
 type ParseResumeFunc func(ctx context.Context, userID uint, filePath string, fileSize int64) (uint64, interface{}, error)
 
 type WorkerPool struct {
@@ -76,9 +90,9 @@ func (wp *WorkerPool) Stop() error {
 		select {
 		case <-done:
 			log.Printf("[WorkerPool] All workers stopped gracefully")
-		case <-time.After(30 * time.Second):
-			log.Printf("[WorkerPool] Shutdown timeout - some workers may not have exited")
-			stopErr = fmt.Errorf("shutdown timeout after 30 seconds")
+		case <-time.After(WorkerShutdownTimeout):
+			log.Printf("[WorkerPool] Shutdown timeout after %v - some workers may not have exited", WorkerShutdownTimeout)
+			stopErr = fmt.Errorf("shutdown timeout after %v", WorkerShutdownTimeout)
 		}
 	})
 
@@ -95,7 +109,7 @@ func (wp *WorkerPool) worker(workerID int) {
 			log.Printf("[WorkerPool] Worker %d shutting down", workerID)
 			return
 		default:
-			job, err := wp.queue.DequeueJob(wp.ctx, 5*time.Second)
+			job, err := wp.queue.DequeueJob(wp.ctx, DequeueTimeout)
 			if err != nil {
 				log.Printf("[WorkerPool] Worker %d dequeue error: %v", workerID, err)
 				continue
@@ -238,7 +252,23 @@ func (wp *WorkerPool) publishProgress(ctx context.Context, uploadID string, prog
 }
 
 func (wp *WorkerPool) updateDatabase(uploadID string, updates map[string]interface{}) {
-	if err := model.ResumeUploadStatusDao.UpdateStatus(uploadID, updates); err != nil {
-		log.Printf("[WorkerPool] Failed to update database for uploadID=%s: %v", uploadID, err)
+	var lastErr error
+	for attempt := 0; attempt < DBUpdateMaxRetries; attempt++ {
+		if err := model.ResumeUploadStatusDao.UpdateStatus(uploadID, updates); err == nil {
+			// Success
+			return
+		} else {
+			lastErr = err
+			if attempt < DBUpdateMaxRetries-1 {
+				// Not the last attempt, wait before retrying
+				retryDelay := time.Duration(attempt+1) * DBUpdateRetryDelay
+				log.Printf("[WorkerPool] Database update failed for uploadID=%s (attempt %d/%d), retrying in %v: %v",
+					uploadID, attempt+1, DBUpdateMaxRetries, retryDelay, err)
+				time.Sleep(retryDelay)
+			}
+		}
 	}
+	// All retries exhausted
+	log.Printf("[WorkerPool] Failed to update database for uploadID=%s after %d attempts: %v",
+		uploadID, DBUpdateMaxRetries, lastErr)
 }

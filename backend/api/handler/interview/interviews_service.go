@@ -29,6 +29,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	// QuickSyncTimeout is the maximum time to attempt synchronous resume processing before falling back to async
+	QuickSyncTimeout = 15 * time.Second
+)
+
 var (
 	globalWorkerPool *worker.WorkerPool
 	workerPoolMutex  sync.RWMutex
@@ -115,7 +120,7 @@ func UploadResume(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	syncCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	syncCtx, cancel := context.WithTimeout(ctx, QuickSyncTimeout)
 	defer cancel()
 
 	syncDone := make(chan struct{})
