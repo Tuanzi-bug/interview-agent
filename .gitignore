@@ -9,3 +9,16 @@ frontend/next/
 .idea/
 .vscode/
 .trae/
+# Go build artifacts
+backend/ai-eino-interview-agent
+backend/*.exe
+backend/*.test
+backend/*.out
+
+# Backup files
+*.backup
+*~
+
+# Sisyphus task management (local workflow files)
+.sisyphus/
+
