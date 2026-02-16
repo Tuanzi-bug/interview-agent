@@ -15,10 +15,11 @@ const (
 )
 
 type ResumeUploadJob struct {
-	UploadID string `json:"upload_id"`
-	UserID   uint   `json:"user_id"`
-	FilePath string `json:"file_path"`
-	ResumeID uint64 `json:"resume_id,omitempty"`
+	UploadID    string `json:"upload_id"`
+	UserID      uint   `json:"user_id"`
+	FilePath    string `json:"file_path"`
+	ResumeID    uint64 `json:"resume_id,omitempty"`
+	TimeoutSecs int    `json:"timeout_secs,omitempty"` // Per-job timeout in seconds; 0 means use worker context
 }
 
 type ProgressUpdate struct {

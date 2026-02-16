@@ -194,9 +194,10 @@ func enqueueAsyncJob(uploadID string, userID uint, filePath string) error {
 
 	queue := mq.NewResumeUploadQueue(repository.GetRedis())
 	job := &mq.ResumeUploadJob{
-		UploadID: uploadID,
-		UserID:   userID,
-		FilePath: filePath,
+		UploadID:    uploadID,
+		UserID:      userID,
+		FilePath:    filePath,
+		TimeoutSecs: int(worker.DefaultJobTimeout.Seconds()),
 	}
 
 	if err := queue.EnqueueJob(context.Background(), job); err != nil {

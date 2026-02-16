@@ -23,6 +23,9 @@ const (
 
 	// DBUpdateRetryDelay is the base delay between database update retries
 	DBUpdateRetryDelay = 100 * time.Millisecond
+
+	// DefaultJobTimeout is the default timeout for individual job processing
+	DefaultJobTimeout = 120 * time.Second
 )
 
 type ParseResumeFunc func(ctx context.Context, userID uint, filePath string, fileSize int64) (uint64, interface{}, error)
@@ -130,7 +133,14 @@ func (wp *WorkerPool) processJob(ctx context.Context, job *mq.ResumeUploadJob) e
 	log.Printf("[WorkerPool] Processing job: uploadID=%s, userID=%d, filePath=%s",
 		job.UploadID, job.UserID, job.FilePath)
 
-	wp.publishProgress(ctx, job.UploadID, &mq.ProgressUpdate{
+	jobCtx := ctx
+	if job.TimeoutSecs > 0 {
+		var cancel context.CancelFunc
+		jobCtx, cancel = context.WithTimeout(ctx, time.Duration(job.TimeoutSecs)*time.Second)
+		defer cancel()
+	}
+
+	wp.publishProgress(jobCtx, job.UploadID, &mq.ProgressUpdate{
 		Status:   "pending",
 		Progress: 0,
 		Stage:    "Job received, waiting to process",
@@ -145,7 +155,7 @@ func (wp *WorkerPool) processJob(ctx context.Context, job *mq.ResumeUploadJob) e
 	fileInfo, err := os.Stat(job.FilePath)
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to get file info: %v", err)
-		wp.publishProgress(ctx, job.UploadID, &mq.ProgressUpdate{
+		wp.publishProgress(jobCtx, job.UploadID, &mq.ProgressUpdate{
 			Status:   "failed",
 			Progress: 0,
 			Stage:    "Error: " + errMsg,
@@ -162,7 +172,7 @@ func (wp *WorkerPool) processJob(ctx context.Context, job *mq.ResumeUploadJob) e
 
 	fileSize := fileInfo.Size()
 
-	wp.publishProgress(ctx, job.UploadID, &mq.ProgressUpdate{
+	wp.publishProgress(jobCtx, job.UploadID, &mq.ProgressUpdate{
 		Status:   "extracting",
 		Progress: 25,
 		Stage:    "Extracting text from PDF",
@@ -176,7 +186,7 @@ func (wp *WorkerPool) processJob(ctx context.Context, job *mq.ResumeUploadJob) e
 
 	extractStart := time.Now()
 
-	wp.publishProgress(ctx, job.UploadID, &mq.ProgressUpdate{
+	wp.publishProgress(jobCtx, job.UploadID, &mq.ProgressUpdate{
 		Status:   "extracted",
 		Progress: 50,
 		Stage:    "Text extraction complete, starting AI analysis",
@@ -191,7 +201,7 @@ func (wp *WorkerPool) processJob(ctx context.Context, job *mq.ResumeUploadJob) e
 		"extract_duration": extractDuration,
 	})
 
-	wp.publishProgress(ctx, job.UploadID, &mq.ProgressUpdate{
+	wp.publishProgress(jobCtx, job.UploadID, &mq.ProgressUpdate{
 		Status:   "analyzing",
 		Progress: 75,
 		Stage:    "Analyzing resume with AI",
@@ -205,10 +215,10 @@ func (wp *WorkerPool) processJob(ctx context.Context, job *mq.ResumeUploadJob) e
 
 	analyzeStart := time.Now()
 
-	dbResumeID, _, err := wp.parseResumeFunc(ctx, job.UserID, job.FilePath, fileSize)
+	dbResumeID, _, err := wp.parseResumeFunc(jobCtx, job.UserID, job.FilePath, fileSize)
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to parse resume: %v", err)
-		wp.publishProgress(ctx, job.UploadID, &mq.ProgressUpdate{
+		wp.publishProgress(jobCtx, job.UploadID, &mq.ProgressUpdate{
 			Status:   "failed",
 			Progress: 75,
 			Stage:    "Error: " + errMsg,
@@ -225,7 +235,7 @@ func (wp *WorkerPool) processJob(ctx context.Context, job *mq.ResumeUploadJob) e
 
 	analyzeDuration := time.Since(analyzeStart).Milliseconds()
 
-	wp.publishProgress(ctx, job.UploadID, &mq.ProgressUpdate{
+	wp.publishProgress(jobCtx, job.UploadID, &mq.ProgressUpdate{
 		Status:   "completed",
 		Progress: 100,
 		Stage:    "Resume analysis complete",
