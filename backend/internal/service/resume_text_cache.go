@@ -50,7 +50,7 @@ func (c *ResumeTextCache) Get(ctx context.Context, filePath string) (string, boo
 	redisClient := repository.GetRedis()
 	if redisClient == nil {
 		log.Printf("[ResumeTextCache] Redis client not initialized")
-		return "", false, nil
+		return "", false, fmt.Errorf("redis client not initialized")
 	}
 
 	text, err := redisClient.Get(ctx, cacheKey).Result()

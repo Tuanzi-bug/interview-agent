@@ -248,9 +248,8 @@ func TestGet_RedisNotInitialized(t *testing.T) {
 
 	text, hit, err := cache.Get(ctx, testFile)
 
-	// Should not return error, just return empty with no hit
-	if err != nil {
-		t.Errorf("Get should not return error when Redis not initialized: %v", err)
+	if err == nil {
+		t.Error("Get should return error when Redis not initialized")
 	}
 
 	if hit {
