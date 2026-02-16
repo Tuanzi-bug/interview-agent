@@ -29,8 +29,9 @@ export const useResumeUploadProgress = (): UseResumeUploadProgressReturn => {
   const [error, setError] = useState<string | null>(null);
   const [resumeId, setResumeId] = useState<number | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
-  
+
   const eventSourceRef = useRef<EventSource | null>(null);
+  const statusRef = useRef<string>('pending');
 
   const disconnect = useCallback(() => {
     if (eventSourceRef.current) {
@@ -44,89 +45,96 @@ export const useResumeUploadProgress = (): UseResumeUploadProgressReturn => {
     disconnect();
     setProgress(0);
     setStatus('pending');
+    statusRef.current = 'pending';
     setStage('准备中...');
     setError(null);
     setResumeId(null);
   }, [disconnect]);
 
-  const connect = useCallback((uploadId: string) => {
-    // Prevent multiple connections
-    if (eventSourceRef.current) {
-      disconnect();
-    }
+  const connect = useCallback(
+    (uploadId: string) => {
+      // Prevent multiple connections
+      if (eventSourceRef.current) {
+        disconnect();
+      }
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setError('未登录，无法建立连接');
-      return;
-    }
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('未登录，无法建立连接');
+        return;
+      }
 
-    // Construct URL with token query param since EventSource doesn't support headers
-    // Use the API_BASE_URL which might already contain /api suffix
-    // If API_BASE_URL ends with /, remove it to avoid double slashes
-    const baseUrl = (API_BASE_URL || '').replace(/\/$/, '');
-    const url = `${baseUrl}/resume/upload/progress/${uploadId}?token=${token}`;
-    
-    try {
-      const eventSource = new EventSource(url);
-      eventSourceRef.current = eventSource;
+      // Construct URL with token query param since EventSource doesn't support headers
+      // Use the API_BASE_URL which might already contain /api suffix
+      // If API_BASE_URL ends with /, remove it to avoid double slashes
+      const baseUrl = (API_BASE_URL || '').replace(/\/$/, '');
+      const url = `${baseUrl}/resume/upload/progress/${uploadId}?token=${token}`;
 
-      eventSource.onopen = () => {
-        setIsConnected(true);
-        setError(null);
-      };
+      try {
+        const eventSource = new EventSource(url);
+        eventSourceRef.current = eventSource;
 
-      eventSource.onerror = (e) => {
-        // EventSource error handling is limited, usually means connection failed
-        console.error('SSE connection error:', e);
-        // Don't immediately fail on error as it might be a temporary network issue
-        // But if readyState is CLOSED (2), then we should probably fail
-        if (eventSource.readyState === 2) {
-          setIsConnected(false);
-          setError('连接中断，请重试');
-          disconnect();
-        }
-      };
+        eventSource.onopen = () => {
+          setIsConnected(true);
+          setError(null);
+        };
 
-      // Listen for specific events
-      eventSource.addEventListener('connected', (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data);
-          // console.log('SSE Connected:', data);
-        } catch (e) {
-          console.error('Error parsing connected event:', e);
-        }
-      });
-
-      eventSource.addEventListener('progress', (event: MessageEvent) => {
-        try {
-          const data: ProgressUpdate = JSON.parse(event.data);
-          
-          setProgress(data.progress);
-          setStatus(data.status);
-          setStage(data.stage);
-          
-          if (data.status === 'failed') {
-            setError(data.error_msg || '上传失败');
-            disconnect();
-          } else if (data.status === 'completed') {
-            if (data.resume_id) {
-              setResumeId(data.resume_id);
+        eventSource.onerror = (e) => {
+          // EventSource error handling is limited, usually means connection failed
+          console.error('SSE connection error:', e);
+          // Don't immediately fail on error as it might be a temporary network issue
+          // But if readyState is CLOSED (2), then we should probably fail
+          if (eventSource.readyState === 2) {
+            if (statusRef.current === 'completed' || statusRef.current === 'failed') {
+              disconnect();
+              return;
             }
-            // Don't disconnect immediately, let the UI handle the completion state
-            // or wait for the component to unmount/reset
-            disconnect(); 
+            setIsConnected(false);
+            setError('连接中断，请重试');
+            disconnect();
           }
-        } catch (e) {
-          console.error('Error parsing progress event:', e);
-        }
-      });
+        };
 
-    } catch (e: any) {
-      setError(e.message || '无法建立连接');
-      setIsConnected(false);
-    }
-  }, [disconnect]);
+        // Listen for specific events
+        eventSource.addEventListener('connected', (event: MessageEvent) => {
+          try {
+            const data = JSON.parse(event.data);
+            // console.log('SSE Connected:', data);
+          } catch (e) {
+            console.error('Error parsing connected event:', e);
+          }
+        });
+
+        eventSource.addEventListener('progress', (event: MessageEvent) => {
+          try {
+            const data: ProgressUpdate = JSON.parse(event.data);
+
+            const safeProgress = Math.min(100, Math.max(0, Math.round(Number(data.progress) || 0)));
+
+            setProgress(safeProgress);
+            setStatus(data.status);
+            statusRef.current = data.status;
+            setStage(data.stage);
+
+            if (data.status === 'failed') {
+              setError(data.error_msg || '上传失败');
+              disconnect();
+            } else if (data.status === 'completed') {
+              if (data.resume_id) {
+                setResumeId(data.resume_id);
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing progress event:', e);
+          }
+        });
+      } catch (e: any) {
+        setError(e.message || '无法建立连接');
+        setIsConnected(false);
+      }
+    },
+    [disconnect]
+  );
 
   // Cleanup on unmount
   useEffect(() => {
@@ -144,7 +152,7 @@ export const useResumeUploadProgress = (): UseResumeUploadProgressReturn => {
     isConnected,
     connect,
     disconnect,
-    reset
+    reset,
   };
 };
 

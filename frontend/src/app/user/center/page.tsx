@@ -34,7 +34,7 @@ import Link from 'next/link';
 import type { UploadProps } from 'antd';
 import apiClient from '@/services/api/client';
 import { API_BASE_URL } from '@/config/api';
-import useResumeUploadProgress from '@/hooks/useResumeUploadProgress';
+import { useUploadProgressStore } from '@/store/uploadProgressStore';
 
 const { Title, Paragraph, Text } = Typography;
 const { Dragger } = Upload;
@@ -90,18 +90,16 @@ export default function UserCenterPage() {
   const [loadingResumes, setLoadingResumes] = useState(false);
   const [modelConfigured, setModelConfigured] = useState<boolean | null>(null);
   const [checkingConfig, setCheckingConfig] = useState<boolean>(false);
-  const [showProgressModal, setShowProgressModal] = useState(false);
-
   const {
     progress,
     status,
     stage,
     error: progressError,
-    resumeId: uploadedResumeId,
-    connect: connectProgress,
-    disconnect: disconnectProgress,
-    reset: resetProgress,
-  } = useResumeUploadProgress();
+    connect,
+    reset,
+    hideToBackground,
+    isModalVisible,
+  } = useUploadProgressStore();
 
   // 获取简历列表
   const fetchResumes = useCallback(async () => {
@@ -120,23 +118,20 @@ export default function UserCenterPage() {
   useEffect(() => {
     if (status === 'completed') {
       message.success('简历上传成功');
-      // 延迟关闭，让用户看到100%
-      setTimeout(() => {
-        setShowProgressModal(false);
-        fetchResumes();
-        resetProgress();
-      }, 1000);
+      fetchResumes();
     }
-  }, [status, fetchResumes, resetProgress]);
+
+    if (status === 'failed' && progressError) {
+      message.error(progressError);
+    }
+  }, [status, fetchResumes, progressError]);
 
   // 关闭进度弹窗
   const handleCloseProgress = () => {
     if (status === 'pending' || status === 'extracting' || status === 'analyzing') {
       return; // 进行中不可关闭
     }
-    setShowProgressModal(false);
-    disconnectProgress();
-    resetProgress();
+    reset();
   };
 
   // 上传简历
@@ -162,8 +157,7 @@ export default function UserCenterPage() {
       });
 
       if (res.is_async) {
-        setShowProgressModal(true);
-        connectProgress(res.upload_id);
+        connect(res.upload_id, { showModal: true });
       } else {
         message.success('简历上传成功');
         fetchResumes();
@@ -427,9 +421,30 @@ export default function UserCenterPage() {
 
         {/* Upload Progress Modal */}
         <Modal
-          open={showProgressModal}
+          open={isModalVisible}
           title="简历上传进度"
-          footer={null}
+          footer={
+            status === 'pending' || status === 'extracting' || status === 'analyzing' ? (
+              <div className="flex flex-col sm:flex-row gap-3 sm:justify-between items-center">
+                <div className="text-xs text-slate-500">你可以先去其他页面，后台会继续处理</div>
+                <Space>
+                  <Button
+                    onClick={() => {
+                      hideToBackground();
+                    }}
+                  >
+                    后台处理
+                  </Button>
+                </Space>
+              </div>
+            ) : (
+              <div className="flex justify-center">
+                <Button type="primary" onClick={handleCloseProgress}>
+                  关闭
+                </Button>
+              </div>
+            )
+          }
           closable={status !== 'pending' && status !== 'extracting' && status !== 'analyzing'}
           onCancel={handleCloseProgress}
           centered
@@ -468,6 +483,7 @@ export default function UserCenterPage() {
                   <p className="text-slate-500 text-sm">
                     {status === 'pending' && '正在排队处理...'}
                     {status === 'extracting' && '正在提取简历文本...'}
+                    {status === 'extracted' && '文本提取完成，准备分析...'}
                     {status === 'analyzing' && 'AI正在深度分析内容...'}
                   </p>
                 </div>
