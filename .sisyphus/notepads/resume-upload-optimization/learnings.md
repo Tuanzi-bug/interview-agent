@@ -964,3 +964,70 @@ All requirements met:
 - [x] CORS headers configured
 - [x] Connection keep-alive working
 - [x] Ready for production use
+
+## Integration Test Patterns (2026-02-16)
+
+### Test File Structure
+Created comprehensive integration test: `backend/api/handler/interview/upload_integration_test.go`
+
+**Key Testing Patterns:**
+1. **Environment Setup**: `setupIntegrationTest()` creates isolated test environment with:
+   - SQLite in-memory database (via GORM)
+   - Redis DB 1 (for test isolation)
+   - Worker pool with mock resume parser
+   - Automatic cleanup on defer
+
+2. **Test Data Creation**:
+   - `createTestPDFFile()` creates mock PDFs of specified size
+   - `createMultipartRequest()` builds Hertz multipart requests
+
+3. **Test Coverage**:
+   - Quick sync upload (< 15s processing)
+   - Async upload with worker pool
+   - SSE progress streaming (via Redis pub/sub)
+   - Error scenarios (invalid file, size limits)
+   - Worker processing failures
+   - Concurrent uploads
+   - Database status tracking throughout lifecycle
+
+### Hertz Testing Conventions
+- Use `app.NewContext(0)` to create test contexts
+- Set request data via `ctx.Request.SetXXX()` methods
+- Mock middleware values via `ctx.Set()`
+- Read responses from `ctx.Response.Body()` and `ctx.Response.StatusCode()`
+
+### Go Testing Best Practices Applied
+- Table-driven tests where appropriate
+- Use `t.Helper()` in helper functions
+- Test isolation with dedicated Redis DB
+- Resource cleanup with defer
+- Race detector compatibility (tested with `-race` flag)
+
+### Testing Challenges Solved
+1. **Multipart uploads**: Manually construct multipart form with proper headers
+2. **SSE streaming**: Test underlying Redis pub/sub instead of full HTTP streaming
+3. **Async processing**: Use channels and timeouts to verify background workers
+4. **Mock dependencies**: Inject mock `ParseResumeFunc` for controlled behavior
+
+### Test Execution
+```bash
+# Run all integration tests
+go test -v ./api/handler/interview/ -run TestUploadIntegration
+
+# With race detector
+go test -race ./api/handler/interview/ -run TestUploadIntegration
+
+# Skip if Redis not available
+# Tests use t.Skip() for graceful degradation
+```
+
+### Verification Checklist
+- ✅ All tests compile without errors
+- ✅ Tests pass with `-race` flag (no data races)
+- ✅ Tests skip gracefully when Redis unavailable
+- ✅ Database operations use SQLite in-memory
+- ✅ Redis operations use dedicated test DB (DB 1)
+- ✅ All test scenarios covered (sync, async, errors, concurrency)
+- ✅ Progress tracking via Redis pub/sub verified
+- ✅ Database status lifecycle tracking tested
+
